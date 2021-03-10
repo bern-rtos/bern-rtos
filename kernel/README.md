@@ -1,3 +1,3 @@
-# bern-core
+# Bern RTOS Core
 
 Bern RTOS core component
