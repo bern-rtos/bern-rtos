@@ -155,8 +155,8 @@ pub fn start() -> ! {
     if sched.tasks_ready[(CONF.task.priorities as usize) -1].len() == 0 {
         Task::new()
             .idle_task()
-            .static_stack(crate::alloc_static_stack!(128))
-            .spawn(move || default_idle());
+            .static_stack(crate::alloc_static_stack!(256))
+            .spawn(default_idle);
     }
 
     let mut task = None;
