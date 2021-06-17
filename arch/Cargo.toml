@@ -1,0 +1,13 @@
+[package]
+name = "bern-arch"
+version = "0.1.0"
+authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
+edition = "2018"
+
+[target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies]
+cortex-m-rt = "0.6.10"
+cortex-m = { version = "0.7.2", features = ["inline-asm"] }
+r0 = "1.0.0"
+
+[target.'cfg(not(target_os = "none"))'.dependencies]
+mockall = "0.9.1"
