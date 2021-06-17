@@ -1,7 +1,22 @@
 [package]
 name = "bern-conf-type"
 version = "0.1.0"
+authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
 edition = "2018"
+license = "MIT"
+categories = ["embedded", "no-std"]
+keywords = ["embedded", "no_std", "cortex-m", "iot", "rtos"]
+description = "Bern RTOS configuration type."
+documentation = "https://docs.rs/bern-conf-type"
+repository = "https://gitlab.com/bern-rtos/kernel/bern-kernel"
+homepage = "https://bern-rtos.org"
 
 [dependencies]
-bern-arch = { version = "*", path = "../../bern_arch" }
+bern-arch = "0.2.0"
+
+[package.metadata.docs.rs]
+targets = [
+    "thumbv7em-none-eabi",
+    "thumbv7em-none-eabihf",
+    "thumbv7m-none-eabi",
+]

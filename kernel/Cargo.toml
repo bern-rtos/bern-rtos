@@ -1,18 +1,32 @@
 [package]
 name = "bern-kernel"
-version = "0.0.1"
+version = "0.2.0"
 authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
 edition = "2018"
+license = "MIT"
+categories = ["embedded", "no-std"]
+keywords = ["embedded", "no_std", "cortex-m", "iot", "rtos"]
+description = "Preemptive real-time kernel for microcontrollers."
+documentation = "https://docs.rs/bern-kernel"
+repository = "https://gitlab.com/bern-rtos/kernel/bern-kernel"
+homepage = "https://bern-rtos.org"
 
 [features]
 time-slicing = []
 
 [dependencies]
-bern-arch = { version = "*", path = "../bern_arch" }
-bern-kernel-macros = { version = "*", path = "macros" }
-bern-conf = { version = "*", path = "conf" }
+bern-arch = "0.2.0"
+bern-kernel-macros = "0.2.0"
+bern-conf = "0.1.0"
 
 [build-dependencies]
 toml = "0.5.8"
 serde = "1.0.125"
 serde_derive = "1.0.125"
+
+[package.metadata.docs.rs]
+targets = [
+    "thumbv7em-none-eabi",
+    "thumbv7em-none-eabihf",
+    "thumbv7m-none-eabi",
+]

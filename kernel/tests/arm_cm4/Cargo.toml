@@ -31,9 +31,8 @@ path = "tests/memory_protection.rs"
 harness = false
 
 [dependencies]
-bern-kernel = { version = "*", path = "../.." }
-bern-test = { version = "*", features = ["autorun", "serial", "colored"], path = "../../../bern_test" }
-#bern-test = { version = "*", features = ["autorun", "rtt", "colored"], path = "../../../bern_test" }
+bern-kernel = "0.2.*"
+bern-test = { version = "*", features = ["autorun", "serial", "colored"]}
 st-nucleo-f446 = { version = "*", path = "../../../platform/st_nucleo_f446"}
 
 cortex-m = "0.7.2"

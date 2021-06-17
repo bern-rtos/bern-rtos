@@ -1,8 +1,15 @@
 [package]
 name = "bern-kernel-macros"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
 edition = "2018"
+license = "MIT"
+categories = ["embedded", "no-std"]
+keywords = ["embedded", "no_std", "cortex-m", "iot", "rtos"]
+description = "Procedural macros for bern-kernel."
+documentation = "https://docs.rs/bern-kernel-macros"
+repository = "https://gitlab.com/bern-rtos/kernel/bern-kernel"
+homepage = "https://bern-rtos.org"
 
 [lib]
 proc-macro = true
@@ -19,3 +26,10 @@ syn = { version = "1.0.40", features = ["extra-traits", "full"] }
 toml = "0.5.8"
 serde = "1.0.125"
 serde_derive = "1.0.125"
+
+[package.metadata.docs.rs]
+targets = [
+    "thumbv7em-none-eabi",
+    "thumbv7em-none-eabihf",
+    "thumbv7m-none-eabi",
+]
