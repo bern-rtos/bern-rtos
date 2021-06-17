@@ -1,8 +1,15 @@
 [package]
 name = "bern-arch"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
 edition = "2018"
+license = "MIT"
+categories = ["embedded", "no-std"]
+keywords = ["embedded", "no_std", "cortex-m", "iot", "rtos"]
+description = "Bern RTOS hardware specific implementation."
+documentation = "https://docs.rs/bern-arch"
+repository = "https://gitlab.com/bern-rtos/kernel/bern-arch"
+homepage = "https://bern-rtos.org"
 
 [target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies]
 cortex-m-rt = "0.6.10"
@@ -11,3 +18,10 @@ r0 = "1.0.0"
 
 [target.'cfg(not(target_os = "none"))'.dependencies]
 mockall = "0.9.1"
+
+[package.metadata.docs.rs]
+targets = [
+    "thumbv7em-none-eabi",
+    "thumbv7em-none-eabihf",
+    "thumbv7m-none-eabi",
+]
