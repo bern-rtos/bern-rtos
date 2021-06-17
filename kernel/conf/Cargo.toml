@@ -1,0 +1,10 @@
+[package]
+name = "bern-conf"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+path = "conf.rs"
+
+[dependencies]
+bern-conf-type = { version = "*", path = "../conf_type" }

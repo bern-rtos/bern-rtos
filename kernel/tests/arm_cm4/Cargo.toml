@@ -1,0 +1,44 @@
+[package]
+authors = ["Stefan Lüthi <stefan.luethi@outlook.com"]
+name = "test-armv7e-m"
+publish = false
+edition = "2018"
+version = "0.1.0"
+
+[[test]]
+name = "arm_cm4-serial"
+path = "tests/serial.rs"
+harness = false
+
+[[test]]
+name = "arm_cm4-task"
+path = "tests/task.rs"
+harness = false
+
+[[test]]
+name = "arm_cm4-semaphore"
+path = "tests/semaphore.rs"
+harness = false
+
+[[test]]
+name = "arm_cm4-mutex"
+path = "tests/mutex.rs"
+harness = false
+
+[[test]]
+name = "arm_cm4-memory-protection"
+path = "tests/memory_protection.rs"
+harness = false
+
+[dependencies]
+bern-kernel = { version = "*", path = "../.." }
+bern-test = { version = "*", features = ["autorun", "serial", "colored"], path = "../../../bern_test" }
+#bern-test = { version = "*", features = ["autorun", "rtt", "colored"], path = "../../../bern_test" }
+st-nucleo-f446 = { version = "*", path = "../../../platform/st_nucleo_f446"}
+
+cortex-m = "0.7.2"
+cortex-m-rt = "0.6.10"
+nb = "1.0.0"
+
+embedded-hal = "0.2.4"
+stm32f4xx-hal = { version = "0.8", features = ["rt", "stm32f446"] }

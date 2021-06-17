@@ -1,0 +1,18 @@
+[package]
+name = "bern-kernel"
+version = "0.0.1"
+authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
+edition = "2018"
+
+[features]
+time-slicing = []
+
+[dependencies]
+bern-arch = { version = "*", path = "../bern_arch" }
+bern-kernel-macros = { version = "*", path = "macros" }
+bern-conf = { version = "*", path = "conf" }
+
+[build-dependencies]
+toml = "0.5.8"
+serde = "1.0.125"
+serde_derive = "1.0.125"
