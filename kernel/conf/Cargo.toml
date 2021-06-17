@@ -1,6 +1,6 @@
 [package]
 name = "bern-conf"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
 edition = "2018"
 license = "MIT"
@@ -15,7 +15,7 @@ homepage = "https://bern-rtos.org"
 path = "conf.rs"
 
 [dependencies]
-bern-conf-type = "0.1.0"
+bern-conf-type = "0.1"
 
 [package.metadata.docs.rs]
 targets = [

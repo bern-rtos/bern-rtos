@@ -1,6 +1,6 @@
 [package]
 name = "bern-kernel"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
 edition = "2018"
 license = "MIT"
@@ -15,9 +15,9 @@ homepage = "https://bern-rtos.org"
 time-slicing = []
 
 [dependencies]
-bern-arch = "0.2.0"
-bern-kernel-macros = "0.2.0"
-bern-conf = "0.1.0"
+bern-arch = "0.2"
+bern-kernel-macros = "0.2"
+bern-conf = "0.1"
 
 [build-dependencies]
 toml = "0.5.8"
