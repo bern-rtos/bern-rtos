@@ -120,7 +120,7 @@ impl TaskBuilder {
     /// **Note:** A task cannot access another tasks stack, thus all stack
     /// initialization must be handled via syscalls.
     pub fn spawn<F>(&mut self, closure: F)
-        where F: 'static + Sync + FnMut() -> RunnableResult
+        where F: 'static + FnMut() -> RunnableResult
     {
         syscall::move_closure_to_stack(closure, self);
         let mut stack = match self.stack.as_mut() {

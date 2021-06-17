@@ -54,7 +54,7 @@ impl Service {
 ///
 /// This will copy the `closure` to stack point store in the `builder`c
 pub(crate) fn move_closure_to_stack<F>(closure: F, builder: &mut TaskBuilder)
-    where F: 'static + Sync + FnMut() -> RunnableResult
+    where F: 'static + FnMut() -> RunnableResult
 {
     Arch::syscall(
         Service::MoveClosureToStack.service_id(),
