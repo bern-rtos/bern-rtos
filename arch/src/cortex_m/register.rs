@@ -45,8 +45,47 @@ pub struct StackFrameExtension {
 }
 
 /// FPU registers the software must push/pop to/from the stack
-// todo: CPU registers used by the floating point unit
-#[allow(dead_code)]
 #[repr(C)]
 pub struct StackFrameFpu {
+    /// Floating Point Register 16
+    pub s16: u32,
+    /// Floating Point Register 17
+    pub s17: u32,
+    /// Floating Point Register 18
+    pub s18: u32,
+    /// Floating Point Register 19
+    pub s19: u32,
+    /// Floating Point Register 20
+    pub s20: u32,
+    /// Floating Point Register 21
+    pub s21: u32,
+    /// Floating Point Register 22
+    pub s22: u32,
+    /// Floating Point Register 23
+    pub s23: u32,
+    /// Floating Point Register 24
+    pub s24: u32,
+    /// Floating Point Register 25
+    pub s25: u32,
+    /// Floating Point Register 26
+    pub s26: u32,
+    /// Floating Point Register 27
+    pub s27: u32,
+    /// Floating Point Register 28
+    pub s28: u32,
+    /// Floating Point Register 29
+    pub s29: u32,
+    /// Floating Point Register 30
+    pub s30: u32,
+    /// Floating Point Register 31
+    pub s31: u32,
+}
+
+/// Additional Settings pushed to the stack
+#[repr(C)]
+pub struct StackSettings {
+    /// Link register in exception context
+    pub exception_lr: u32,
+    /// Control register (privilege level)
+    pub control: u32,
 }
