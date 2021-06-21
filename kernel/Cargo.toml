@@ -1,6 +1,6 @@
 [package]
 name = "bern-kernel"
-version = "0.2.3"
+version = "0.2.4"
 authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
 edition = "2018"
 license = "MIT"

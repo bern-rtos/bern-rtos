@@ -354,6 +354,10 @@ fn switch_context(stack_ptr: u32) -> u32 {
         // Put the running task into its next state
         let mut pausing = sched.task_running.take().unwrap();
         let prio: usize = (*pausing).priority().into();
+        // Did pausing task break hardware specific boundaries?
+        if stack_ptr == 0 {
+            pausing.set_transition(Transition::Terminating);
+        }
         match (*pausing).transition() {
             Transition::None => sched.tasks_ready[prio].push_back(pausing),
             Transition::Sleeping => {
