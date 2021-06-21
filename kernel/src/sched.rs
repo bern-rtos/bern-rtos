@@ -172,6 +172,7 @@ pub fn start() -> ! {
     sched.task_running = task;
     sched.core.start();
 
+    Arch::apply_regions((*sched.task_running.as_ref().unwrap()).memory_regions());
     let stack_ptr = (*sched.task_running.as_ref().unwrap()).stack_ptr();
     Arch::start_first_task(stack_ptr);
 }
