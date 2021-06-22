@@ -16,10 +16,10 @@ use crate::arch::register::{StackFrame, StackFrameExtension, StackSettings};
 #[naked] // todo: move to separate assembly file and introduce at link time
 extern "C" fn PendSV() {
     // Based on "Definitive Guide to Cortex-M3/4", p. 349
+    #[cfg(has_fpu)]
     unsafe {
         asm!(
         "mrs      r1, psp",
-
         "mov      r2, lr",
         "tst      r2, #10",         // was FPU used?
         "ite      eq",
@@ -32,16 +32,14 @@ extern "C" fn PendSV() {
         "itt      ne",              // if stack invalid
         "movne    r0, 0",           // set psp to 0, signal `switch_context` an error
         "bne      switch",
-                                    // else store
+        // else store
         "tst      r2, #10",         // was FPU used?
         "it       eq",
         "vstmdbeq r1!, {{s16-s31}}", // push FPU registers
         "mrs      r3, control",
         "stmdb    r1!, {{r2-r11}}", // push LR, control and remaining registers
         "mov      r0, r1",
-
         "switch:  bl switch_context",
-
         "ldmia    r0!, {{r2-r11}}",
         "msr      control, r3",
         "isb",
@@ -49,6 +47,34 @@ extern "C" fn PendSV() {
         "tst      lr, #10",         // was FPU used?
         "it       eq",
         "vldmiaeq r0!, {{s16-s31}}", // pop FPU registers
+        "msr      psp, r0",
+        "bx       lr",
+        options(noreturn),
+        )
+    }
+
+    #[cfg(not(has_fpu))]
+    unsafe {
+        asm!(
+        "mrs      r1, psp",
+        "mov      r2, lr",
+        "sub      r0, r1, #40",     // psp without FPU registers after register push
+        "push     {{r1,r2}}",
+        "bl       check_stack",     // in: psp (r0), out: store context (1), stack would overflow (0)
+        "pop      {{r1,r2}}",
+        "cmp      r0, #1",          // stack invalid?
+        "itt      ne",              // if stack invalid
+        "movne    r0, 0",           // set psp to 0, signal `switch_context` an error
+        "bne      switch",
+        // else store
+        "mrs      r3, control",
+        "stmdb    r1!, {{r2-r11}}", // push LR, control and remaining registers
+        "mov      r0, r1",
+        "switch:  bl switch_context",
+        "ldmia    r0!, {{r2-r11}}",
+        "msr      control, r3",
+        "isb",
+        "mov      lr, r2",
         "msr      psp, r0",
         "bx       lr",
         options(noreturn),

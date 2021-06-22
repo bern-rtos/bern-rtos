@@ -40,7 +40,7 @@ pub mod mock;
 #[cfg(not(target_os = "none"))]
 pub use crate::mock as arch;
 
-#[cfg(all(target_arch = "arm", target_os = "none"))]
+#[cfg(arm_cortex_m)]
 pub mod cortex_m;
-#[cfg(all(target_arch = "arm", target_os = "none"))]
+#[cfg(arm_cortex_m)]
 pub use crate::cortex_m as arch;
