@@ -43,7 +43,7 @@ static mut SCHEDULER: MaybeUninit<Scheduler> = MaybeUninit::uninit();
 struct Scheduler {
     core: ArchCore,
     task_running: Option<Box<Node<Task>>>,
-    tasks_ready: [LinkedList<Task, TaskPool>; CONF.task.pool_size],
+    tasks_ready: [LinkedList<Task, TaskPool>; CONF.task.priorities as usize],
     tasks_sleeping: LinkedList<Task, TaskPool>,
     tasks_terminated: LinkedList<Task, TaskPool>,
     events: LinkedList<Event, EventPool>,
@@ -172,7 +172,6 @@ pub fn start() -> ! {
     sched.task_running = task;
     sched.core.start();
 
-    Arch::apply_regions((*sched.task_running.as_ref().unwrap()).memory_regions());
     let stack_ptr = (*sched.task_running.as_ref().unwrap()).stack_ptr();
     Arch::start_first_task(stack_ptr);
 }
