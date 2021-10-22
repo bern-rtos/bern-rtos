@@ -40,13 +40,13 @@ pub enum Size {
 }
 impl Size {
     /// Return register value from `Size`.
-    pub const fn bits(self) -> u32 {
-        self as u32
+    pub const fn bits(self) -> usize {
+        self as usize
     }
 
     /// Return `Size` in bytes
-    pub const fn size_bytes(self) -> u32 {
-        2u32.pow((self as u32) + 1)
+    pub const fn size_bytes(self) -> usize {
+        2u32.pow((self as u32) + 1) as usize
     }
 }
 
@@ -249,8 +249,8 @@ impl Mpu<'_> {
         let register = (!executable as u32) << 28 |
             ap << 24 |
             tex << 19 | s << 18 | c << 17 | b << 16 |
-            subregions.bits() << 8 |
-            region_size.bits() << 1 |
+            (subregions.bits() as u32) << 8 |
+            (region_size.bits() as u32) << 1 |
             MPU_REGION_ENABLE;
 
         register
