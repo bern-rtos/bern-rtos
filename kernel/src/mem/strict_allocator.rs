@@ -1,11 +1,11 @@
 use core::alloc::Layout;
-use core::ptr::NonNull;
+use core::ptr::{NonNull, slice_from_raw_parts, slice_from_raw_parts_mut};
 use core::sync::atomic::{AtomicPtr, Ordering};
 use crate::mem::allocator::{Allocator, AllocError};
 
 /// The strict memory allocator can allocate memory but never release.
 pub struct StrictAllocator {
-    start: NonNull<u8>,
+    pool: *mut [u8], // this can be static because we cannot deallocate
     end: NonNull<u8>,
     current: AtomicPtr<u8>,
 }
@@ -17,7 +17,7 @@ impl StrictAllocator {
     /// intended range.
     pub unsafe fn new(start: NonNull<u8>, size: usize) -> Self {
         StrictAllocator {
-            start,
+            pool: slice_from_raw_parts_mut(start.as_ptr(), size),
             end: NonNull::new_unchecked(start.as_ptr().add(size)),
             current: AtomicPtr::new(start.as_ptr())
         }
@@ -25,9 +25,13 @@ impl StrictAllocator {
 }
 
 impl Allocator for StrictAllocator {
-    fn allocate(&self, layout: Layout) -> Result<NonNull<u8>, AllocError> {
+    fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         let old = self.current.load(Ordering::Relaxed);
         let padding = old.align_offset(layout.align());
+        // Note(unsafe): No data is accessed before size check.
+        let memory = unsafe {
+            slice_from_raw_parts_mut(old.add(padding), layout.size())
+        };
 
         if self.capacity() < (layout.size() + padding) {
             return Err(AllocError);
@@ -39,9 +43,11 @@ impl Allocator for StrictAllocator {
                 old,
                 old.add(layout.size() + padding),
                 Ordering::SeqCst,
-                Ordering::Release
+                Ordering::Relaxed
             ) {
-                Ok(_) => Ok(NonNull::new_unchecked(old)),
+                Ok(_) => {
+                    Ok(NonNull::new_unchecked(memory))
+                },
                 Err(_) => Err(AllocError)
             }
         }
