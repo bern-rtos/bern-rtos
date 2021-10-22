@@ -1,13 +1,18 @@
 use core::alloc::Layout;
 use core::ptr::{NonNull, slice_from_raw_parts, slice_from_raw_parts_mut};
-use core::sync::atomic::{AtomicPtr, Ordering};
+use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 use crate::mem::allocator::{Allocator, AllocError};
 
 /// The strict memory allocator can allocate memory but never release.
 pub struct StrictAllocator {
-    pool: *mut [u8], // this can be static because we cannot deallocate
+    /// Memory block from memory can be allocated.
+    pool: *mut [u8],
+    /// End of memory block.
     end: NonNull<u8>,
+    /// Current allocation pointer.
     current: AtomicPtr<u8>,
+    /// Memory wasted due to padding.
+    wastage: AtomicUsize,
 }
 
 impl StrictAllocator {
@@ -19,7 +24,8 @@ impl StrictAllocator {
         StrictAllocator {
             pool: slice_from_raw_parts_mut(start.as_ptr(), size),
             end: NonNull::new_unchecked(start.as_ptr().add(size)),
-            current: AtomicPtr::new(start.as_ptr())
+            current: AtomicPtr::new(start.as_ptr()),
+            wastage: AtomicUsize::new(0),
         }
     }
 }
@@ -46,6 +52,7 @@ impl Allocator for StrictAllocator {
                 Ordering::Relaxed
             ) {
                 Ok(_) => {
+                    self.wastage.fetch_add(padding, Ordering::Relaxed);
                     Ok(NonNull::new_unchecked(memory))
                 },
                 Err(_) => Err(AllocError)
