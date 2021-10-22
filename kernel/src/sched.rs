@@ -5,6 +5,7 @@
 
 pub(crate) mod event;
 
+use core::alloc::Layout;
 use core::sync::atomic::{self, Ordering};
 use core::mem::MaybeUninit;
 use core::ptr::NonNull;
@@ -23,8 +24,11 @@ use crate::mem::{
 
 use bern_arch::{ICore, IScheduler, IStartup, IMemoryProtection};
 use bern_arch::arch::{ArchCore, Arch};
+use bern_arch::arch::memory_protection::Size;
 use bern_arch::memory_protection::{Config, Type, Access, Permission};
 use bern_conf::CONF;
+use crate::mem::allocator::{Allocator, AllocError};
+use crate::mem::strict_allocator::StrictAllocator;
 
 // These statics are MaybeUninit because, there currently no solution to
 // initialize an array dependent on a `const` size and a non-copy type.
@@ -37,6 +41,8 @@ static mut TASK_POOL: MaybeUninit<TaskPool> = MaybeUninit::uninit();
 static mut EVENT_POOL: MaybeUninit<EventPool> = MaybeUninit::uninit();
 
 static mut SCHEDULER: MaybeUninit<Scheduler> = MaybeUninit::uninit();
+
+static mut STACK_ALLOCATOR: MaybeUninit<StrictAllocator> = MaybeUninit::uninit();
 
 // todo: split scheduler into kernel and scheduler
 
@@ -95,6 +101,11 @@ pub fn init() {
     Arch::disable_memory_region(4);
 
     let core = ArchCore::new();
+
+    unsafe {
+        STACK_ALLOCATOR = MaybeUninit::new(
+            StrictAllocator::new(NonNull::new_unchecked(0x2001E000 as *mut u8), 5_000));
+    }
 
     // Init static pools, this is unsafe but stable for now. Temporary solution
     // until const fn works with MaybeUninit.
@@ -229,6 +240,13 @@ pub(crate) fn task_terminate() {
         task.set_transition(Transition::Terminating);
     });
     Arch::trigger_context_switch();
+}
+
+pub(crate) fn request_stack(size: Size) -> Result<NonNull<[u8]>, AllocError> {
+    unsafe {
+        let stack_alloc = &mut *STACK_ALLOCATOR.as_mut_ptr();
+        stack_alloc.allocate(Layout::from_size_align_unchecked(size.size_bytes(), size.size_bytes())) // todo: aligment
+    }
 }
 
 /// Tick occurred, update sleeping list

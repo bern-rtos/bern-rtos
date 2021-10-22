@@ -36,6 +36,7 @@ use bern_arch::arch::Arch;
 use bern_arch::memory_protection::{Config, Type, Access, Permission};
 use bern_arch::IMemoryProtection;
 use bern_conf::CONF;
+use crate::mem::allocator::AllocError;
 
 /// Transition for next context switch
 #[derive(Copy, Clone)]
@@ -94,6 +95,16 @@ impl TaskBuilder {
     /// Add a static stack to the task.
     pub fn static_stack(&mut self, stack: Stack) -> &mut Self {
         self.stack = Some(stack);
+        self
+    }
+
+    /// Set stack size.
+    pub fn stack(&mut self, size: Size) -> &mut Self {
+        let mut memory = match sched::request_stack(size) {
+            Ok(m) => m,
+            Err(_) => return self, // stack remains None
+        };
+        self.stack = Some(Stack::new(unsafe {memory.as_mut()}, size));
         self
     }
 
