@@ -32,30 +32,31 @@ impl StrictAllocator {
 
 impl Allocator for StrictAllocator {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
-        let old = self.current.load(Ordering::Relaxed);
-        let padding = old.align_offset(layout.align());
-        // Note(unsafe): No data is accessed before size check.
-        let memory = unsafe {
-            slice_from_raw_parts_mut(old.add(padding), layout.size())
-        };
+        loop { // CAS loop
+            let old = self.current.load(Ordering::Acquire);
+            let padding = old.align_offset(layout.align());
 
-        if self.capacity() < (layout.size() + padding) {
-            return Err(AllocError);
-        }
+            if self.capacity() < (layout.size() + padding) {
+                return Err(AllocError);
+            }
 
-        // Note(unsafe): we checked the size requirements already
-        unsafe {
-            match self.current.compare_exchange(
-                old,
-                old.add(layout.size() + padding),
-                Ordering::SeqCst,
-                Ordering::Relaxed
-            ) {
-                Ok(_) => {
-                    self.wastage.fetch_add(padding, Ordering::Relaxed);
-                    Ok(NonNull::new_unchecked(memory))
-                },
-                Err(_) => Err(AllocError)
+            // Note(unsafe): We checked the size requirements already
+            unsafe {
+                match self.current.compare_exchange(
+                    old,
+                    old.add(layout.size() + padding),
+                    Ordering::SeqCst,
+                    Ordering::Relaxed
+                ) {
+                    Ok(_) => {
+                        let memory = unsafe {
+                            slice_from_raw_parts_mut(old.add(padding), layout.size())
+                        };
+                        self.wastage.fetch_add(padding, Ordering::Relaxed);
+                        return Ok(NonNull::new_unchecked(memory));
+                    },
+                    Err(_) => continue, // Allocation was interrupted, restart
+                }
             }
         }
     }
