@@ -28,7 +28,7 @@ pub struct Event {
     /// Event identifier (randomize to protect access)
     id: usize,
     /// Tasks waiting for the event
-    pub pending: LinkedList<Task, super::TaskPool>,
+    pub pending: LinkedList<Task>,
     /// Wake strategy on event
     wake: Wake,
     /// Apply priority inversion
@@ -41,7 +41,7 @@ impl Event {
         unsafe {
             Event {
                 id,
-                pending: LinkedList::new(&*super::TASK_POOL.as_mut_ptr()),
+                pending: LinkedList::new(),
                 wake: Wake::WakeFirst,
                 priority_inversion: false,
             }
