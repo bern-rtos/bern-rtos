@@ -19,7 +19,7 @@ use crate::mem::{
     linked_list::*,
     boxed::Box,
     allocator::{Allocator, AllocError},
-    strict_allocator::StrictAllocator,
+    bump_allocator::BumpAllocator,
 };
 
 use bern_arch::{ICore, IScheduler, IStartup, IMemoryProtection};
@@ -36,8 +36,8 @@ use bern_conf::CONF;
 
 static mut SCHEDULER: MaybeUninit<Scheduler> = MaybeUninit::uninit();
 
-static mut STACK_ALLOCATOR: MaybeUninit<StrictAllocator> = MaybeUninit::uninit();
-static mut KERNEL_ALLOCATOR: MaybeUninit<StrictAllocator> = MaybeUninit::uninit();
+static mut STACK_ALLOCATOR: MaybeUninit<BumpAllocator> = MaybeUninit::uninit();
+static mut KERNEL_ALLOCATOR: MaybeUninit<BumpAllocator> = MaybeUninit::uninit();
 
 // todo: split scheduler into kernel and scheduler
 struct Scheduler {
@@ -99,11 +99,11 @@ pub fn init() {
     // todo: remove this hack
     unsafe {
         STACK_ALLOCATOR = MaybeUninit::new(
-            StrictAllocator::new(NonNull::new_unchecked(0x2001E000 as *mut u8), 5_120));
+            BumpAllocator::new(NonNull::new_unchecked(0x2001E000 as *mut u8), 5_120));
     }
     unsafe {
         KERNEL_ALLOCATOR = MaybeUninit::new(
-            StrictAllocator::new(NonNull::new_unchecked(0x2001B800 as *mut u8), 10_240));
+            BumpAllocator::new(NonNull::new_unchecked(0x2001B800 as *mut u8), 10_240));
     }
 
     // Init static pools, this is unsafe but stable for now. Temporary solution
@@ -233,7 +233,7 @@ pub(crate) fn task_terminate() {
 pub(crate) fn request_stack(size: Size) -> Result<NonNull<[u8]>, AllocError> {
     unsafe {
         let stack_alloc = &mut *STACK_ALLOCATOR.as_mut_ptr();
-        stack_alloc.allocate(Layout::from_size_align_unchecked(size.size_bytes(), size.size_bytes())) // todo: aligment
+        stack_alloc.allocate(Layout::from_size_align_unchecked(size.size_bytes(), size.size_bytes())) // todo: alignment
     }
 }
 

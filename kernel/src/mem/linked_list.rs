@@ -410,7 +410,7 @@ mod tests {
     use super::*;
     use core::borrow::Borrow;
     use std::mem::size_of;
-    use crate::mem::strict_allocator::StrictAllocator;
+    use crate::mem::bump_allocator::BumpAllocator;
 
     #[derive(Debug, Copy, Clone)]
     struct MyStruct {
@@ -420,8 +420,8 @@ mod tests {
     #[test]
     fn one_node() {
         static mut BUFFER: [u8; 128] = [0; 128];
-        static ALLOCATOR: StrictAllocator = unsafe {
-            StrictAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
+        static ALLOCATOR: BumpAllocator = unsafe {
+            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
         };
 
         let mut list = LinkedList::new();
@@ -454,8 +454,8 @@ mod tests {
     #[test]
     fn length() {
         static mut BUFFER: [u8; 128] = [0; 128];
-        static ALLOCATOR: StrictAllocator = unsafe {
-            StrictAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
+        static ALLOCATOR: BumpAllocator = unsafe {
+            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
         };
 
         let mut list = LinkedList::new();
@@ -472,8 +472,8 @@ mod tests {
     #[test]
     fn pushing_and_popping() {
         static mut BUFFER: [u8; 128] = [0; 128];
-        static ALLOCATOR: StrictAllocator = unsafe {
-            StrictAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
+        static ALLOCATOR: BumpAllocator = unsafe {
+            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
         };
 
         let mut list = LinkedList::new();
@@ -495,8 +495,8 @@ mod tests {
         const ELEMENT_LEN: usize = size_of::<BoxData<Node<MyStruct>>>();
         // Add some extra space for alignment
         static mut BUFFER: [u8; ELEMENT_LEN*16 + 4] = [0; ELEMENT_LEN*16 + 4];
-        static ALLOCATOR: StrictAllocator = unsafe {
-            StrictAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
+        static ALLOCATOR: BumpAllocator = unsafe {
+            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
         };
 
         let mut list = LinkedList::new();
@@ -510,8 +510,8 @@ mod tests {
     #[test]
     fn iterate() {
         static mut BUFFER: [u8; 128] = [0; 128];
-        static ALLOCATOR: StrictAllocator = unsafe {
-            StrictAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
+        static ALLOCATOR: BumpAllocator = unsafe {
+            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
         };
 
         let mut list = LinkedList::new();
@@ -532,8 +532,8 @@ mod tests {
     #[test]
     fn iterate_mut() {
         static mut BUFFER: [u8; 128] = [0; 128];
-        static ALLOCATOR: StrictAllocator = unsafe {
-            StrictAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
+        static ALLOCATOR: BumpAllocator = unsafe {
+            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
         };
 
         let mut list = LinkedList::new();
@@ -556,8 +556,8 @@ mod tests {
     #[test]
     fn find_and_take() {
         static mut BUFFER: [u8; 128] = [0; 128];
-        static ALLOCATOR: StrictAllocator = unsafe {
-            StrictAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
+        static ALLOCATOR: BumpAllocator = unsafe {
+            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
         };
 
         let mut list = LinkedList::new();
@@ -591,8 +591,8 @@ mod tests {
     #[test]
     fn insert_at_condition() {
         static mut BUFFER: [u8; 256] = [0; 256];
-        static ALLOCATOR: StrictAllocator = unsafe {
-            StrictAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
+        static ALLOCATOR: BumpAllocator = unsafe {
+            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
         };
 
         let mut list = LinkedList::new();

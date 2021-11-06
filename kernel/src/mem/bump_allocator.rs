@@ -4,7 +4,7 @@ use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 use crate::mem::allocator::{Allocator, AllocError};
 
 /// The strict memory allocator can allocate memory but never release.
-pub struct StrictAllocator {
+pub struct BumpAllocator {
     /// Memory block from memory can be allocated.
     pool: *mut [u8],
     /// End of memory block.
@@ -15,13 +15,13 @@ pub struct StrictAllocator {
     wastage: AtomicUsize,
 }
 
-impl StrictAllocator {
+impl BumpAllocator {
     ///
     /// # Safety
     /// `start` must be a valid address and the memory block must not exceed its
     /// intended range.
     pub unsafe fn new(start: NonNull<u8>, size: usize) -> Self {
-        StrictAllocator {
+        BumpAllocator {
             pool: slice_from_raw_parts_mut(start.as_ptr(), size),
             end: NonNull::new_unchecked(start.as_ptr().add(size)),
             current: AtomicPtr::new(start.as_ptr()),
@@ -30,7 +30,7 @@ impl StrictAllocator {
     }
 }
 
-impl Allocator for StrictAllocator {
+impl Allocator for BumpAllocator {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         loop { // CAS loop
             let old = self.current.load(Ordering::Acquire);
