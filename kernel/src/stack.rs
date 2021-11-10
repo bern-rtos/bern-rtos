@@ -16,14 +16,14 @@ pub struct Stack {
     /// Pointer to the first element of the stack
     bottom: *mut u8,
     /// Stack size
-    size: Size,
+    size: usize,
     /// Current stack pointer
     pub ptr: *mut usize,
 }
 
 impl Stack {
     /// Create a new stack object from an existing byte array with a fixed size
-    pub fn new(stack: &mut [u8], size: Size) -> Self {
+    pub fn new(stack: &mut [u8], size: usize) -> Self {
         Stack {
             bottom: stack.as_mut_ptr(),
             ptr: unsafe { stack.as_mut_ptr().offset(stack.len() as isize) } as *mut usize,
@@ -37,7 +37,7 @@ impl Stack {
     }
 
     /// Stack size in bytes
-    pub fn size(&self) -> Size {
+    pub fn size(&self) -> usize {
         self.size
     }
 }

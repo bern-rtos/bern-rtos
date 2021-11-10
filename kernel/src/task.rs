@@ -41,6 +41,8 @@ use bern_conf::CONF;
 use crate::mem::allocator::AllocError;
 use crate::process::Process;
 
+const MPU_MIN_SIZE: usize = 32;
+
 /// Transition for next context switch
 #[derive(Copy, Clone)]
 #[repr(u8)]
@@ -104,8 +106,12 @@ impl<'a> TaskBuilder<'a> {
     }
 
     /// Set stack size.
-    pub fn stack(&mut self, size: Size) -> &mut Self {
-        let mut memory = match self.parent.request_memory(unsafe { Layout::from_size_align_unchecked(size.size_bytes(), 4) }) {
+    pub fn stack(&mut self, size: usize) -> &mut Self {
+        // The effective stack is slightly larger than request to provide memory
+        // protection padding.
+        let padding = size % MPU_MIN_SIZE + MPU_MIN_SIZE;
+
+        let mut memory = match self.parent.request_memory(unsafe { Layout::from_size_align_unchecked(size + padding, 4) }) {
             Ok(m) => m,
             Err(_) => return self, // stack remains None
         };
@@ -192,17 +198,26 @@ impl<'a> TaskBuilder<'a> {
         stack.ptr = ptr as *mut usize;
 
         // prepare memory region configs
-        let memory_regions = [Arch::prepare_memory_region(
-            5,
+        let memory_regions = [
+            Arch::prepare_memory_region(
+            0,
             Config {
-                addr: stack.bottom_ptr() as *const _,
+                addr: self.parent.start_addr() as *const _,
                 memory: Type::SramInternal,
-                size: stack.size(),
+                size: self.parent.size(),
                 access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
                 executable: false
             }),
-            Arch::prepare_unused_region(6),
-            Arch::prepare_unused_region(7)
+            Arch::prepare_memory_region(
+            1,
+            Config {
+                addr: stack.bottom_ptr() as *const _,
+                memory: Type::SramInternal,
+                size: Size::S32,
+                access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
+                executable: false
+            }),
+            Arch::prepare_unused_region(2)
         ];
 
         let mut task = Task {

@@ -56,9 +56,13 @@ struct Scheduler {
 pub fn init() {
     Arch::init_static_memory();
 
+    // Memory regions 0..2 are reserved for tasks
+    Arch::disable_memory_region(0);
+    Arch::disable_memory_region(1);
+    Arch::disable_memory_region(2);
     // allow flash read/exec
     Arch::enable_memory_region(
-        0,
+        3,
         Config {
             addr: CONF.memory.flash.start_address as *const _,
             memory: Type::Flash,
@@ -70,7 +74,7 @@ pub fn init() {
 
     // allow peripheral RW
     Arch::enable_memory_region(
-        1,
+        4,
         Config {
             addr: CONF.memory.peripheral.start_address as *const _,
             memory: Type::Peripheral,
@@ -82,7 +86,7 @@ pub fn init() {
     //allow .shared section RW access
     let shared = Arch::region();
     Arch::enable_memory_region(
-        2,
+        5,
         Config {
             addr: shared.start,
             memory: Type::SramInternal,
@@ -91,16 +95,14 @@ pub fn init() {
             executable: false
         });
 
-    Arch::disable_memory_region(3);
-    Arch::disable_memory_region(4);
+    /*Arch::enable_memory_region(
+        3,
+    Arch::disable_memory_region(6);
+    Arch::disable_memory_region(7);
 
     let core = ArchCore::new();
 
     // todo: remove this hack
-    unsafe {
-        STACK_ALLOCATOR = MaybeUninit::new(
-            BumpAllocator::new(NonNull::new_unchecked(0x2001E000 as *mut u8), 5_120));
-    }
     unsafe {
         KERNEL_ALLOCATOR = MaybeUninit::new(
             BumpAllocator::new(NonNull::new_unchecked(0x2001B800 as *mut u8), 10_240));
@@ -228,13 +230,6 @@ pub(crate) fn task_terminate() {
         task.set_transition(Transition::Terminating);
     });
     Arch::trigger_context_switch();
-}
-
-pub(crate) fn request_stack(size: Size) -> Result<NonNull<[u8]>, AllocError> {
-    unsafe {
-        let stack_alloc = &mut *STACK_ALLOCATOR.as_mut_ptr();
-        stack_alloc.allocate(Layout::from_size_align_unchecked(size.size_bytes(), size.size_bytes())) // todo: alignment
-    }
 }
 
 /// Tick occurred, update sleeping list
