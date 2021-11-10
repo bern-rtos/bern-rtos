@@ -21,6 +21,8 @@
 //! Tasks can be spawened from `main()` or within other tasks.
 
 #![allow(unused)]
+
+use core::alloc::Layout;
 use core::mem;
 use core::ptr;
 use core::ops::Deref;
@@ -37,6 +39,7 @@ use bern_arch::memory_protection::{Config, Type, Access, Permission};
 use bern_arch::IMemoryProtection;
 use bern_conf::CONF;
 use crate::mem::allocator::AllocError;
+use crate::process::Process;
 
 /// Transition for next context switch
 #[derive(Copy, Clone)]
@@ -84,14 +87,16 @@ impl Into<usize> for Priority {
 }
 
 /// Builder to create a new task
-pub struct TaskBuilder {
+pub struct TaskBuilder<'a> {
+    /// Parent process
+    parent: &'a mut Process,
     /// Task stack
     stack: Option<Stack>,
     /// Task priority
     priority: Priority,
 }
 
-impl TaskBuilder {
+impl<'a> TaskBuilder<'a> {
     /// Add a static stack to the task.
     pub fn static_stack(&mut self, stack: Stack) -> &mut Self {
         self.stack = Some(stack);
@@ -100,7 +105,7 @@ impl TaskBuilder {
 
     /// Set stack size.
     pub fn stack(&mut self, size: Size) -> &mut Self {
-        let mut memory = match sched::request_stack(size) {
+        let mut memory = match self.parent.request_memory(unsafe { Layout::from_size_align_unchecked(size.size_bytes(), 4) }) {
             Ok(m) => m,
             Err(_) => return self, // stack remains None
         };
@@ -233,8 +238,9 @@ pub struct Task {
 
 impl Task {
     /// Create a new task using the [`TaskBuilder`]
-    pub fn new() -> TaskBuilder {
+    pub fn new<'a>(parent: &'a mut Process) -> TaskBuilder<'a> {
         TaskBuilder {
+            parent,
             stack: None,
             // set default to lowest priority above idle
             priority: Priority(CONF.task.priorities - 2),

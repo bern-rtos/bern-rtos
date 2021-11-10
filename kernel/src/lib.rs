@@ -18,6 +18,7 @@
 #![feature(asm)]
 #![feature(naked_functions)]
 
+pub mod process;
 pub mod task;
 pub mod sched;
 pub mod syscall;
