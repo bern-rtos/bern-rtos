@@ -105,7 +105,9 @@ pub fn init() {
     // todo: remove this hack
     unsafe {
         KERNEL_ALLOCATOR = MaybeUninit::new(
-            BumpAllocator::new(NonNull::new_unchecked(0x2001B800 as *mut u8), 10_240));
+            BumpAllocator::new(
+                NonNull::new_unchecked(0x2001B800 as *mut u8),
+                NonNull::new_unchecked((0x2001B800 + 10_240) as *mut u8)));
     }
 
     // Init static pools, this is unsafe but stable for now. Temporary solution

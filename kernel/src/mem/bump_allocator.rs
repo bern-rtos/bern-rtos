@@ -5,8 +5,6 @@ use crate::mem::allocator::{Allocator, AllocError};
 
 /// The strict memory allocator can allocate memory but never release.
 pub struct BumpAllocator {
-    /// Memory block from memory can be allocated.
-    pool: *mut [u8],
     /// End of memory block.
     end: NonNull<u8>,
     /// Current allocation pointer.
@@ -20,10 +18,9 @@ impl BumpAllocator {
     /// # Safety
     /// `start` must be a valid address and the memory block must not exceed its
     /// intended range.
-    pub unsafe fn new(start: NonNull<u8>, size: usize) -> Self {
+    pub const unsafe fn new(start: NonNull<u8>, end: NonNull<u8>) -> Self {
         BumpAllocator {
-            pool: slice_from_raw_parts_mut(start.as_ptr(), size),
-            end: NonNull::new_unchecked(start.as_ptr().add(size)),
+            end,
             current: AtomicPtr::new(start.as_ptr()),
             wastage: AtomicUsize::new(0),
         }
@@ -49,9 +46,7 @@ impl Allocator for BumpAllocator {
                     Ordering::Relaxed
                 ) {
                     Ok(_) => {
-                        let memory = unsafe {
-                            slice_from_raw_parts_mut(old.add(padding), layout.size())
-                        };
+                        let memory = slice_from_raw_parts_mut(old.add(padding), layout.size());
                         self.wastage.fetch_add(padding, Ordering::Relaxed);
                         return Ok(NonNull::new_unchecked(memory));
                     },
