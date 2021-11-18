@@ -91,7 +91,7 @@ impl Into<usize> for Priority {
 /// Builder to create a new task
 pub struct TaskBuilder<'a> {
     /// Parent process
-    parent: &'a mut Process,
+    parent: &'a Process,
     /// Task stack
     stack: Option<Stack>,
     /// Task priority
@@ -253,7 +253,7 @@ pub struct Task {
 
 impl Task {
     /// Create a new task using the [`TaskBuilder`]
-    pub fn new<'a>(parent: &'a mut Process) -> TaskBuilder<'a> {
+    pub fn new(parent: &Process) -> TaskBuilder {
         TaskBuilder {
             parent,
             stack: None,

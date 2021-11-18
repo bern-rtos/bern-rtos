@@ -1,5 +1,8 @@
 use core::alloc::Layout;
+use core::cell::Cell;
 use core::ptr::NonNull;
+use core::sync::atomic::AtomicBool;
+use bern_common::process::ProcessMemory;
 use crate::mem::allocator::{Allocator, AllocError};
 use crate::mem::bump_allocator::BumpAllocator;
 use crate::mem::Size;
@@ -7,54 +10,53 @@ use crate::stack::Stack;
 use crate::task;
 
 pub struct Process {
-    proc_memory: &'static mut [u8],
+    memory: ProcessMemory,
     proc_allocator: BumpAllocator,
-    size: Size,
+    init: Cell<bool>,
 }
 
 impl Process {
-    pub fn new(proc_memory: &'static mut [u8], size: Size) -> Self {
+    pub const fn new(memory: ProcessMemory) -> Self {
         let proc_allocator = unsafe {
             BumpAllocator::new(
-                NonNull::new_unchecked(proc_memory.as_mut_ptr()),
-                proc_memory.len()
+                NonNull::new_unchecked(memory.heap_start as *mut _),
+                NonNull::new_unchecked(memory.heap_end as *mut _)
             )};
 
         Process {
-            size,
-            proc_memory,
-            proc_allocator
+            memory,
+            proc_allocator,
+            init: Cell::new(false),
         }
     }
 
-    pub fn create_thread(&mut self) -> task::TaskBuilder {
+    fn lazy_init(&self) {
+        if self.init.get() {
+            return;
+        }
+
+        /* todo: init process bss */
+
+        self.init.set(false);
+    }
+
+    pub fn create_thread(&self) -> task::TaskBuilder {
+        self.lazy_init();
         task::Task::new(self)
     }
 
-    pub(crate) fn request_memory(&mut self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+    pub(crate) fn request_memory(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         self.proc_allocator.allocate(layout)
     }
 
     pub(crate) fn start_addr(&self) -> *const u8 {
-        self.proc_memory.as_ptr()
+        unsafe { self.memory.bss_start }
     }
 
     pub(crate) fn size(&self) -> Size {
-        self.size
+        unsafe { Size::from_bytes(self.memory.size) }
     }
 }
 
-
-#[macro_export]
-macro_rules! alloc_process_memory {
-    ($name:ident, $size:tt) => {
-        {
-            #[link_section = ".proc.$name"]
-            static mut MEMORY: $crate::stack::Aligned<$crate::bern_arch::alignment_from_size!($size), [u8; $size]> =
-                $crate::stack::Aligned([0; $size]);
-
-            // this is unsound, because the same stack can 'allocated' multiple times
-            unsafe { &mut *MEMORY }
-        }
-    };
-}
+// Note(unsafe): The values of `Process` are read only.
+unsafe impl Sync for Process { }

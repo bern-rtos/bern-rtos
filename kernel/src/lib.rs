@@ -29,6 +29,7 @@ pub mod mem;
 
 pub use crate::syscall::*;
 pub use bern_kernel_macros::*;
+pub use bern_common as common;
 
 #[allow(unused_imports)]
 use bern_arch::arch as _;
