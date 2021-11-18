@@ -4,6 +4,7 @@
 //! - simplify the kernel usage
 //! - make kernel development less tedious (used internally)
 mod enum_map;
+mod process;
 
 use proc_macro::TokenStream;
 use quote::ToTokens;
@@ -46,6 +47,14 @@ use quote::ToTokens;
 #[proc_macro]
 pub fn enum_map(input: TokenStream) -> TokenStream {
     let map = syn::parse_macro_input!(input as enum_map::EnumMap);
+    let mut output = proc_macro2::TokenStream::new();
+    map.to_tokens(&mut output);
+    TokenStream::from(output)
+}
+
+#[proc_macro]
+pub fn new_process(input: TokenStream) -> TokenStream {
+    let map = syn::parse_macro_input!(input as process::ProcessInfo);
     let mut output = proc_macro2::TokenStream::new();
     map.to_tokens(&mut output);
     TokenStream::from(output)
