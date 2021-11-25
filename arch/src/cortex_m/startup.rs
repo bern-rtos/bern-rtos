@@ -5,26 +5,19 @@ use crate::arch::Arch;
 use r0;
 use crate::startup::Region;
 
-extern "C" {
-    static mut __sshared: u32;
-    static mut __eshared: u32;
-    static __sishared: u32;
-}
+// todo: r0 is deprecated, replace with assembly
 
 impl IStartup for Arch {
-    fn init_static_memory() {
+    fn init_static_region(mut region: Region) {
         unsafe {
-            let shared_ptr = &mut __sshared;
-            r0::init_data(shared_ptr, &mut __eshared, &__sishared);
-        }
-    }
+            let mut start = region.start as *mut u32;
+            let end = region.end as *mut u32;
+            let mut data = match region.data {
+                None => return,
+                Some(d) => d,
+            } as *const u32;
 
-    fn region() -> Region {
-        unsafe {
-            Region {
-                start: &__sshared as *const _ as *const usize,
-                stop: &__eshared as *const _ as *const usize,
-            }
+            r0::init_data(start, end, data);
         }
     }
 }
