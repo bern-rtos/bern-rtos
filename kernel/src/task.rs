@@ -109,13 +109,13 @@ impl TaskBuilder {
     pub fn stack(&mut self, size: usize) -> &mut Self {
         // The effective stack is slightly larger than request to provide memory
         // protection padding.
-        let padding = size % MPU_MIN_SIZE + MPU_MIN_SIZE;
+        let padding = MPU_MIN_SIZE;
 
-        let mut memory = match self.parent.request_memory(unsafe { Layout::from_size_align_unchecked(size + padding, 4) }) {
+        let mut memory = match self.parent.request_memory(unsafe { Layout::from_size_align_unchecked(size + padding, 32) }) {
             Ok(m) => m,
             Err(_) => return self, // stack remains None
         };
-        self.stack = Some(Stack::new(unsafe {memory.as_mut()}, size));
+        self.stack = Some(Stack::new(unsafe {memory.as_mut()}, size + padding));
         self
     }
 
@@ -214,7 +214,7 @@ impl TaskBuilder {
                 addr: stack.bottom_ptr() as *const _,
                 memory: Type::SramInternal,
                 size: Size::S32,
-                access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
+                access: Access { user: Permission::NoAccess, system: Permission::NoAccess },
                 executable: false
             }),
             Arch::prepare_unused_region(2)
