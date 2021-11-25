@@ -100,7 +100,7 @@ SECTIONS {{
         /* Process static memory */
         . = ALIGN(8);
         __smprocess_{0} = .;
-        *(.process.{0});
+        KEEP(*(.process.{0}))
         . = ALIGN(8);
         __emprocess_{0} = .;
 
@@ -110,10 +110,11 @@ SECTIONS {{
         . = __smprocess_{0} + {1};
         __ehprocess_{0} = .;
 
-        ASSERT(__emprocess_{0} <= __ehprocess_{0}, "Error: No room left in process {0}.");
+        ASSERT(__emprocess_{0} <= __ehprocess_{0}, "ERROR(bern-kernel): No memory left in process {0}.");
+        ASSERT(__smprocess_{0} > 0, "ERROR(bern-kernel): Section was optimized out, please place a variable in {0}.");
     }} > RAM
     __siprocess_{0} = LOADADDR(.process_{0});
-}} INSERT AFTER .bss;
+}} INSERT AFTER .shared_global;
 "###,
                process_name,
                process_size

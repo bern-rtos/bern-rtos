@@ -14,12 +14,7 @@ use crate::task::{self, Task, Transition};
 use crate::syscall;
 use crate::time;
 use crate::sync::critical_section;
-use crate::mem::{
-    linked_list::*,
-    boxed::Box,
-    allocator::AllocError,
-    bump_allocator::BumpAllocator,
-};
+use crate::mem::{linked_list::*, boxed::Box, allocator::AllocError, bump_allocator::BumpAllocator, Size};
 use crate::kernel::static_memory;
 
 use bern_arch::{ICore, IScheduler, IStartup, IMemoryProtection};
@@ -62,7 +57,7 @@ pub fn init() {
     Arch::disable_memory_region(1);
     Arch::disable_memory_region(2);
 
-    // allow flash read/exec
+    // Allow flash read/exec
     Arch::enable_memory_region(
         3,
         Config {
@@ -73,7 +68,7 @@ pub fn init() {
             executable: true
         });
 
-    // allow peripheral RW
+    // Allow peripheral RW
     Arch::enable_memory_region(
         4,
         Config {
@@ -84,7 +79,17 @@ pub fn init() {
             executable: false
         });
 
-    Arch::disable_memory_region(5);
+    // Allow .data & .bss read/write
+    Arch::enable_memory_region(
+        5,
+        Config {
+            addr: CONF.memory.sram.start_address as *const _,
+            memory: Type::SramInternal,
+            size: Size::S4K, // todo: read from linker symbol or config
+            access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
+            executable: false
+        });
+
     Arch::disable_memory_region(6);
     Arch::disable_memory_region(7);
 
