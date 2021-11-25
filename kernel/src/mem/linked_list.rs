@@ -5,25 +5,32 @@
 //!
 //! In contrast to [`std::collections::LinkedList`](https://doc.rust-lang.org/alloc/collections/linked_list/struct.LinkedList.html)
 //! you will only ever get a reference to a node and never a copy/move.
+//!
+//! # Atomicity
+//! In an attempt to reduce interrupt latency and with multicore systems in
+//! mind, the linked list uses atomic operations. However, these are not safe
+//! yet. Use a critical section when accessing the linked list.
 
 #![allow(unused)]
 
-use core::ptr;
+use core::{mem, ptr};
 use core::ptr::NonNull;
 use core::mem::MaybeUninit;
 use core::cell::RefCell;
 use core::borrow::BorrowMut;
-use crate::mem::boxed::Box;
-use crate::mem::pool_allocator::{self, PoolAllocator};
+use crate::mem::boxed::{Box, BoxData};
 use core::ops::{Deref, DerefMut};
-
-type Link<T> = Option<NonNull<Node<T>>>;
+use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
+use core::marker::PhantomData;
+use crate::mem::allocator::{Allocator, AllocError};
 
 /******************************************************************************/
 
+type Link<T> = AtomicPtr<BoxData<Node<T>>>;
+
 /// An element/node of a list.
 // Copy needed for initialization
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug)]
 pub struct Node<T> {
     inner: T,
     prev: Link<T>,
@@ -35,8 +42,8 @@ impl<T> Node<T> {
     pub fn new(element: T) -> Self {
         Node {
             inner: element,
-            prev: None,
-            next: None,
+            prev: AtomicPtr::default(),
+            next: AtomicPtr::default(),
         }
     }
 }
@@ -64,18 +71,19 @@ impl<T> DerefMut for Node<T> {
 ///
 /// # Examples
 ///
-/// Create a new list with `ArrayPool` allocator:
+/// Create a new list:
 /// ```no_run
-/// static POOL: ArrayPool<Node<MyStruct>,16> = ArrayPool::new([None; 16]);
-/// let mut list_a = LinkedList::new(&POOL);
-/// let mut list_b = LinkedList::new(&POOL);
+/// let mut list_a = LinkedList::new();
+/// let mut list_b = LinkedList::new();
 /// ```
 ///
-/// Add element to the end of a list:
+/// Add element to the end of a list with an allocator:
 /// ```
-/// list_a.emplace_back(MyStruct { id: 42 });
-/// list_a.emplace_back(MyStruct { id: 54 });
+/// static ALLOCATOR: StrictAllocator = StrictAllocator::new(NonNull::new_unchecked(0x2001E000 as *mut u8), 5_000);
+/// list_a.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
+/// list_a.emplace_back(MyStruct { id: 54 }, &ALLOCATOR);
 ///```
+/// Nodes in the same list can be allocated in different memory sections.
 ///
 /// Move an element from one to another list:
 /// ```
@@ -83,94 +91,97 @@ impl<T> DerefMut for Node<T> {
 /// list_a.push_back(node);
 ///```
 #[derive(Debug)]
-pub struct LinkedList<T,P>
-    where P: PoolAllocator<Node<T>> + 'static
-{
+pub struct LinkedList<T> {
     head: Link<T>,
     tail: Link<T>,
-    pool: &'static P,
-    len: usize,
+    len: AtomicUsize,
 }
 
-impl<T,P> LinkedList<T,P>
-    where P: PoolAllocator<Node<T>> + 'static
-{
-    /// Create a new list from an allocator
-    pub fn new(pool: &'static P) -> Self {
+impl<T> LinkedList<T> {
+    /// Create an empty list
+    pub fn new() -> Self {
         LinkedList {
-            head: None,
-            tail: None,
-            pool,
-            len: 0,
+            head: AtomicPtr::default(),
+            tail: AtomicPtr::default(),
+            len: AtomicUsize::new(0),
         }
     }
 
     /// Allocate a new element and move it to the end of the list
     ///
     /// **Note:** This fails when we're out of memory
-    pub fn emplace_back(&mut self, element: T) -> Result<(), pool_allocator::Error> {
-        let node = self.pool.insert(Node::new(element));
-        node.map(|n| {
+    pub fn emplace_back(&self, element: T, alloc: &'static dyn Allocator) -> Result<(), AllocError> {
+        let node = Box::try_new_in(Node::new(element), alloc);
+        // Note(unsafe): map() is only called if the pointer is non-null.
+        node.map(|mut n| unsafe {
             self.push_back(n);
         })
     }
 
     /// Insert a node at the end on the list
-    pub fn push_back(&mut self, mut node: Box<Node<T>>) {
-        node.prev = self.tail;
+    pub fn push_back(&self, mut node: Box<Node<T>>) {
+        let mut node_raw = Box::leak(node);
+        let mut tail = self.tail.load(Ordering::Acquire);
 
-        let link = Some(node.into_nonnull());
-        // NOTE(unsafe):  we check tail is Some()
+        // Note(unsafe): Pointer requirements are met.
         unsafe {
-            match self.tail {
-                None => self.head = link,
-                Some(mut tail) => tail.as_mut().next = link,
-            }
+            (**node_raw.as_ref()).prev.store(tail, Ordering::Relaxed);
+
+            match tail.as_mut() {
+                None => self.head.store(node_raw.as_ptr(), Ordering::Relaxed),
+                Some(tail) => (*tail).next.store(node_raw.as_ptr(), Ordering::Relaxed),
+            };
         }
 
-        self.tail = link;
-        self.len += 1;
+        self.tail.store(node_raw.as_ptr(), Ordering::Release);
+        self.len.fetch_add(1, Ordering::Relaxed);
     }
 
     /// Remove and return the first node from the list if there is any
-    pub fn pop_front(&mut self) -> Option<Box<Node<T>>> {
-        let mut front = self.head.take();
+    pub fn pop_front(&self) -> Option<Box<Node<T>>> {
+        // Note(unsafe): Pointer requirements are met.
+        unsafe {
+            self.head.load(Ordering::Relaxed).as_mut().map(|node| {
+                let next = (*node).next.load(Ordering::Relaxed);
+                self.head.store(next, Ordering::Relaxed);
 
-        match front {
-            Some(mut node) => unsafe {
-                self.head = node.as_ref().next;
-                if let Some(mut head) = self.head {
-                    head.as_mut().prev = None;
+                if let Some(head) = next.as_mut() {
+                    (*head).prev.store(ptr::null_mut(), Ordering::Relaxed);
                 }
-                if self.tail == Some(node) {
-                    self.tail = node.as_ref().next;
+
+                if self.tail.load(Ordering::Acquire) == node {
+                    self.tail.store(next, Ordering::Release);
                 }
-                node.as_mut().next = None;
-                self.len -= 1;
-                Some(Box::from_raw(node))
-            },
-            None => None,
+
+                (*node).next.store(ptr::null_mut(), Ordering::Relaxed);
+                self.len.fetch_sub(1, Ordering::Relaxed);
+                Box::from_raw(NonNull::new_unchecked(node))
+            })
         }
     }
 
     /// Insert a node exactly before a given node
     ///
     /// **Note:** prefer [`Self::insert_when()`] if possible
-    pub fn insert(&mut self, mut node: Box<Node<T>>, mut new_node: Box<Node<T>>) {
-        let mut node = node.into_nonnull();
-        let mut new_node = new_node.into_nonnull();
+    pub fn insert(&self, mut node: Box<Node<T>>, mut new_node: Box<Node<T>>) {
+        let node_ptr = Box::leak(node);
+        let new_node_ptr = Box::leak(new_node);
+
+        // Note(unsafe): Pointer requirements are met.
         unsafe {
-            match node.as_mut().prev {
-                Some(mut prev) => prev.as_mut().next = Some(new_node),
-                None => self.head = Some(new_node),
+            match (*node_ptr.as_ref()).prev.load(Ordering::Acquire).as_mut() {
+                None => self.head.store(new_node_ptr.as_ptr(), Ordering::Relaxed),
+                Some(prev) => (*prev).next.store(new_node_ptr.as_ptr(), Ordering::Relaxed),
             }
-            node.as_mut().prev = Some(new_node);
-            new_node.as_mut().next = Some(node);
+
+            (*node_ptr.as_ref()).prev.store(new_node_ptr.as_ptr(), Ordering::Release);
+            (*new_node_ptr.as_ref()).next.store(node_ptr.as_ptr(), Ordering::Relaxed);
         }
-        self.len += 1;
+
+        self.len.fetch_add(1, Ordering::Relaxed);
     }
 
-    /// Insert a node before the first failed match given a comparison criteria
+    /// Insert a node before the first succeeding match given a comparison criteria.
     ///
     /// # Example
     /// Insert task `pausing` before the element where the next wake-up time
@@ -181,79 +192,112 @@ impl<T,P> LinkedList<T,P>
     /// tasks_sleeping.insert_when(
     ///     pausing,
     ///     |pausing, task| {
-    ///         pausing.next_wut() < task.next_wut()
+    ///         pausing.next_wut() > task.next_wut()
     ///     });
     /// ```
-    pub fn insert_when(&mut self, mut node: Box<Node<T>>, criteria: impl Fn(&T, &T) -> bool) {
-        if let Some(mut current) = self.head {
-            loop { unsafe {
-                if criteria(&*node, &*current.as_ref()) {
-                    self.insert(Box::from_raw(current), node);
-                    return;
+    pub fn insert_when(&self, mut node: Box<Node<T>>, criteria: impl Fn(&T, &T) -> bool) {
+        // Note(unsafe): Pointer requirements are met.
+        let mut current = unsafe { self.head.load(Ordering::Relaxed).as_mut() };
+        if let Some(mut current) = current {
+            loop {
+                // Note(unsafe): current is checked to be non-null above.
+                unsafe {
+                    if criteria(&(*node).inner, &current.inner) {
+                        self.insert(Box::from_raw(NonNull::new_unchecked(current)), node);
+                        return;
+                    }
+
+                    current = match current.next.load(Ordering::Relaxed).as_mut() {
+                        None => break,
+                        Some(next) => next,
+                    };
                 }
-                current = match current.as_ref().next {
-                    Some(node) => node,
-                    None => break,
-                }
-            }}
+            }
         }
         self.push_back(node);
     }
 
     /// Get a reference to the first value of the list if there is a node
     pub fn front(&self) -> Option<&T> {
-        self.head.map(|front| unsafe { &**front.as_ref() })
+        // Note(unsafe): Pointer requirements are met.
+        unsafe {
+            self.head.load(Ordering::Relaxed).as_mut().map(|head|
+                &(*head).inner
+            )
+        }
     }
 
     /// Get a reference to last value of the list if there is a node
     pub fn back(&self) -> Option<&T> {
-        self.tail.map(|back| unsafe { &**back.as_ref() })
+        // Note(unsafe): Pointer requirements are met.
+        unsafe {
+            self.tail.load(Ordering::Relaxed).as_mut().map(|tail|
+                &(*tail).inner
+            )
+        }
     }
 
     /// Get the current length of the list
     pub fn len(&self) -> usize {
-        self.len
+        self.len.load(Ordering::Relaxed)
     }
+
 
     /// Remove a node from any point in the list.
     ///
     /// # Safety
     /// A node is only allowed to be unliked once.
-    unsafe fn unlink(&mut self, node: &mut Node<T>) -> Box<Node<T>> {
-        match node.prev {
-            Some(mut prev) => prev.as_mut().next = node.next,
-            None => self.head = node.next,
+    unsafe fn unlink(&self, node: Box<Node<T>>) -> Box<Node<T>> {
+        self.unlink_raw(Box::leak(node))
+    }
+
+    /// Remove a node from any point in the list.
+    ///
+    /// # Safety
+    /// - A node is only allowed to be unliked once.
+    /// - Must unlinked in the correct list.
+    unsafe fn unlink_raw(&self, mut node: NonNull<BoxData<Node<T>>>) -> Box<Node<T>> {
+        let prev = (*node.as_mut()).prev.load(Ordering::Relaxed);
+        let next = (*node.as_mut()).next.load(Ordering::Relaxed);
+
+        match prev.as_mut() {
+            None => self.head.store(next, Ordering::Relaxed),
+            Some(prev) => prev.next.store(next, Ordering::Relaxed),
         };
 
-        match node.next {
-            Some(mut next) => next.as_mut().prev = node.prev,
-            None => self.tail = node.prev,
+        match next.as_mut() {
+            None => self.tail.store(prev, Ordering::Relaxed),
+            Some(next) => next.prev.store(prev, Ordering::Relaxed),
         };
 
-        node.prev = None;
-        node.next = None;
-        self.len -= 1;
+        (*node.as_mut()).prev.store(ptr::null_mut(), Ordering::Relaxed);
+        (*node.as_mut()).next.store(ptr::null_mut(), Ordering::Relaxed);
+        self.len.fetch_sub(1, Ordering::Relaxed);
 
-        Box::from_raw(NonNull::new_unchecked(node))
+        Box::from_raw(node)
     }
 
     /// Provides a forward iterator.
     pub fn iter(&self) -> Iter<'_, T> {
-        Iter {
-            next: self.head.map(|node| unsafe { & *node.as_ptr() }),
-        }
+        // Note(unsafe): Pointer requirements are met.
+        let next = unsafe {
+            self.head.load(Ordering::Relaxed).as_ref()
+        };
+        Iter { next }
     }
 
     /// Provides a forward iterator with mutable references.
     pub fn iter_mut(&self) -> IterMut<'_, T> {
-        IterMut {
-            next: self.head.map(|node| unsafe { &mut *node.as_ptr() })
-        }
+        // Note(unsafe): Pointer requirements are met.
+        let next = unsafe {
+            self.head.load(Ordering::Relaxed).as_mut()
+        };
+        IterMut { next }
     }
 
     /// Provides a cursor with editing operation at the front element.
-    pub fn cursor_front_mut(&mut self) -> Cursor<'_, T, P> {
-        Cursor { node: self.head, list: self }
+    pub fn cursor_front_mut(&self) -> Cursor<'_, T> {
+        Cursor { node: self.head.load(Ordering::Relaxed), list: self }
     }
 }
 
@@ -262,19 +306,21 @@ impl<T,P> LinkedList<T,P>
 /// An iterator over the elements of a [`LinkedList`].
 ///
 /// This `struct` is created by [`LinkedList::iter()`].
-pub struct Iter<'a, T>
-{
-    next: Option<&'a Node<T>>,
+pub struct Iter<'a, T> {
+    next: Option<&'a BoxData<Node<T>>>,
 }
 
-impl<'a,T> Iterator for Iter<'a,T>
+impl<'a,T> Iterator for Iter<'a, T>
 {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.next.map(|node| unsafe {
-            self.next = node.next.map(|next| next.as_ref());
-            &**node
+            // Note(unsafe): Pointer requirements are met.
+            self.next = unsafe {
+                (*node).next.load(Ordering::Relaxed).as_ref()
+            };
+            &(*node).inner
         })
     }
 }
@@ -283,7 +329,7 @@ impl<'a,T> Iterator for Iter<'a,T>
 ///
 /// This `struct` is created by [`LinkedList::iter_mut()`].
 pub struct IterMut<'a, T> {
-    next: Option<&'a mut Node<T>>,
+    next: Option<&'a mut BoxData<Node<T>>>,
 }
 
 impl<'a, T> Iterator for IterMut<'a, T> {
@@ -291,8 +337,11 @@ impl<'a, T> Iterator for IterMut<'a, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.next.take().map(|node| unsafe {
-            self.next = node.next.map(|mut next| next.as_mut());
-            &mut **node
+            // Note(unsafe): Pointer requirements are met.
+            self.next = unsafe {
+                (*node).next.load(Ordering::Relaxed).as_mut()
+            };
+            &mut (*node).inner
         })
     }
 }
@@ -304,40 +353,53 @@ impl<'a, T> Iterator for IterMut<'a, T> {
 /// In contrast to an iterator a cursor can move from front to back and take an
 /// element out of the list.
 #[derive(Debug)]
-pub struct Cursor<'a,T,P>
-    where P: PoolAllocator<Node<T>> + 'static
-{
-    node: Link<T>,
-    list: &'a mut LinkedList<T,P>,
+pub struct Cursor<'a,T> {
+    node: *mut BoxData<Node<T>>,
+    list: &'a LinkedList<T>,
 }
 
-impl<'a, T, P> Cursor<'a, T, P>
-    where P: PoolAllocator<Node<T>> + Sized
-{
+impl<'a, T> Cursor<'a, T> {
     /// Get reference to value of node if there is any
     pub fn inner(&self) -> Option<&T> {
-        self.node.map(|node| unsafe { &**node.as_ref() })
+        // Note(unsafe): Pointer requirements are met.
+        unsafe {
+            self.node.as_ref().map(|node|
+                &(*node).inner
+            )
+        }
     }
 
     /// Get mutable reference to value of node if there is any
     pub fn inner_mut(&self) -> Option<&mut T> {
-        self.node.map(|mut node| unsafe { &mut **node.as_mut() })
+        // Note(unsafe): Pointer requirements are met.
+        unsafe {
+            self.node.as_mut().map(|node|
+                &mut (*node).inner
+            )
+        }
     }
 
     /// Move cursor to the next node
     pub fn move_next(&mut self) {
-        if let Some(node) = self.node {
-            self.node = unsafe { node.as_ref().next };
+        // Note(unsafe): Pointer requirements are met.
+        unsafe {
+            if let Some(node) = self.node.as_mut() {
+                self.node = (*node).next.load(Ordering::Relaxed);
+            }
         }
     }
 
-    /// Take the current node if there is one
+    /// Take the current node if there is one. Also moves the cursor before
+    /// removing a node.
     pub fn take(&mut self) -> Option<Box<Node<T>>> {
-        self.node.map(|mut node|
-            unsafe {
-                self.node = node.as_ref().next;
-                self.list.unlink(node.as_mut())
-            })
+        let node = self.node;
+        self.move_next();
+        // Note(unsafe): Node is checked be non-null.
+        unsafe {
+            node.as_mut().map(move |node|
+                self.list.unlink_raw(NonNull::new_unchecked(node))
+            )
+        }
     }
 }
 
@@ -347,9 +409,8 @@ impl<'a, T, P> Cursor<'a, T, P>
 mod tests {
     use super::*;
     use core::borrow::Borrow;
-    use crate::mem::array_pool::ArrayPool;
-
-    type Pool = ArrayPool<Node<MyStruct>,16>;
+    use std::mem::size_of;
+    use crate::mem::bump_allocator::BumpAllocator;
 
     #[derive(Debug, Copy, Clone)]
     struct MyStruct {
@@ -358,85 +419,105 @@ mod tests {
 
     #[test]
     fn one_node() {
-        static POOL: Pool = ArrayPool::new([None; 16]);
-        let node_0 = POOL.insert(Node::new(MyStruct { id: 42 })).unwrap();
-        assert_eq!(node_0.prev, None);
-        assert_eq!(node_0.next, None);
+        static mut BUFFER: [u8; 128] = [0; 128];
+        static ALLOCATOR: BumpAllocator = unsafe {
+            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
+        };
 
-        let mut list = LinkedList::new(&POOL);
-        assert_eq!(list.head, None);
-        assert_eq!(list.tail, None);
+        let mut list = LinkedList::new();
+        assert_eq!(list.head.load(Ordering::Relaxed), ptr::null_mut());
+        assert_eq!(list.tail.load(Ordering::Relaxed), ptr::null_mut());
 
-        list.push_back(node_0);
-        assert_ne!(list.head, None);
-        assert_eq!(list.tail, list.head);
+        list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
+        let head = list.head.load(Ordering::Relaxed);
+        let tail = list.tail.load(Ordering::Relaxed);
+        assert_ne!(head, ptr::null_mut());
+        assert_eq!(tail, head);
         unsafe {
-            assert_eq!(list.head.unwrap().as_ref().prev, None);
-            assert_eq!(list.head.unwrap().as_ref().next, None);
+            assert_eq!((*head).prev.load(Ordering::Relaxed), ptr::null_mut());
+            assert_eq!((*tail).prev.load(Ordering::Relaxed), ptr::null_mut());
         }
 
-        let node = list.pop_front();
+        let node = list.pop_front().unwrap();
+        let head = list.head.load(Ordering::Relaxed);
+        let tail = list.tail.load(Ordering::Relaxed);
+        assert_eq!(head, ptr::null_mut());
+        assert_eq!(tail, ptr::null_mut());
+        unsafe {
+            assert_eq!((*node).prev.load(Ordering::Relaxed), ptr::null_mut());
+            assert_eq!((*node).next.load(Ordering::Relaxed), ptr::null_mut());
+        }
 
-        assert_eq!(list.head, None);
-        assert_eq!(list.tail, None);
-        assert_eq!(node.as_ref().unwrap().prev, None);
-        assert_eq!(node.as_ref().unwrap().next, None);
+        list.push_back(node);
     }
 
     #[test]
     fn length() {
-        static POOL: Pool = ArrayPool::new([None; 16]);
+        static mut BUFFER: [u8; 128] = [0; 128];
+        static ALLOCATOR: BumpAllocator = unsafe {
+            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
+        };
 
-        let mut list = LinkedList::new(&POOL);
+        let mut list = LinkedList::new();
         assert_eq!(list.len(), 0);
-        list.pop_front();
+        let node = list.pop_front();
+        assert!(node.is_none());
         assert_eq!(list.len(), 0);
-        list.emplace_back(MyStruct { id: 42 });
+        list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
         assert_eq!(list.len(), 1);
-        list.pop_front();
+        Box::leak(list.pop_front().unwrap());
         assert_eq!(list.len(), 0);
     }
 
     #[test]
     fn pushing_and_popping() {
-        static POOL: Pool = ArrayPool::new([None; 16]);
+        static mut BUFFER: [u8; 128] = [0; 128];
+        static ALLOCATOR: BumpAllocator = unsafe {
+            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
+        };
 
-        let mut list = LinkedList::new(&POOL);
-        list.emplace_back(MyStruct { id: 42 });
-        list.emplace_back(MyStruct { id: 43 });
+        let mut list = LinkedList::new();
+        list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
+        list.emplace_back(MyStruct { id: 43 }, &ALLOCATOR);
 
-        let mut another_list = LinkedList::new(&POOL);
-        list.emplace_back(MyStruct { id: 44 });
+        let mut another_list = LinkedList::new();
+        list.emplace_back(MyStruct { id: 44 }, &ALLOCATOR);
 
-        let mut front = list.pop_front();
-        assert_eq!(front.as_mut().unwrap().inner().id, 42);
-        another_list.push_back(front.unwrap());
+        let mut front = list.pop_front().unwrap();
+        assert_eq!((*front).id, 42);
+        another_list.push_back(front);
 
         assert_eq!(another_list.back().unwrap().id, 42);
     }
 
     #[test]
-    fn pool_overflow() {
-        static POOL: Pool = ArrayPool::new([None; 16]);
+    fn memory_overflow() {
+        const ELEMENT_LEN: usize = size_of::<BoxData<Node<MyStruct>>>();
+        // Add some extra space for alignment
+        static mut BUFFER: [u8; ELEMENT_LEN*16 + 4] = [0; ELEMENT_LEN*16 + 4];
+        static ALLOCATOR: BumpAllocator = unsafe {
+            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
+        };
 
-        let mut list = LinkedList::new(&POOL);
+        let mut list = LinkedList::new();
         for i in 0..16 {
-            assert_eq!(list.emplace_back(MyStruct { id: i }), Ok(()));
+            assert!(list.emplace_back(MyStruct { id: i }, &ALLOCATOR).is_ok());
         }
-        assert_eq!(list.emplace_back(MyStruct { id: 16 }), Err(pool_allocator::Error::OutOfMemory));
+        assert!(list.emplace_back(MyStruct { id: 16 }, &ALLOCATOR).is_err());
     }
+
 
     #[test]
     fn iterate() {
-        static POOL: Pool = ArrayPool::new([None; 16]);
-        let node_0 = POOL.insert(Node::new(MyStruct { id: 42 })).unwrap();
-        let node_1 = POOL.insert(Node::new(MyStruct { id: 43 })).unwrap();
-        let node_2 = POOL.insert(Node::new(MyStruct { id: 44 })).unwrap();
+        static mut BUFFER: [u8; 128] = [0; 128];
+        static ALLOCATOR: BumpAllocator = unsafe {
+            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
+        };
 
-        let mut list = LinkedList::new(&POOL);
-        list.push_back(node_0);
-        list.push_back(node_1);
-        list.push_back(node_2);
+        let mut list = LinkedList::new();
+        list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
+        list.emplace_back(MyStruct { id: 43 }, &ALLOCATOR);
+        list.emplace_back(MyStruct { id: 44 }, &ALLOCATOR);
 
         let truth = vec![42,43,44,45];
         for (i, element) in list.iter().enumerate() {
@@ -450,15 +531,15 @@ mod tests {
 
     #[test]
     fn iterate_mut() {
-        static POOL: Pool = ArrayPool::new([None; 16]);
-        let node_0 = POOL.insert(Node::new(MyStruct { id: 42 })).unwrap();
-        let node_1 = POOL.insert(Node::new(MyStruct { id: 43 })).unwrap();
-        let node_2 = POOL.insert(Node::new(MyStruct { id: 44 })).unwrap();
+        static mut BUFFER: [u8; 128] = [0; 128];
+        static ALLOCATOR: BumpAllocator = unsafe {
+            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
+        };
 
-        let mut list = LinkedList::new(&POOL);
-        list.push_back(node_0);
-        list.push_back(node_1);
-        list.push_back(node_2);
+        let mut list = LinkedList::new();
+        list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
+        list.emplace_back(MyStruct { id: 43 }, &ALLOCATOR);
+        list.emplace_back(MyStruct { id: 44 }, &ALLOCATOR);
 
         let truth = vec![42,43,44,45];
         for (i, element) in list.iter_mut().enumerate() {
@@ -474,17 +555,17 @@ mod tests {
 
     #[test]
     fn find_and_take() {
-        static POOL: Pool = ArrayPool::new([None; 16]);
-        let node_0 = POOL.insert(Node::new(MyStruct { id: 42 })).unwrap();
-        let node_1 = POOL.insert(Node::new(MyStruct { id: 43 })).unwrap();
-        let node_2 = POOL.insert(Node::new(MyStruct { id: 44 })).unwrap();
+        static mut BUFFER: [u8; 128] = [0; 128];
+        static ALLOCATOR: BumpAllocator = unsafe {
+            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
+        };
 
-        let mut list = LinkedList::new(&POOL);
-        list.push_back(node_0);
-        list.push_back(node_1);
-        list.push_back(node_2);
+        let mut list = LinkedList::new();
+        list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
+        list.emplace_back(MyStruct { id: 43 }, &ALLOCATOR);
+        list.emplace_back(MyStruct { id: 44 }, &ALLOCATOR);
 
-        let mut another_list = LinkedList::new(&POOL);
+        let mut another_list = LinkedList::new();
 
         let mut cursor = list.cursor_front_mut();
         let mut target: Option<Box<Node<MyStruct>>> = None;
@@ -504,6 +585,33 @@ mod tests {
 
         for element in another_list.iter() {
             assert_eq!(element.id, 43);
+        }
+    }
+
+    #[test]
+    fn insert_at_condition() {
+        static mut BUFFER: [u8; 256] = [0; 256];
+        static ALLOCATOR: BumpAllocator = unsafe {
+            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
+        };
+
+        let mut list = LinkedList::new();
+        list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
+        list.emplace_back(MyStruct { id: 43 }, &ALLOCATOR);
+        list.emplace_back(MyStruct { id: 44 }, &ALLOCATOR);
+        list.emplace_back(MyStruct { id: 45 }, &ALLOCATOR);
+        list.emplace_back(MyStruct { id: 48 }, &ALLOCATOR);
+
+        let mut head = list.pop_front().unwrap();
+        head.id = 47;
+
+        list.insert_when(head, |head, node| {
+            head.id < node.id
+        });
+
+        let truth = vec![43, 44, 45, 47, 48];
+        for (i, element) in list.iter().enumerate() {
+            assert_eq!(element.id, truth[i]);
         }
     }
 }

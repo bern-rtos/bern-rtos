@@ -83,7 +83,7 @@ impl<T> Mutex<T> {
     /// Try to lock the mutex (non-blocking). Returns a [`MutexGuard`] or an
     /// error if the mutex is not available or poisoned.
     pub fn try_lock(&self) -> Result<MutexGuard<'_,T>, Error> {
-        if self.raw_lock().is_ok() {
+        if self.raw_try_lock() {
             Ok(MutexGuard::new(&self))
         } else {
             Err(Error::WouldBlock)
@@ -95,13 +95,13 @@ impl<T> Mutex<T> {
     ///
     /// **Note:** The timeout function is not implemented yet.
     pub fn lock(&self, timeout: u32) ->  Result<MutexGuard<'_,T>, Error> {
-        if self.raw_lock().is_ok() {
+        if self.raw_try_lock() {
             return Ok(MutexGuard::new(&self));
         } else {
             let id = unsafe { *self.id.get() };
             match syscall::event_await(id, timeout) {
                 Ok(_) => {
-                    self.raw_lock().ok();
+                    self.raw_try_lock();
                     Ok(MutexGuard::new(&self))
                 },
                 Err(event::Error::TimeOut) => Err(Error::TimeOut),
@@ -110,10 +110,10 @@ impl<T> Mutex<T> {
         }
     }
 
-    fn raw_lock(&self) -> Result<bool,bool> {
+    fn raw_try_lock(&self) -> bool {
         self.lock.compare_exchange(false, true,
                                    Ordering::Acquire,
-                                   Ordering::Acquire)
+                                   Ordering::Relaxed).is_ok()
     }
 
     fn raw_unlock(&self) {

@@ -17,36 +17,37 @@ use crate::sync::critical_section;
 use crate::mem::{
     linked_list::*,
     boxed::Box,
-    array_pool::ArrayPool,
-    pool_allocator,
+    allocator::AllocError,
+    bump_allocator::BumpAllocator,
 };
+use crate::kernel::static_memory;
 
 use bern_arch::{ICore, IScheduler, IStartup, IMemoryProtection};
 use bern_arch::arch::{ArchCore, Arch};
 use bern_arch::memory_protection::{Config, Type, Access, Permission};
 use bern_conf::CONF;
+use crate::process::Process;
+
 
 // These statics are MaybeUninit because, there currently no solution to
 // initialize an array dependent on a `const` size and a non-copy type.
 // These attempts didn't work:
 // - const fn with internal MaybeUninit: not stable yet
 // - proc_macro: cannot evaluate const
-type TaskPool = ArrayPool<Node<Task>, { CONF.task.pool_size }>;
-type EventPool = ArrayPool<Node<Event>, { CONF.event.pool_size }>;
-static mut TASK_POOL: MaybeUninit<TaskPool> = MaybeUninit::uninit();
-static mut EVENT_POOL: MaybeUninit<EventPool> = MaybeUninit::uninit();
 
+#[link_section = ".kernel"]
 static mut SCHEDULER: MaybeUninit<Scheduler> = MaybeUninit::uninit();
+#[link_section = ".kernel"]
+static mut KERNEL_ALLOCATOR: MaybeUninit<BumpAllocator> = MaybeUninit::uninit();
 
 // todo: split scheduler into kernel and scheduler
-
 struct Scheduler {
     core: ArchCore,
     task_running: Option<Box<Node<Task>>>,
-    tasks_ready: [LinkedList<Task, TaskPool>; CONF.task.priorities as usize],
-    tasks_sleeping: LinkedList<Task, TaskPool>,
-    tasks_terminated: LinkedList<Task, TaskPool>,
-    events: LinkedList<Event, EventPool>,
+    tasks_ready: [LinkedList<Task>; CONF.task.priorities as usize],
+    tasks_sleeping: LinkedList<Task>,
+    tasks_terminated: LinkedList<Task>,
+    events: LinkedList<Event>,
     event_counter: usize,
 }
 
@@ -54,11 +55,16 @@ struct Scheduler {
 ///
 /// **Note:** Must be called before any other non-const kernel functions.
 pub fn init() {
-    Arch::init_static_memory();
+    Arch::init_static_region(static_memory::kernel_data());
+
+    // Memory regions 0..2 are reserved for tasks
+    Arch::disable_memory_region(0);
+    Arch::disable_memory_region(1);
+    Arch::disable_memory_region(2);
 
     // allow flash read/exec
     Arch::enable_memory_region(
-        0,
+        3,
         Config {
             addr: CONF.memory.flash.start_address as *const _,
             memory: Type::Flash,
@@ -67,10 +73,9 @@ pub fn init() {
             executable: true
         });
 
-
     // allow peripheral RW
     Arch::enable_memory_region(
-        1,
+        4,
         Config {
             addr: CONF.memory.peripheral.start_address as *const _,
             memory: Type::Peripheral,
@@ -79,54 +84,36 @@ pub fn init() {
             executable: false
         });
 
-    //allow .shared section RW access
-    let shared = Arch::region();
-    Arch::enable_memory_region(
-        2,
-        Config {
-            addr: shared.start,
-            memory: Type::SramInternal,
-            size: CONF.memory.shared.size,
-            access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
-            executable: false
-        });
-
-    Arch::disable_memory_region(3);
-    Arch::disable_memory_region(4);
+    Arch::disable_memory_region(5);
+    Arch::disable_memory_region(6);
+    Arch::disable_memory_region(7);
 
     let core = ArchCore::new();
+
+    unsafe {
+        KERNEL_ALLOCATOR = MaybeUninit::new(
+            BumpAllocator::new(
+                NonNull::new_unchecked(static_memory::kernel_heap().start as *mut u8),
+                NonNull::new_unchecked(static_memory::kernel_heap().end as *mut u8)));
+    }
 
     // Init static pools, this is unsafe but stable for now. Temporary solution
     // until const fn works with MaybeUninit.
     unsafe {
-        let mut task_pool: [Option<Node<Task>>; CONF.task.pool_size] =
-            MaybeUninit::uninit().assume_init();
-        for element in task_pool.iter_mut() {
-            *element = None;
-        }
-        TASK_POOL = MaybeUninit::new(ArrayPool::new(task_pool));
-
-        let mut event_pool: [Option<Node<Event>>; CONF.event.pool_size] =
-            MaybeUninit::uninit().assume_init();
-        for element in event_pool.iter_mut() {
-            *element = None;
-        }
-        EVENT_POOL = MaybeUninit::new(ArrayPool::new(event_pool));
-
-        let mut tasks_ready: [LinkedList<Task, TaskPool>; CONF.task.priorities as usize] =
+        let mut tasks_ready: [LinkedList<Task>; CONF.task.priorities as usize] =
             MaybeUninit::uninit().assume_init();
         for element in tasks_ready.iter_mut() {
-            *element = LinkedList::new(&*TASK_POOL.as_mut_ptr());
+            *element = LinkedList::new();
         }
 
 
         SCHEDULER = MaybeUninit::new(Scheduler {
             core,
             task_running: None,
-            tasks_ready: tasks_ready,
-            tasks_sleeping: LinkedList::new(&*TASK_POOL.as_mut_ptr()),
-            tasks_terminated: LinkedList::new(&*TASK_POOL.as_mut_ptr()),
-            events: LinkedList::new(&*EVENT_POOL.as_mut_ptr()),
+            tasks_ready,
+            tasks_sleeping: LinkedList::new(),
+            tasks_terminated: LinkedList::new(),
+            events: LinkedList::new(),
             event_counter: 0,
         });
     }
@@ -152,12 +139,12 @@ pub fn start() -> ! {
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
 
     // ensure an idle task is present
-    if sched.tasks_ready[(CONF.task.priorities as usize) -1].len() == 0 {
-        Task::new()
+    /*if sched.tasks_ready[(CONF.task.priorities as usize) -1].len() == 0 {
+        IDLE_PROC.create_thread()
             .idle_task()
-            .static_stack(crate::alloc_static_stack!(256))
+            .stack(256)
             .spawn(default_idle);
-    }
+    }*/
 
     let mut task = None;
     for list in sched.tasks_ready.iter_mut() {
@@ -167,7 +154,7 @@ pub fn start() -> ! {
         }
     }
 
-    Arch::apply_regions((*task.as_ref().unwrap()).memory_regions());
+    Arch::apply_regions((**task.as_ref().unwrap()).memory_regions());
     Arch::enable_memory_protection();
     sched.task_running = task;
     sched.core.start();
@@ -195,7 +182,10 @@ pub(crate) fn add(mut task: Task) {
         }
 
         let prio: usize = task.priority().into();
-        sched.tasks_ready[prio].emplace_back(task).ok();
+        sched.tasks_ready[prio].emplace_back(
+            task,
+            unsafe { &*KERNEL_ALLOCATOR.as_ptr() }
+        ).ok();
     });
 }
 
@@ -251,7 +241,7 @@ pub(crate) fn tick_update() {
             if task.next_wut() <= now as u64 {
                 // todo: this is inefficient, we know that node exists
                 if let Some(node) = cursor.take() {
-                    let prio: usize = (*node).priority().into();
+                    let prio: usize = (**node).priority().into();
                     sched.tasks_ready[prio].push_back(node);
                     if prio < preempt_prio {
                         trigger_switch = true;
@@ -260,7 +250,6 @@ pub(crate) fn tick_update() {
             } else {
                 break; // the list is sorted by wake-up time, we can abort early
             }
-            cursor.move_next();
         }
 
         #[cfg(feature = "time-slicing")]
@@ -280,13 +269,16 @@ fn default_idle() {
     }
 }
 
-pub(crate) fn event_register() -> Result<usize, pool_allocator::Error> {
+pub(crate) fn event_register() -> Result<usize, AllocError> {
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
 
     critical_section::exec(|| {
         let id = sched.event_counter + 1;
         sched.event_counter = id;
-        let result = sched.events.emplace_back(Event::new(id));
+        let result = sched.events.emplace_back(
+            Event::new(id),
+            unsafe { &*KERNEL_ALLOCATOR.as_ptr() }
+        );
         result.map(|_| id)
     })
 }

@@ -21,6 +21,8 @@
 //! Tasks can be spawened from `main()` or within other tasks.
 
 #![allow(unused)]
+
+use core::alloc::Layout;
 use core::mem;
 use core::ptr;
 use core::ops::Deref;
@@ -36,6 +38,10 @@ use bern_arch::arch::Arch;
 use bern_arch::memory_protection::{Config, Type, Access, Permission};
 use bern_arch::IMemoryProtection;
 use bern_conf::CONF;
+use crate::mem::allocator::AllocError;
+use crate::process::Process;
+
+const MPU_MIN_SIZE: usize = 32;
 
 /// Transition for next context switch
 #[derive(Copy, Clone)]
@@ -84,6 +90,8 @@ impl Into<usize> for Priority {
 
 /// Builder to create a new task
 pub struct TaskBuilder {
+    /// Parent process
+    parent: &'static Process,
     /// Task stack
     stack: Option<Stack>,
     /// Task priority
@@ -94,6 +102,20 @@ impl TaskBuilder {
     /// Add a static stack to the task.
     pub fn static_stack(&mut self, stack: Stack) -> &mut Self {
         self.stack = Some(stack);
+        self
+    }
+
+    /// Set stack size.
+    pub fn stack(&mut self, size: usize) -> &mut Self {
+        // The effective stack is slightly larger than request to provide memory
+        // protection padding.
+        let padding = MPU_MIN_SIZE;
+
+        let mut memory = match self.parent.request_memory(unsafe { Layout::from_size_align_unchecked(size + padding, 32) }) {
+            Ok(m) => m,
+            Err(_) => return self, // stack remains None
+        };
+        self.stack = Some(Stack::new(unsafe {memory.as_mut()}, size + padding));
         self
     }
 
@@ -176,20 +198,30 @@ impl TaskBuilder {
         stack.ptr = ptr as *mut usize;
 
         // prepare memory region configs
-        let memory_regions = [Arch::prepare_memory_region(
-            5,
+        let memory_regions = [
+            Arch::prepare_memory_region(
+            0,
             Config {
-                addr: stack.bottom_ptr() as *const _,
+                addr: self.parent.start_addr() as *const _,
                 memory: Type::SramInternal,
-                size: stack.size(),
+                size: self.parent.size(),
                 access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
                 executable: false
             }),
-            Arch::prepare_unused_region(6),
-            Arch::prepare_unused_region(7)
+            Arch::prepare_memory_region(
+            1,
+            Config {
+                addr: stack.bottom_ptr() as *const _,
+                memory: Type::SramInternal,
+                size: Size::S32,
+                access: Access { user: Permission::NoAccess, system: Permission::NoAccess },
+                executable: false
+            }),
+            Arch::prepare_unused_region(2)
         ];
 
         let mut task = Task {
+            process: self.parent,
             transition: Transition::None,
             runnable_ptr,
             next_wut: 0,
@@ -211,6 +243,7 @@ impl TaskBuilder {
 // todo: manage lifetime of stack & runnable
 /// Task control block
 pub struct Task {
+    process: &'static Process,
     transition: Transition,
     runnable_ptr: *mut usize,
     next_wut: u64,
@@ -222,8 +255,9 @@ pub struct Task {
 
 impl Task {
     /// Create a new task using the [`TaskBuilder`]
-    pub fn new() -> TaskBuilder {
+    pub fn new(parent: &'static Process) -> TaskBuilder {
         TaskBuilder {
+            parent,
             stack: None,
             // set default to lowest priority above idle
             priority: Priority(CONF.task.priorities - 2),

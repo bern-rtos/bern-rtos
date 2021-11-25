@@ -72,7 +72,7 @@ impl Semaphore {
     /// [`SemaphorePermit`] or an error if no permit is available or semaphore
     /// is poisoned.
     pub fn try_acquire(&self) -> Result<SemaphorePermit<'_>, Error> {
-        if self.raw_acquire().is_ok() {
+        if self.raw_try_acquire() {
             Ok(SemaphorePermit::new(&self))
         } else {
             Err(Error::WouldBlock)
@@ -85,13 +85,13 @@ impl Semaphore {
     ///
     /// **Note:** The timeout function is not implemented yet.
     pub fn acquire(&self, timeout: u32) ->  Result<SemaphorePermit<'_>, Error> {
-        if self.raw_acquire().is_ok() {
+        if self.raw_try_acquire() {
             return Ok(SemaphorePermit::new(&self));
         } else {
             let id = unsafe { *self.id.get() };
             match syscall::event_await(id, timeout) {
                 Ok(_) => {
-                    self.raw_acquire().ok();
+                    self.raw_try_acquire();
                     Ok(SemaphorePermit::new(&self))
                 },
                 Err(event::Error::TimeOut) => Err(Error::TimeOut),
@@ -112,16 +112,23 @@ impl Semaphore {
         syscall::event_fire(unsafe { *self.id.get() });
     }
 
-    /// **Note:** This will return a false positive when `permits_issued` overflows
-    fn raw_acquire(&self) -> Result<(), ()> {
-        let permits = self.permits_issued.fetch_add(1, Ordering::Acquire);
-        if permits >= self.permits.load(Ordering::Relaxed) {
-            self.permits_issued.fetch_sub(1, Ordering::Release);
-            Err(())
-        } else {
-            Ok(())
+    fn raw_try_acquire(&self) -> bool {
+        loop { // CAS loop
+            let permits_issued = self.permits_issued.load(Ordering::Acquire);
+            if permits_issued < self.permits.load(Ordering::Relaxed) {
+                match self.permits_issued.compare_exchange(
+                    permits_issued,
+                    permits_issued + 1,
+                    Ordering::Release,
+                    Ordering::Relaxed
+                ) {
+                    Ok(_) =>  { return true; }
+                    Err(_) => continue, // CAS loop was interrupted, restart
+                }
+            } else {
+                return false;
+            }
         }
-
     }
 
     fn raw_release(&self) {
