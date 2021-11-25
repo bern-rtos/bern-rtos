@@ -33,6 +33,7 @@ impl Parse for ProcessInfo {
 impl ToTokens for ProcessInfo {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let process_ident = self.ident.clone();
+        let process_ident_upper = Ident::new(&process_ident.to_string().to_uppercase(), Span::call_site());
         let size = self.memory_size.clone();
 
         let smprocess = Ident::new(&format!("__smprocess_{}", process_ident), Span::call_site());
@@ -41,9 +42,18 @@ impl ToTokens for ProcessInfo {
         let shprocess = Ident::new(&format!("__shprocess_{}", process_ident), Span::call_site());
         let ehprocess = Ident::new(&format!("__ehprocess_{}", process_ident), Span::call_site());
 
-        /* format enum */
+        // Create a static process structure.
+        //
+        // Process memory locations are filled in by the linker.
+        // There must no be multiple linker sections with the same name. Instead
+        // of checking the linker script within this macro, we declare the
+        // static variable `no_mangle`, so that the compiler does the check for
+        // us.
         let formatted = TokenStream::from(quote!{
             {
+                use bern_kernel::process::Process;
+                use bern_kernel::common::process::ProcessMemory;
+
                 extern "C" {
                     static mut #smprocess: usize;
                     static mut #emprocess: usize;
@@ -53,7 +63,9 @@ impl ToTokens for ProcessInfo {
                     static mut #ehprocess: usize;
                 }
 
-                bern_kernel::process::Process::new(unsafe { bern_kernel::common::process::ProcessMemory {
+                #[no_mangle]
+                #[link_section = ".kernel.process"]
+                static #process_ident_upper: Process = Process::new(unsafe { ProcessMemory {
                     size: #size,
 
                     bss_start: (& #smprocess) as *const _ as *const u8,
@@ -62,12 +74,14 @@ impl ToTokens for ProcessInfo {
 
                     heap_start: (& #shprocess) as *const _ as *const u8,
                     heap_end: (& #ehprocess) as *const _ as *const u8,
-                }})
+                }});
+
+                & #process_ident_upper
             }
         });
         tokens.extend(formatted);
 
-        /* append link section */
+        // Append link section
         let process_name = self.ident.clone().to_string();
         let process_size = self.memory_size.clone().to_string();
 
