@@ -38,13 +38,11 @@ pub struct Event {
 impl Event {
     /// Allocate a new event from a given unique ID.
     pub fn new(id: usize) -> Self {
-        unsafe {
-            Event {
-                id,
-                pending: LinkedList::new(),
-                wake: Wake::WakeFirst,
-                priority_inversion: false,
-            }
+        Event {
+            id,
+            pending: LinkedList::new(),
+            wake: Wake::WakeFirst,
+            priority_inversion: false,
         }
     }
 

@@ -8,12 +8,11 @@
 //! ```
 
 use core::ops::{DerefMut, Deref};
-use crate::bern_arch::arch::memory_protection::Size;
 
 /// Stack management structure
 #[repr(C)]
 pub struct Stack {
-    /// Pointer to the first element of the stack
+    /// Pointer to the lowest address of the stack
     bottom: *mut u8,
     /// Stack size
     size: usize,

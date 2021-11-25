@@ -1,5 +1,5 @@
 use core::alloc::Layout;
-use core::ptr::{NonNull, slice_from_raw_parts, slice_from_raw_parts_mut};
+use core::ptr::{NonNull, slice_from_raw_parts_mut};
 use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 use crate::mem::allocator::{Allocator, AllocError};
 
@@ -56,7 +56,7 @@ impl Allocator for BumpAllocator {
         }
     }
 
-    unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
+    unsafe fn deallocate(&self, _ptr: NonNull<u8>, _layout: Layout) {
         unimplemented!();
     }
 

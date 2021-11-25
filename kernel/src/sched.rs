@@ -5,7 +5,6 @@
 
 pub(crate) mod event;
 
-use core::alloc::Layout;
 use core::sync::atomic::{self, Ordering};
 use core::mem::MaybeUninit;
 use core::ptr::NonNull;
@@ -18,16 +17,17 @@ use crate::sync::critical_section;
 use crate::mem::{
     linked_list::*,
     boxed::Box,
-    allocator::{Allocator, AllocError},
+    allocator::AllocError,
     bump_allocator::BumpAllocator,
 };
 use crate::kernel::static_memory;
 
 use bern_arch::{ICore, IScheduler, IStartup, IMemoryProtection};
 use bern_arch::arch::{ArchCore, Arch};
-use bern_arch::arch::memory_protection::Size;
 use bern_arch::memory_protection::{Config, Type, Access, Permission};
 use bern_conf::CONF;
+use crate::process::Process;
+
 
 // These statics are MaybeUninit because, there currently no solution to
 // initialize an array dependent on a `const` size and a non-copy type.
@@ -35,9 +35,9 @@ use bern_conf::CONF;
 // - const fn with internal MaybeUninit: not stable yet
 // - proc_macro: cannot evaluate const
 
+#[link_section = ".kernel"]
 static mut SCHEDULER: MaybeUninit<Scheduler> = MaybeUninit::uninit();
-
-static mut STACK_ALLOCATOR: MaybeUninit<BumpAllocator> = MaybeUninit::uninit();
+#[link_section = ".kernel"]
 static mut KERNEL_ALLOCATOR: MaybeUninit<BumpAllocator> = MaybeUninit::uninit();
 
 // todo: split scheduler into kernel and scheduler
@@ -61,6 +61,7 @@ pub fn init() {
     Arch::disable_memory_region(0);
     Arch::disable_memory_region(1);
     Arch::disable_memory_region(2);
+
     // allow flash read/exec
     Arch::enable_memory_region(
         3,
@@ -71,7 +72,6 @@ pub fn init() {
             access: Access { user: Permission::ReadOnly, system: Permission::ReadOnly },
             executable: true
         });
-
 
     // allow peripheral RW
     Arch::enable_memory_region(
@@ -84,20 +84,7 @@ pub fn init() {
             executable: false
         });
 
-    //allow .shared section RW access
-    let shared = Arch::region();
-    Arch::enable_memory_region(
-        5,
-        Config {
-            addr: shared.start,
-            memory: Type::SramInternal,
-            size: CONF.memory.shared.size,
-            access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
-            executable: false
-        });
-
-    /*Arch::enable_memory_region(
-        3,
+    Arch::disable_memory_region(5);
     Arch::disable_memory_region(6);
     Arch::disable_memory_region(7);
 
@@ -123,7 +110,7 @@ pub fn init() {
         SCHEDULER = MaybeUninit::new(Scheduler {
             core,
             task_running: None,
-            tasks_ready: tasks_ready,
+            tasks_ready,
             tasks_sleeping: LinkedList::new(),
             tasks_terminated: LinkedList::new(),
             events: LinkedList::new(),
@@ -152,12 +139,12 @@ pub fn start() -> ! {
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
 
     // ensure an idle task is present
-    if sched.tasks_ready[(CONF.task.priorities as usize) -1].len() == 0 {
-        Task::new()
+    /*if sched.tasks_ready[(CONF.task.priorities as usize) -1].len() == 0 {
+        IDLE_PROC.create_thread()
             .idle_task()
-            .static_stack(crate::alloc_static_stack!(256))
+            .stack(256)
             .spawn(default_idle);
-    }
+    }*/
 
     let mut task = None;
     for list in sched.tasks_ready.iter_mut() {
