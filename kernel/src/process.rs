@@ -2,7 +2,6 @@ use core::alloc::Layout;
 use core::cell::Cell;
 use core::ptr::NonNull;
 use core::sync::atomic::AtomicBool;
-use bern_common::process::ProcessMemory;
 use crate::mem::allocator::{Allocator, AllocError};
 use crate::mem::bump_allocator::BumpAllocator;
 use crate::mem::Size;
@@ -11,6 +10,17 @@ use crate::task;
 use bern_arch::arch::Arch;
 use bern_arch::IStartup;
 use bern_arch::startup::Region;
+
+pub struct ProcessMemory {
+    pub size: usize,
+
+    pub data_start: *const u8,
+    pub data_end: *const u8,
+    pub data_load: *const u8,
+
+    pub heap_start: *const u8,
+    pub heap_end: *const u8,
+}
 
 pub struct Process {
     memory: ProcessMemory,
@@ -39,9 +49,9 @@ impl Process {
         }
 
         Arch::init_static_region(Region {
-            start: self.memory.bss_start as *const _,
-            end: self.memory.bss_end as *const _,
-            data: self.memory.bss_load as *const _
+            start: self.memory.data_start as *const _,
+            end: self.memory.data_end as *const _,
+            data: self.memory.data_load as *const _
         });
 
         self.init.set(false);
@@ -57,7 +67,7 @@ impl Process {
     }
 
     pub(crate) fn start_addr(&self) -> *const u8 {
-        unsafe { self.memory.bss_start }
+        unsafe { self.memory.data_start }
     }
 
     pub(crate) fn size(&self) -> Size {

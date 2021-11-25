@@ -18,7 +18,6 @@ time-slicing = []
 bern-arch = "0.2"
 bern-kernel-macros = "0.2"
 bern-conf = "0.1"
-bern-common = { path = "common" }
 
 [build-dependencies]
 toml = "0.5.8"

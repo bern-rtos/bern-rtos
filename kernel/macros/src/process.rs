@@ -51,8 +51,7 @@ impl ToTokens for ProcessInfo {
         // us.
         let formatted = TokenStream::from(quote!{
             {
-                use bern_kernel::process::Process;
-                use bern_kernel::common::process::ProcessMemory;
+                use bern_kernel::process::{Process, ProcessMemory};
 
                 extern "C" {
                     static mut #smprocess: usize;
