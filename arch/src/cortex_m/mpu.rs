@@ -2,6 +2,7 @@
 //!
 //! Based on <https://github.com/helium/cortex-mpu>.
 
+use core::mem;
 use cortex_m::peripheral::{self, mpu, MPU};
 use cortex_m::asm;
 
@@ -47,6 +48,19 @@ impl Size {
     /// Return `Size` in bytes
     pub const fn size_bytes(self) -> usize {
         2u32.pow((self as u32) + 1) as usize
+    }
+
+    /// Creates a Size from a raw number.
+    ///
+    /// # Safety
+    /// `size` must be a multiple of `2`.
+    pub unsafe fn from_bytes(mut size: usize) -> Self {
+        let mut log2: u8 = 0;
+        while size > 1 {
+            size = size >> 1;
+            log2 += 1;
+        }
+        mem::transmute(log2 - 1)
     }
 }
 
