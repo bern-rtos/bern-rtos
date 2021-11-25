@@ -8,6 +8,9 @@ use crate::mem::bump_allocator::BumpAllocator;
 use crate::mem::Size;
 use crate::stack::Stack;
 use crate::task;
+use bern_arch::arch::Arch;
+use bern_arch::IStartup;
+use bern_arch::startup::Region;
 
 pub struct Process {
     memory: ProcessMemory,
@@ -35,7 +38,11 @@ impl Process {
             return;
         }
 
-        /* todo: init process bss */
+        Arch::init_static_region(Region {
+            start: self.memory.bss_start as *const _,
+            end: self.memory.bss_end as *const _,
+            data: self.memory.bss_load as *const _
+        });
 
         self.init.set(false);
     }
