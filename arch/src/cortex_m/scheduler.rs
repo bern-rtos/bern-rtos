@@ -12,6 +12,7 @@ use crate::arch::register::{StackFrame, StackFrameExtension, StackSettings};
 /// Storing and loading registers in context switch.
 ///
 /// Exception is triggered by `cortex_m::peripheral::SCB::PendSV()`.
+#[allow(named_asm_labels)]
 #[no_mangle]
 #[naked] // todo: move to separate assembly file and introduce at link time
 extern "C" fn PendSV() {
@@ -116,7 +117,7 @@ impl IScheduler for Arch {
             "pop   {{pc}}",             // 'jump' to the task entry function we put on the stack
             in("r0") stack_ptr as u32,
             options(noreturn),
-            );
+            )
         }
     }
 
