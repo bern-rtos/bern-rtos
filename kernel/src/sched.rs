@@ -21,6 +21,7 @@ use crate::mem::{
     allocator::{Allocator, AllocError},
     bump_allocator::BumpAllocator,
 };
+use crate::kernel::static_memory;
 
 use bern_arch::{ICore, IScheduler, IStartup, IMemoryProtection};
 use bern_arch::arch::{ArchCore, Arch};
@@ -54,7 +55,7 @@ struct Scheduler {
 ///
 /// **Note:** Must be called before any other non-const kernel functions.
 pub fn init() {
-    Arch::init_static_memory();
+    Arch::init_static_region(static_memory::kernel_data());
 
     // Memory regions 0..2 are reserved for tasks
     Arch::disable_memory_region(0);
@@ -102,12 +103,11 @@ pub fn init() {
 
     let core = ArchCore::new();
 
-    // todo: remove this hack
     unsafe {
         KERNEL_ALLOCATOR = MaybeUninit::new(
             BumpAllocator::new(
-                NonNull::new_unchecked(0x2001B800 as *mut u8),
-                NonNull::new_unchecked((0x2001B800 + 10_240) as *mut u8)));
+                NonNull::new_unchecked(static_memory::kernel_heap().start as *mut u8),
+                NonNull::new_unchecked(static_memory::kernel_heap().end as *mut u8)));
     }
 
     // Init static pools, this is unsafe but stable for now. Temporary solution
