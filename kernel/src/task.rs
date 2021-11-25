@@ -89,16 +89,16 @@ impl Into<usize> for Priority {
 }
 
 /// Builder to create a new task
-pub struct TaskBuilder<'a> {
+pub struct TaskBuilder {
     /// Parent process
-    parent: &'a Process,
+    parent: &'static Process,
     /// Task stack
     stack: Option<Stack>,
     /// Task priority
     priority: Priority,
 }
 
-impl<'a> TaskBuilder<'a> {
+impl TaskBuilder {
     /// Add a static stack to the task.
     pub fn static_stack(&mut self, stack: Stack) -> &mut Self {
         self.stack = Some(stack);
@@ -221,6 +221,7 @@ impl<'a> TaskBuilder<'a> {
         ];
 
         let mut task = Task {
+            process: self.parent,
             transition: Transition::None,
             runnable_ptr,
             next_wut: 0,
@@ -242,6 +243,7 @@ impl<'a> TaskBuilder<'a> {
 // todo: manage lifetime of stack & runnable
 /// Task control block
 pub struct Task {
+    process: &'static Process,
     transition: Transition,
     runnable_ptr: *mut usize,
     next_wut: u64,
@@ -253,7 +255,7 @@ pub struct Task {
 
 impl Task {
     /// Create a new task using the [`TaskBuilder`]
-    pub fn new(parent: &Process) -> TaskBuilder {
+    pub fn new(parent: &'static Process) -> TaskBuilder {
         TaskBuilder {
             parent,
             stack: None,

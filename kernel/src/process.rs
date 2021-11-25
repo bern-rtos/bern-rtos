@@ -47,7 +47,7 @@ impl Process {
         self.init.set(false);
     }
 
-    pub fn create_thread(&self) -> task::TaskBuilder {
+    pub fn create_thread(&'static self) -> task::TaskBuilder {
         self.lazy_init();
         task::Task::new(self)
     }
