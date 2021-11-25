@@ -67,9 +67,9 @@ impl ToTokens for ProcessInfo {
                 static #process_ident_upper: Process = Process::new(unsafe { ProcessMemory {
                     size: #size,
 
-                    bss_start: (& #smprocess) as *const _ as *const u8,
-                    bss_end: (& #emprocess) as *const _ as *const u8,
-                    bss_load: (& #siprocess) as *const _ as *const u8,
+                    data_start: (& #smprocess) as *const _ as *const u8,
+                    data_end: (& #emprocess) as *const _ as *const u8,
+                    data_load: (& #siprocess) as *const _ as *const u8,
 
                     heap_start: (& #shprocess) as *const _ as *const u8,
                     heap_end: (& #ehprocess) as *const _ as *const u8,
@@ -95,7 +95,7 @@ impl ToTokens for ProcessInfo {
 
         write!(file, r###"
 SECTIONS {{
-    .process_{0} : ALIGN(8)
+    .process_{0} : ALIGN({1})
     {{
         /* Process static memory */
         . = ALIGN(8);
