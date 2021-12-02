@@ -72,7 +72,7 @@ impl<T> Box<T> {
         let layout = unsafe {
             Layout::from_size_align_unchecked(mem::size_of_val(&internal), 4)
         };
-        let memory = match alloc.allocate(layout) {
+        let memory = match alloc.alloc(layout) {
             Ok(m) => m,
             Err(e) => return Err(e),
         };
