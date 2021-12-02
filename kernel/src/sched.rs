@@ -138,7 +138,7 @@ pub fn set_tick_frequency(tick_frequency: u32, clock_frequency: u32) {
 /// Start the scheduler.
 ///
 /// Will never return.
-pub fn start() -> ! {
+pub(crate) fn start() -> ! {
     // NOTE(unsafe): scheduler must be initialized first
     // todo: replace with `assume_init_mut()` as soon as stable
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
@@ -328,6 +328,14 @@ pub(crate) fn event_fire(id: usize) {
     }
 }
 
+pub(crate) fn with_callee<F, R>(f: F) -> R
+    where F: FnOnce(&Task) -> R
+{
+    let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
+    let task = &***sched.task_running.as_ref().unwrap();
+    f(task)
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /// Switch context from current to next task.
@@ -423,6 +431,7 @@ fn check_stack(stack_ptr: usize) -> StackSpace {
 /// Exception if a memory protection rule was violated.
 #[no_mangle]
 fn memory_protection_exception() {
+    defmt::warn!("Memory exception, terminating thread.");
     task_terminate();
 }
 

@@ -26,7 +26,7 @@ pub mod time;
 pub mod stack;
 pub mod sync;
 pub mod mem;
-pub(crate) mod kernel;
+pub mod kernel;
 
 pub use crate::syscall::*;
 pub use bern_kernel_macros::*;
@@ -34,3 +34,4 @@ pub use bern_kernel_macros::*;
 #[allow(unused_imports)]
 use bern_arch::arch as _;
 pub use bern_arch;
+pub use kernel::*;
