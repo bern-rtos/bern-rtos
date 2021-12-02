@@ -18,7 +18,7 @@ use core::ptr::NonNull;
 use core::mem::MaybeUninit;
 use core::cell::RefCell;
 use core::borrow::BorrowMut;
-use crate::mem::boxed::{Box, BoxData};
+use crate::mem::boxed::Box;
 use core::ops::{Deref, DerefMut};
 use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 use core::marker::PhantomData;
@@ -26,7 +26,7 @@ use crate::mem::allocator::{Allocator, AllocError};
 
 /******************************************************************************/
 
-type Link<T> = AtomicPtr<BoxData<Node<T>>>;
+type Link<T> = AtomicPtr<Node<T>>;
 
 /// An element/node of a list.
 // Copy needed for initialization
@@ -125,7 +125,7 @@ impl<T> LinkedList<T> {
 
         // Note(unsafe): Pointer requirements are met.
         unsafe {
-            (**node_raw.as_ref()).prev.store(tail, Ordering::Relaxed);
+            (*node_raw.as_ref()).prev.store(tail, Ordering::Relaxed);
 
             match tail.as_mut() {
                 None => self.head.store(node_raw.as_ptr(), Ordering::Relaxed),
@@ -256,7 +256,7 @@ impl<T> LinkedList<T> {
     /// # Safety
     /// - A node is only allowed to be unliked once.
     /// - Must unlinked in the correct list.
-    unsafe fn unlink_raw(&self, mut node: NonNull<BoxData<Node<T>>>) -> Box<Node<T>> {
+    unsafe fn unlink_raw(&self, mut node: NonNull<Node<T>>) -> Box<Node<T>> {
         let prev = (*node.as_mut()).prev.load(Ordering::Relaxed);
         let next = (*node.as_mut()).next.load(Ordering::Relaxed);
 
@@ -307,7 +307,7 @@ impl<T> LinkedList<T> {
 ///
 /// This `struct` is created by [`LinkedList::iter()`].
 pub struct Iter<'a, T> {
-    next: Option<&'a BoxData<Node<T>>>,
+    next: Option<&'a Node<T>>,
 }
 
 impl<'a,T> Iterator for Iter<'a, T>
@@ -329,7 +329,7 @@ impl<'a,T> Iterator for Iter<'a, T>
 ///
 /// This `struct` is created by [`LinkedList::iter_mut()`].
 pub struct IterMut<'a, T> {
-    next: Option<&'a mut BoxData<Node<T>>>,
+    next: Option<&'a mut Node<T>>,
 }
 
 impl<'a, T> Iterator for IterMut<'a, T> {
@@ -354,7 +354,7 @@ impl<'a, T> Iterator for IterMut<'a, T> {
 /// element out of the list.
 #[derive(Debug)]
 pub struct Cursor<'a,T> {
-    node: *mut BoxData<Node<T>>,
+    node: *mut Node<T>,
     list: &'a LinkedList<T>,
 }
 
