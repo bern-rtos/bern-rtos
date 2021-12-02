@@ -28,10 +28,15 @@ impl BumpAllocator {
 }
 
 impl Allocator for BumpAllocator {
-    fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+    fn alloc(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         loop { // CAS loop
             let old = self.current.load(Ordering::Acquire);
             let padding = old.align_offset(layout.align());
+            defmt::trace!(
+                "Try allocating {}B at 0x{:x}",
+                layout.size(),
+                old as usize + padding
+            );
 
             if self.capacity() < (layout.size() + padding) {
                 return Err(AllocError);
@@ -56,8 +61,12 @@ impl Allocator for BumpAllocator {
         }
     }
 
-    unsafe fn deallocate(&self, _ptr: NonNull<u8>, _layout: Layout) {
-        unimplemented!();
+    unsafe fn dealloc(&self, ptr: NonNull<u8>, layout: Layout) {
+        defmt::warn!(
+            "BumpAllocator cannot deallocate memory (0x{:x}, {}B). Ignoring call from .",
+            ptr.as_ptr(),
+            layout.size()
+        );
     }
 
     fn capacity(&self) -> usize {
