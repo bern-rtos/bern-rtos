@@ -314,6 +314,10 @@ impl Task {
     pub(crate) fn set_blocking_event(&mut self, event: NonNull<Event>) {
         self.blocking_event = Some(event);
     }
+
+    pub(crate) fn process(&self) -> &Process {
+        self.process
+    }
 }
 
 /// Static and non-generic entry point of the task.
