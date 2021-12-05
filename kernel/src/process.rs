@@ -1,8 +1,8 @@
 use core::alloc::Layout;
 use core::cell::Cell;
 use core::ptr::NonNull;
-use crate::mem::allocator::{Allocator, AllocError};
-use crate::mem::bump_allocator::BumpAllocator;
+use crate::alloc::allocator::{Allocator, AllocError};
+use crate::alloc::bump::Bump;
 use crate::mem::Size;
 use crate::task;
 use bern_arch::arch::Arch;
@@ -23,7 +23,7 @@ pub struct ProcessMemory {
 
 pub struct Process {
     memory: ProcessMemory,
-    proc_allocator: BumpAllocator,
+    proc_allocator: Bump,
     init: Cell<bool>,
 }
 
@@ -36,7 +36,7 @@ pub enum ProcessError {
 impl Process {
     pub const fn new(memory: ProcessMemory) -> Self {
         let proc_allocator = unsafe {
-            BumpAllocator::new(
+            Bump::new(
                 NonNull::new_unchecked(memory.heap_start as *mut _),
                 NonNull::new_unchecked(memory.heap_end as *mut _)
             )};

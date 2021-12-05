@@ -27,6 +27,7 @@ pub mod stack;
 pub mod sync;
 pub mod mem;
 pub mod kernel;
+pub mod alloc;
 
 pub use crate::syscall::*;
 pub use bern_kernel_macros::*;

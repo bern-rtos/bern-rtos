@@ -24,7 +24,7 @@ use core::alloc::Layout;
 use core::mem;
 use core::ptr::NonNull;
 use core::ops::{Deref, DerefMut};
-use crate::mem::allocator::{Allocator, AllocError};
+use crate::alloc::allocator::{Allocator, AllocError};
 
 /// A pointer type for dynamically allocated memory.
 ///

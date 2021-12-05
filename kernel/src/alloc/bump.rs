@@ -1,10 +1,10 @@
 use core::alloc::Layout;
 use core::ptr::{NonNull, slice_from_raw_parts_mut};
 use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
-use crate::mem::allocator::{Allocator, AllocError};
+use crate::alloc::allocator::{Allocator, AllocError};
 
 /// The strict memory allocator can allocate memory but never release.
-pub struct BumpAllocator {
+pub struct Bump {
     /// End of memory block.
     end: NonNull<u8>,
     /// Current allocation pointer.
@@ -13,13 +13,13 @@ pub struct BumpAllocator {
     wastage: AtomicUsize,
 }
 
-impl BumpAllocator {
+impl Bump {
     ///
     /// # Safety
     /// `start` must be a valid address and the memory block must not exceed its
     /// intended range.
     pub const unsafe fn new(start: NonNull<u8>, end: NonNull<u8>) -> Self {
-        BumpAllocator {
+        Bump {
             end,
             current: AtomicPtr::new(start.as_ptr()),
             wastage: AtomicUsize::new(0),
@@ -27,7 +27,7 @@ impl BumpAllocator {
     }
 }
 
-impl Allocator for BumpAllocator {
+impl Allocator for Bump {
     fn alloc(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         loop { // CAS loop
             let old = self.current.load(Ordering::Acquire);
@@ -39,7 +39,7 @@ impl Allocator for BumpAllocator {
             );
 
             if self.capacity() < (layout.size() + padding) {
-                return Err(AllocError);
+                return Err(AllocError::OutOfMemory);
             }
 
             // Note(unsafe): We checked the size requirements already
@@ -74,3 +74,6 @@ impl Allocator for BumpAllocator {
             self.current.load(Ordering::Relaxed) as usize
     }
 }
+
+// Note(unsafe): We use atomic pointers.
+unsafe impl Sync for Bump { }

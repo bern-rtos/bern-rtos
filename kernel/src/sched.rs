@@ -14,14 +14,16 @@ use crate::task::{self, Task, Transition};
 use crate::syscall;
 use crate::time;
 use crate::sync::critical_section;
-use crate::mem::{linked_list::*, boxed::Box, allocator::AllocError, bump_allocator::BumpAllocator, Size};
+use crate::mem::{boxed::Box, linked_list::*, Size};
+use crate::alloc::allocator::AllocError;
+use crate::alloc::bump::Bump;
+use crate::process::Process;
 use crate::kernel::static_memory;
 
-use bern_arch::{ICore, IScheduler, IStartup, IMemoryProtection};
-use bern_arch::arch::{ArchCore, Arch};
-use bern_arch::memory_protection::{Config, Type, Access, Permission};
+use bern_arch::{ICore, IMemoryProtection, IScheduler, IStartup};
+use bern_arch::arch::{Arch, ArchCore};
+use bern_arch::memory_protection::{Access, Config, Permission, Type};
 use bern_conf::CONF;
-use crate::process::Process;
 
 
 // These statics are MaybeUninit because, there currently no solution to
@@ -33,7 +35,7 @@ use crate::process::Process;
 #[link_section = ".kernel"]
 static mut SCHEDULER: MaybeUninit<Scheduler> = MaybeUninit::uninit();
 #[link_section = ".kernel"]
-static mut KERNEL_ALLOCATOR: MaybeUninit<BumpAllocator> = MaybeUninit::uninit();
+static mut KERNEL_ALLOCATOR: MaybeUninit<Bump> = MaybeUninit::uninit();
 
 // todo: split scheduler into kernel and scheduler
 struct Scheduler {
@@ -97,7 +99,7 @@ pub fn init() {
 
     unsafe {
         KERNEL_ALLOCATOR = MaybeUninit::new(
-            BumpAllocator::new(
+            Bump::new(
                 NonNull::new_unchecked(static_memory::kernel_heap().start as *mut u8),
                 NonNull::new_unchecked(static_memory::kernel_heap().end as *mut u8)));
     }

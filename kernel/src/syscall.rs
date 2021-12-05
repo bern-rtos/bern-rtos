@@ -28,7 +28,7 @@ use crate::task::{RunnableResult, TaskBuilder};
 
 use bern_arch::ISyscall;
 use bern_arch::arch::Arch;
-use crate::mem::wrapper::Wrapper;
+use crate::alloc::wrapper::Wrapper;
 
 
 // todo: create with proc macro
