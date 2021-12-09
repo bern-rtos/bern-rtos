@@ -17,7 +17,7 @@ struct Free {
 const MIN_FREE_SIZE: usize = size_of::<Node<Free>>();
 
 pub struct Heap {
-    free_list: LinkedList<Free>,
+    free: LinkedList<Free>,
     size: Cell<usize>,
     end: Cell<*const u8>,
 }
@@ -25,7 +25,7 @@ pub struct Heap {
 impl Heap {
     pub const fn empty() -> Self {
         Heap {
-            free_list: LinkedList::new(),
+            free: LinkedList::new(),
             size: Cell::new(0),
             end: Cell::new(ptr::null()),
         }
@@ -47,7 +47,7 @@ impl Heap {
     /// # Safety
     /// Free block must larger or equal than `Node<Free>`.
     unsafe fn insert_free(&self, block: NonNull<[u8]>) {
-        let mut size = block.as_ref().len();
+        let size = block.as_ref().len();
 
         let ptr = block.as_ptr() as *mut Node<Free>;
 
@@ -58,25 +58,23 @@ impl Heap {
         ptr.write(node);
 
         let boxed = Box::from_raw(NonNull::new_unchecked(ptr));
-        let mut cursor = self.free_list.cursor_front_mut();
+        let mut cursor = self.free.cursor_front_mut();
         // Insert the new free block by ascending memory address.
-        for _i in 0..self.free_list.len() + 1 {
+        for _i in 0..self.free.len() + 1 {
             if (cursor.node() as usize) > (ptr as usize) {
-                let a = cursor.node() as usize;
-                let b = ptr as usize;
                 // Is this the adjecent node?
                 if (cursor.node() as usize) == (ptr as usize + size) {
-                    // todo: Join free blocks
-                    //(*ptr).size += (*cursor.node()).size;
-                    //Box::leak(cursor.take().unwrap_unchecked());
-                }
+                    // Join right
+                    (*ptr).size += (*cursor.node()).size;
+                    Box::leak(cursor.take().unwrap_unchecked());
+                } else if ()
 
                 if cursor.node().is_null() {
                     // We could have moved the cursor to the end of the list
                     // when when took a node.
-                    self.free_list.push_back(boxed);
+                    self.free.push_back(boxed);
                 } else {
-                    self.free_list.insert(
+                    self.free.insert(
                         NonNull::new_unchecked(cursor.node()),
                         boxed,
                     );
@@ -84,7 +82,7 @@ impl Heap {
                 return;
             } else if cursor.node().is_null() {
                 // End of list reached.
-                self.free_list.push_back(boxed);
+                self.free.push_back(boxed);
                 return;
             }
             cursor.move_next();
@@ -122,8 +120,8 @@ impl Allocator for Heap {
         }
 
         // Find free block that is large enough.
-        let mut cursor = self.free_list.cursor_front_mut();
-        for i in 0..self.free_list.len() + 1{
+        let mut cursor = self.free.cursor_front_mut();
+        for i in 0..self.free.len() + 1{
             match cursor.inner() {
                 None => return Err(AllocError::OutOfMemory),
                 Some(node) => {
@@ -135,7 +133,7 @@ impl Allocator for Heap {
                 }
             }
             cursor.move_next();
-            if i == self.free_list.len() - 1 {
+            if i == self.free.len() - 1 {
                 panic!("`self.free_list` contains a loop.");
             }
         }
@@ -237,7 +235,10 @@ mod tests {
             }
             for e in vars.iter_mut() {
                 unsafe {
-                    HEAP.dealloc(NonNull::new_unchecked((*e).take().unwrap().as_ptr() as *mut u8), layout.clone());
+                    HEAP.dealloc(
+                        NonNull::new_unchecked(e.take().unwrap().as_ptr() as *mut u8),
+                        layout.clone()
+                    );
                 }
             }
         }
