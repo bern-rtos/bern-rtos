@@ -67,7 +67,7 @@ impl Heap {
                     // Join right
                     (*ptr).size += (*cursor.node()).size;
                     Box::leak(cursor.take().unwrap_unchecked());
-                } else if ()
+                }
 
                 if cursor.node().is_null() {
                     // We could have moved the cursor to the end of the list
