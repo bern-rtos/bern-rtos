@@ -38,7 +38,7 @@ use bern_arch::arch::Arch;
 use bern_arch::memory_protection::{Config, Type, Access, Permission};
 use bern_arch::IMemoryProtection;
 use bern_conf::CONF;
-use crate::mem::allocator::AllocError;
+use crate::alloc::allocator::AllocError;
 use crate::process::Process;
 
 const MPU_MIN_SIZE: usize = 32;
@@ -111,7 +111,13 @@ impl TaskBuilder {
         // protection padding.
         let padding = MPU_MIN_SIZE;
 
-        let mut memory = match self.parent.request_memory(unsafe { Layout::from_size_align_unchecked(size + padding, 32) }) {
+        let mut memory = match self
+            .parent
+            .allocator()
+            .alloc(unsafe {
+                Layout::from_size_align_unchecked(size + padding, 32)
+            })
+        {
             Ok(m) => m,
             Err(_) => return self, // stack remains None
         };
@@ -313,6 +319,10 @@ impl Task {
     }
     pub(crate) fn set_blocking_event(&mut self, event: NonNull<Event>) {
         self.blocking_event = Some(event);
+    }
+
+    pub(crate) fn process(&self) -> &Process {
+        self.process
     }
 }
 

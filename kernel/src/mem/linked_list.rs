@@ -18,15 +18,15 @@ use core::ptr::NonNull;
 use core::mem::MaybeUninit;
 use core::cell::RefCell;
 use core::borrow::BorrowMut;
-use crate::mem::boxed::{Box, BoxData};
+use crate::mem::boxed::Box;
 use core::ops::{Deref, DerefMut};
 use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 use core::marker::PhantomData;
-use crate::mem::allocator::{Allocator, AllocError};
+use crate::alloc::allocator::{Allocator, AllocError};
 
 /******************************************************************************/
 
-type Link<T> = AtomicPtr<BoxData<Node<T>>>;
+type Link<T> = AtomicPtr<Node<T>>;
 
 /// An element/node of a list.
 // Copy needed for initialization
@@ -39,11 +39,11 @@ pub struct Node<T> {
 
 impl<T> Node<T> {
     /// Create a node from an element
-    pub fn new(element: T) -> Self {
+    pub const fn new(element: T) -> Self {
         Node {
             inner: element,
-            prev: AtomicPtr::default(),
-            next: AtomicPtr::default(),
+            prev: AtomicPtr::new(ptr::null_mut()),
+            next: AtomicPtr::new(ptr::null_mut()),
         }
     }
 }
@@ -99,10 +99,10 @@ pub struct LinkedList<T> {
 
 impl<T> LinkedList<T> {
     /// Create an empty list
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         LinkedList {
-            head: AtomicPtr::default(),
-            tail: AtomicPtr::default(),
+            head: AtomicPtr::new(ptr::null_mut()),
+            tail: AtomicPtr::new(ptr::null_mut()),
             len: AtomicUsize::new(0),
         }
     }
@@ -125,7 +125,7 @@ impl<T> LinkedList<T> {
 
         // Note(unsafe): Pointer requirements are met.
         unsafe {
-            (**node_raw.as_ref()).prev.store(tail, Ordering::Relaxed);
+            (*node_raw.as_ref()).prev.store(tail, Ordering::Relaxed);
 
             match tail.as_mut() {
                 None => self.head.store(node_raw.as_ptr(), Ordering::Relaxed),
@@ -163,8 +163,8 @@ impl<T> LinkedList<T> {
     /// Insert a node exactly before a given node
     ///
     /// **Note:** prefer [`Self::insert_when()`] if possible
-    pub fn insert(&self, mut node: Box<Node<T>>, mut new_node: Box<Node<T>>) {
-        let node_ptr = Box::leak(node);
+    pub fn insert(&self, node: NonNull<Node<T>>, mut new_node: Box<Node<T>>) {
+        let node_ptr = node;
         let new_node_ptr = Box::leak(new_node);
 
         // Note(unsafe): Pointer requirements are met.
@@ -203,7 +203,7 @@ impl<T> LinkedList<T> {
                 // Note(unsafe): current is checked to be non-null above.
                 unsafe {
                     if criteria(&(*node).inner, &current.inner) {
-                        self.insert(Box::from_raw(NonNull::new_unchecked(current)), node);
+                        self.insert(NonNull::new_unchecked(current), node);
                         return;
                     }
 
@@ -256,7 +256,7 @@ impl<T> LinkedList<T> {
     /// # Safety
     /// - A node is only allowed to be unliked once.
     /// - Must unlinked in the correct list.
-    unsafe fn unlink_raw(&self, mut node: NonNull<BoxData<Node<T>>>) -> Box<Node<T>> {
+    unsafe fn unlink_raw(&self, mut node: NonNull<Node<T>>) -> Box<Node<T>> {
         let prev = (*node.as_mut()).prev.load(Ordering::Relaxed);
         let next = (*node.as_mut()).next.load(Ordering::Relaxed);
 
@@ -307,7 +307,7 @@ impl<T> LinkedList<T> {
 ///
 /// This `struct` is created by [`LinkedList::iter()`].
 pub struct Iter<'a, T> {
-    next: Option<&'a BoxData<Node<T>>>,
+    next: Option<&'a Node<T>>,
 }
 
 impl<'a,T> Iterator for Iter<'a, T>
@@ -329,7 +329,7 @@ impl<'a,T> Iterator for Iter<'a, T>
 ///
 /// This `struct` is created by [`LinkedList::iter_mut()`].
 pub struct IterMut<'a, T> {
-    next: Option<&'a mut BoxData<Node<T>>>,
+    next: Option<&'a mut Node<T>>,
 }
 
 impl<'a, T> Iterator for IterMut<'a, T> {
@@ -354,7 +354,7 @@ impl<'a, T> Iterator for IterMut<'a, T> {
 /// element out of the list.
 #[derive(Debug)]
 pub struct Cursor<'a,T> {
-    node: *mut BoxData<Node<T>>,
+    node: *mut Node<T>,
     list: &'a LinkedList<T>,
 }
 
@@ -377,6 +377,11 @@ impl<'a, T> Cursor<'a, T> {
                 &mut (*node).inner
             )
         }
+    }
+
+    /// Get raw pointer of node. Only use if you really have to.
+    pub(crate) unsafe fn node(&self) -> *mut Node<T> {
+        self.node
     }
 
     /// Move cursor to the next node
@@ -410,7 +415,7 @@ mod tests {
     use super::*;
     use core::borrow::Borrow;
     use std::mem::size_of;
-    use crate::mem::bump_allocator::BumpAllocator;
+    use crate::alloc::bump::Bump;
 
     #[derive(Debug, Copy, Clone)]
     struct MyStruct {
@@ -420,9 +425,11 @@ mod tests {
     #[test]
     fn one_node() {
         static mut BUFFER: [u8; 128] = [0; 128];
-        static ALLOCATOR: BumpAllocator = unsafe {
-            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
-        };
+        static ALLOCATOR: Bump = unsafe {
+            Bump::new(
+                NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
+                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
+            )};
 
         let mut list = LinkedList::new();
         assert_eq!(list.head.load(Ordering::Relaxed), ptr::null_mut());
@@ -454,9 +461,11 @@ mod tests {
     #[test]
     fn length() {
         static mut BUFFER: [u8; 128] = [0; 128];
-        static ALLOCATOR: BumpAllocator = unsafe {
-            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
-        };
+        static ALLOCATOR: Bump = unsafe {
+            Bump::new(
+                NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
+                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
+            )};
 
         let mut list = LinkedList::new();
         assert_eq!(list.len(), 0);
@@ -472,9 +481,11 @@ mod tests {
     #[test]
     fn pushing_and_popping() {
         static mut BUFFER: [u8; 128] = [0; 128];
-        static ALLOCATOR: BumpAllocator = unsafe {
-            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
-        };
+        static ALLOCATOR: Bump = unsafe {
+            Bump::new(
+                NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
+                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
+            )};
 
         let mut list = LinkedList::new();
         list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
@@ -492,12 +503,14 @@ mod tests {
 
     #[test]
     fn memory_overflow() {
-        const ELEMENT_LEN: usize = size_of::<BoxData<Node<MyStruct>>>();
+        const ELEMENT_LEN: usize = size_of::<Node<MyStruct>>();
         // Add some extra space for alignment
         static mut BUFFER: [u8; ELEMENT_LEN*16 + 4] = [0; ELEMENT_LEN*16 + 4];
-        static ALLOCATOR: BumpAllocator = unsafe {
-            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
-        };
+        static ALLOCATOR: Bump = unsafe {
+            Bump::new(
+                NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
+                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
+            )};
 
         let mut list = LinkedList::new();
         for i in 0..16 {
@@ -510,9 +523,11 @@ mod tests {
     #[test]
     fn iterate() {
         static mut BUFFER: [u8; 128] = [0; 128];
-        static ALLOCATOR: BumpAllocator = unsafe {
-            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
-        };
+        static ALLOCATOR: Bump = unsafe {
+            Bump::new(
+                NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
+                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
+            )};
 
         let mut list = LinkedList::new();
         list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
@@ -532,9 +547,11 @@ mod tests {
     #[test]
     fn iterate_mut() {
         static mut BUFFER: [u8; 128] = [0; 128];
-        static ALLOCATOR: BumpAllocator = unsafe {
-            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
-        };
+        static ALLOCATOR: Bump = unsafe {
+            Bump::new(
+                NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
+                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
+            )};
 
         let mut list = LinkedList::new();
         list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
@@ -556,9 +573,11 @@ mod tests {
     #[test]
     fn find_and_take() {
         static mut BUFFER: [u8; 128] = [0; 128];
-        static ALLOCATOR: BumpAllocator = unsafe {
-            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
-        };
+        static ALLOCATOR: Bump = unsafe {
+            Bump::new(
+                NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
+                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
+            )};
 
         let mut list = LinkedList::new();
         list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
@@ -591,9 +610,11 @@ mod tests {
     #[test]
     fn insert_at_condition() {
         static mut BUFFER: [u8; 256] = [0; 256];
-        static ALLOCATOR: BumpAllocator = unsafe {
-            BumpAllocator::new(NonNull::new_unchecked(BUFFER.as_ptr() as *mut _), BUFFER.len())
-        };
+        static ALLOCATOR: Bump = unsafe {
+            Bump::new(
+                NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
+                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
+            )};
 
         let mut list = LinkedList::new();
         list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);

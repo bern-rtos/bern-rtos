@@ -24,63 +24,31 @@ use core::alloc::Layout;
 use core::mem;
 use core::ptr::NonNull;
 use core::ops::{Deref, DerefMut};
-use crate::mem::allocator::{Allocator, AllocError};
-
-// Box structure stored on a heap.
-pub struct BoxData<T> {
-    value: T,
-    /// Allocator used for this box.
-    ///
-    /// **Note:** Allocators are stored as trait object to allow boxes with
-    /// different types to be placed in one common container (e.g. a list).
-    ///
-    /// **Note:** A static reference is used because an allocator is not allowed
-    /// to drop at runtime.
-    alloc: &'static dyn Allocator,
-}
-
-impl<T> Deref for BoxData<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.value
-    }
-}
-
-impl<T> DerefMut for BoxData<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.value
-    }
-}
+use crate::alloc::allocator::{Allocator, AllocError};
 
 /// A pointer type for dynamically allocated memory.
 ///
 /// For more details see [module-level documentation](../index.html)
 pub struct Box<T> {
-    boxed: NonNull<BoxData<T>>,
+    boxed: NonNull<T>,
 }
 
 impl<T> Box<T> {
     /// Try to move a value to an allocated memory space.
     pub fn try_new_in(value: T, alloc: &'static dyn Allocator) -> Result<Self, AllocError> {
-        let internal = BoxData {
-            value,
-            alloc,
-        };
-
         // Note(unsafe): Alignment is power of two.
         let layout = unsafe {
-            Layout::from_size_align_unchecked(mem::size_of_val(&internal), 4)
+            Layout::from_size_align_unchecked(mem::size_of_val(&value), 4)
         };
-        let memory = match alloc.allocate(layout) {
+        let memory = match alloc.alloc(layout) {
             Ok(m) => m,
             Err(e) => return Err(e),
         };
 
-        let memory = memory.cast::<BoxData<T>>();
+        let memory = memory.cast::<T>();
         // Note(unsafe): Memory size checked by the allocator
         unsafe {
-            memory.as_ptr().write(internal);
+            memory.as_ptr().write(value);
         }
 
         Ok(Box {
@@ -90,14 +58,14 @@ impl<T> Box<T> {
 
 
     /// Create a box from a `NonNull` pointer
-    pub unsafe fn from_raw(pointer: NonNull<BoxData<T>>) -> Self {
+    pub unsafe fn from_raw(pointer: NonNull<T>) -> Self {
         Box {
             boxed: pointer,
         }
     }
 
     /// Returns the pointer to the box structure on memory.
-    pub fn leak(b: Self) -> NonNull<BoxData<T>> {
+    pub fn leak(b: Self) -> NonNull<T> {
         let boxed = b.boxed;
         mem::forget(b);
         boxed
@@ -108,13 +76,13 @@ impl<T> Deref for Box<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { &(*self.boxed.as_ref()).value }
+        unsafe { &(*self.boxed.as_ref()) }
     }
 }
 
 impl<T> DerefMut for Box<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { &mut (*self.boxed.as_mut()).value }
+        unsafe { &mut (*self.boxed.as_mut()) }
     }
 }
 

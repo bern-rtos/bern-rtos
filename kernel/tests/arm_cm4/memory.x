@@ -1,32 +1,38 @@
 MEMORY {
     FLASH : ORIGIN = 0x08000000, LENGTH = 512K
     RAM : ORIGIN = 0x20000000, LENGTH = 127K
-    SHARED : ORIGIN = 0x20000000 + 127K, LENGTH = 1K
 }
 
-/* Align stacks to double word see:
-   https://community.arm.com/developer/ip-products/processors/f/cortex-m-forum/6344/what-is-the-meaning-of-a-64-bit-aligned-stack-pointer-address */
 SECTIONS {
-    .task_stack (NOLOAD) : ALIGN(8)
-    {
-        . = ALIGN(8);
-        __stask_stack = .;
-        *(.task_stack);
-        . = ALIGN(8);
-        __etask_stack = .;
+    /* By default static variabled will be placed in .data or .bss. These
+     * sections are not accessible by default and do not meet memory protection
+     * alignment requirements. Thus, we place a marker to give .data + .bss a
+     * fixed size.
+     */
+    .shared_global ORIGIN(RAM) + 4K : {
+        __eshared_global = .;
     } > RAM
-    __sitask_stack = LOADADDR(.task_stack);
-} INSERT AFTER .bss;
+} INSERT AFTER .uninit;
 
 SECTIONS {
-    /*### .shared */
-    .shared : ALIGN(4)
-    {
-        __sishared = LOADADDR(.shared);
+    _kernel_size = 2K;
+
+    .kernel : ALIGN(4) {
+        /* Kernel static memory */
         . = ALIGN(4);
-        __sshared = .;
-        *(.shared);
+        __smkernel = .;
+        *(.kernel);
+        *(.kernel.process);
         . = ALIGN(4);
-        __eshared = .;
-    } > SHARED
-}
+        __emkernel = .;
+
+        /* Kernel heap */
+        . = ALIGN(4);
+        __shkernel = .;
+        . = __smkernel + _kernel_size;
+        __ehkernel = .;
+
+        ASSERT(__emkernel <= __ehkernel, "Error: No room left in bern kernel.");
+    } > RAM
+    __sikernel = LOADADDR(.kernel);
+} INSERT AFTER .shared_global;

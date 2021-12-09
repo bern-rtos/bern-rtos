@@ -1,10 +1,10 @@
 use core::alloc::Layout;
 use core::ptr::{NonNull, slice_from_raw_parts_mut};
 use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
-use crate::mem::allocator::{Allocator, AllocError};
+use crate::alloc::allocator::{Allocator, AllocError};
 
 /// The strict memory allocator can allocate memory but never release.
-pub struct BumpAllocator {
+pub struct Bump {
     /// End of memory block.
     end: NonNull<u8>,
     /// Current allocation pointer.
@@ -13,13 +13,13 @@ pub struct BumpAllocator {
     wastage: AtomicUsize,
 }
 
-impl BumpAllocator {
+impl Bump {
     ///
     /// # Safety
     /// `start` must be a valid address and the memory block must not exceed its
     /// intended range.
     pub const unsafe fn new(start: NonNull<u8>, end: NonNull<u8>) -> Self {
-        BumpAllocator {
+        Bump {
             end,
             current: AtomicPtr::new(start.as_ptr()),
             wastage: AtomicUsize::new(0),
@@ -27,14 +27,19 @@ impl BumpAllocator {
     }
 }
 
-impl Allocator for BumpAllocator {
-    fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+impl Allocator for Bump {
+    fn alloc(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         loop { // CAS loop
             let old = self.current.load(Ordering::Acquire);
             let padding = old.align_offset(layout.align());
+            defmt::trace!(
+                "Try allocating {}B at 0x{:x}",
+                layout.size(),
+                old as usize + padding
+            );
 
             if self.capacity() < (layout.size() + padding) {
-                return Err(AllocError);
+                return Err(AllocError::OutOfMemory);
             }
 
             // Note(unsafe): We checked the size requirements already
@@ -56,8 +61,12 @@ impl Allocator for BumpAllocator {
         }
     }
 
-    unsafe fn deallocate(&self, _ptr: NonNull<u8>, _layout: Layout) {
-        unimplemented!();
+    unsafe fn dealloc(&self, ptr: NonNull<u8>, layout: Layout) {
+        defmt::warn!(
+            "BumpAllocator cannot deallocate memory (0x{:x}, {}B). Ignoring call from .",
+            ptr.as_ptr(),
+            layout.size()
+        );
     }
 
     fn capacity(&self) -> usize {
@@ -65,3 +74,6 @@ impl Allocator for BumpAllocator {
             self.current.load(Ordering::Relaxed) as usize
     }
 }
+
+// Note(unsafe): We use atomic pointers.
+unsafe impl Sync for Bump { }

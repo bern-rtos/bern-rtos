@@ -19,6 +19,7 @@
 //! }
 //! ```
 
+use core::alloc::Layout;
 use core::mem;
 
 use crate::sched;
@@ -27,6 +28,7 @@ use crate::task::{RunnableResult, TaskBuilder};
 
 use bern_arch::ISyscall;
 use bern_arch::arch::Arch;
+use crate::alloc::wrapper::Wrapper;
 
 
 // todo: create with proc macro
@@ -41,6 +43,8 @@ enum Service {
     EventRegister,
     EventAwait,
     EventFire,
+    Alloc,
+    Dealloc,
 }
 
 impl Service {
@@ -52,7 +56,7 @@ impl Service {
 
 /// Move the closure for the task entry point to the task stack.
 ///
-/// This will copy the `closure` to stack point store in the `builder`c
+/// This will copy the `closure` to stack point store in the `builder`.
 pub(crate) fn move_closure_to_stack<F>(closure: F, builder: &mut TaskBuilder)
     where F: 'static + FnMut() -> RunnableResult
 {
@@ -141,6 +145,23 @@ pub(crate) fn event_fire(id: usize) {
     );
 }
 
+pub(crate) fn alloc(layout: Layout) -> *mut u8 {
+    Arch::syscall(
+        Service::Alloc.service_id(),
+        layout.size(),
+        layout.align(),
+        0,
+    ) as *mut u8
+}
+
+pub(crate) fn dealloc(ptr: *mut u8, layout: Layout) {
+    Arch::syscall(
+        Service::Dealloc.service_id(),
+        ptr as usize,
+        layout.size(),
+        layout.align()
+    );
+}
 
 // userland barrier ////////////////////////////////////////////////////////////
 
@@ -206,5 +227,23 @@ fn syscall_handler(service: Service, arg0: usize, arg1: usize, arg2: usize) -> u
             sched::event_fire(id);
             0
         },
+        Service::Alloc => {
+            let size = arg0;
+            let align = arg1;
+            let layout = unsafe {
+                Layout::from_size_align_unchecked(size, align)
+            };
+            Wrapper::alloc_handler(layout) as usize
+        }
+        Service::Dealloc => {
+            let ptr = arg0 as *mut u8;
+            let size = arg1;
+            let align = arg2;
+            let layout = unsafe {
+                Layout::from_size_align_unchecked(size, align)
+            };
+            Wrapper::dealloc_handler(ptr, layout);
+            0
+        }
     }
 }

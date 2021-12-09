@@ -1,13 +1,14 @@
 use core::alloc::Layout;
 use core::cell::Cell;
 use core::ptr::NonNull;
-use crate::mem::allocator::{Allocator, AllocError};
-use crate::mem::bump_allocator::BumpAllocator;
+use crate::alloc::allocator::{Allocator, AllocError};
+use crate::alloc::bump::Bump;
 use crate::mem::Size;
 use crate::task;
 use bern_arch::arch::Arch;
 use bern_arch::IStartup;
 use bern_arch::startup::Region;
+use crate::kernel::{KERNEL, State};
 
 pub struct ProcessMemory {
     pub size: usize,
@@ -22,14 +23,20 @@ pub struct ProcessMemory {
 
 pub struct Process {
     memory: ProcessMemory,
-    proc_allocator: BumpAllocator,
+    proc_allocator: Bump,
     init: Cell<bool>,
+}
+
+pub enum ProcessError {
+    NotInit,
+    AlreadyInit,
+    KernelAlreadyRunning,
 }
 
 impl Process {
     pub const fn new(memory: ProcessMemory) -> Self {
         let proc_allocator = unsafe {
-            BumpAllocator::new(
+            Bump::new(
                 NonNull::new_unchecked(memory.heap_start as *mut _),
                 NonNull::new_unchecked(memory.heap_end as *mut _)
             )};
@@ -41,9 +48,13 @@ impl Process {
         }
     }
 
-    fn lazy_init(&self) {
+    fn startup(&self) -> Result<(), ProcessError> {
         if self.init.get() {
-            return;
+            return Err(ProcessError::AlreadyInit);
+        }
+
+        if KERNEL.state() == State::Running {
+            return Err(ProcessError::KernelAlreadyRunning);
         }
 
         Arch::init_static_region(Region {
@@ -53,15 +64,25 @@ impl Process {
         });
 
         self.init.set(false);
+        return Ok(());
     }
 
-    pub fn create_thread(&'static self) -> task::TaskBuilder {
-        self.lazy_init();
-        task::Task::new(self)
+    pub fn init<F>(&'static self, f: F) -> Result<(), ProcessError>
+        where F: FnOnce(&Context)
+    {
+        self.startup()?;
+        KERNEL.start_init_process(&self);
+
+        f(&Context {
+            process: self
+        });
+
+        KERNEL.end_init_process();
+        return Ok(());
     }
 
-    pub(crate) fn request_memory(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
-        self.proc_allocator.allocate(layout)
+    pub(crate) fn allocator(&self) -> &dyn Allocator {
+        &self.proc_allocator
     }
 
     pub(crate) fn start_addr(&self) -> *const u8 {
@@ -75,3 +96,15 @@ impl Process {
 
 // Note(unsafe): The values of `Process` are read only.
 unsafe impl Sync for Process { }
+
+
+
+pub struct Context {
+    process: &'static Process,
+}
+
+impl Context {
+    pub fn new_thread(&self) -> task::TaskBuilder {
+        task::Task::new(self.process)
+    }
+}
