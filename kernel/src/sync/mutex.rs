@@ -58,18 +58,20 @@ pub struct Mutex<T> {
 }
 
 impl<T> Mutex<T> {
-    pub const fn new(element: T) -> Self {
-        Mutex {
+    pub fn new(element: T) -> Self {
+        let mutex = Mutex {
             id: UnsafeCell::new(0),
             inner: UnsafeCell::new(element),
             lock: AtomicBool::new(false),
-        }
+        };
+        mutex.register().ok();
+        mutex
     }
 
     /// Allocate an event ot the mutex.
     ///
     /// **Note:** The kernel must be initialized before calling this method.
-    pub fn register(&self) -> Result<(),Error> {
+    fn register(&self) -> Result<(),Error> {
         let id = syscall::event_register();
         if id == 0 {
             Err(Error::OutOfMemory)

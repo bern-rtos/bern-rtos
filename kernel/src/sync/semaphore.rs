@@ -46,12 +46,15 @@ pub struct Semaphore {
 }
 
 impl Semaphore {
-    pub const fn new(permits: usize) -> Self {
-        Semaphore {
+    pub fn new(permits: usize) -> Self {
+        let semaphore = Semaphore {
             id: UnsafeCell::new(0),
             permits:  AtomicUsize::new(permits),
             permits_issued: AtomicUsize::new(0),
-        }
+        };
+
+        semaphore.register().ok();
+        semaphore
     }
 
     /// Allocate an event ot the semaphore.
