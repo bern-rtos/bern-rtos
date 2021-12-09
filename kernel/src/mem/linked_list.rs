@@ -39,11 +39,11 @@ pub struct Node<T> {
 
 impl<T> Node<T> {
     /// Create a node from an element
-    pub fn new(element: T) -> Self {
+    pub const fn new(element: T) -> Self {
         Node {
             inner: element,
-            prev: AtomicPtr::default(),
-            next: AtomicPtr::default(),
+            prev: AtomicPtr::new(ptr::null_mut()),
+            next: AtomicPtr::new(ptr::null_mut()),
         }
     }
 }
@@ -101,8 +101,8 @@ impl<T> LinkedList<T> {
     /// Create an empty list
     pub const fn new() -> Self {
         LinkedList {
-            head: AtomicPtr::new(0 as *mut Node<T>),
-            tail: AtomicPtr::new(0 as *mut Node<T>),
+            head: AtomicPtr::new(ptr::null_mut()),
+            tail: AtomicPtr::new(ptr::null_mut()),
             len: AtomicUsize::new(0),
         }
     }
