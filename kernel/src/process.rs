@@ -81,10 +81,6 @@ impl Process {
         return Ok(());
     }
 
-    pub(crate) fn request_memory(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
-        self.proc_allocator.alloc(layout)
-    }
-
     pub(crate) fn allocator(&self) -> &dyn Allocator {
         &self.proc_allocator
     }

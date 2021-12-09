@@ -111,7 +111,13 @@ impl TaskBuilder {
         // protection padding.
         let padding = MPU_MIN_SIZE;
 
-        let mut memory = match self.parent.request_memory(unsafe { Layout::from_size_align_unchecked(size + padding, 32) }) {
+        let mut memory = match self
+            .parent
+            .allocator()
+            .alloc(unsafe {
+                Layout::from_size_align_unchecked(size + padding, 32)
+            })
+        {
             Ok(m) => m,
             Err(_) => return self, // stack remains None
         };

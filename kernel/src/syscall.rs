@@ -56,7 +56,7 @@ impl Service {
 
 /// Move the closure for the task entry point to the task stack.
 ///
-/// This will copy the `closure` to stack point store in the `builder`c
+/// This will copy the `closure` to stack point store in the `builder`.
 pub(crate) fn move_closure_to_stack<F>(closure: F, builder: &mut TaskBuilder)
     where F: 'static + FnMut() -> RunnableResult
 {
