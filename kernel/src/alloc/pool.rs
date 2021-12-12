@@ -5,7 +5,7 @@ use core::ptr;
 use core::ptr::{NonNull, slice_from_raw_parts_mut};
 use crate::alloc::allocator::{Allocator, AllocError};
 use crate::mem::boxed::Box;
-use crate::mem::queue::{Node, Queue};
+use crate::mem::queue::mpmc_linked::{Node, Queue};
 
 
 pub enum PoolError {
