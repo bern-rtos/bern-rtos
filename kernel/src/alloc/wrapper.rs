@@ -1,8 +1,7 @@
 use core::alloc::{GlobalAlloc, Layout};
 use core::ptr::NonNull;
 use crate::kernel::{KERNEL, State};
-use crate::alloc::allocator::{Allocator, AllocError};
-use crate::process::Process;
+use crate::alloc::allocator::Allocator;
 use crate::syscall;
 use crate::sched;
 

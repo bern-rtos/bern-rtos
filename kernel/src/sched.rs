@@ -17,7 +17,6 @@ use crate::sync::critical_section;
 use crate::mem::{boxed::Box, linked_list::*, Size};
 use crate::alloc::allocator::AllocError;
 use crate::alloc::bump::Bump;
-use crate::process::Process;
 use crate::kernel::static_memory;
 
 use bern_arch::{ICore, IMemoryProtection, IScheduler, IStartup};
@@ -270,6 +269,7 @@ pub(crate) fn tick_update() {
     }
 }
 
+#[allow(unused)]
 fn default_idle() {
     loop {
         atomic::compiler_fence(Ordering::SeqCst);

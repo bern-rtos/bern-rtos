@@ -1,7 +1,6 @@
-use core::alloc::Layout;
 use core::cell::Cell;
 use core::ptr::NonNull;
-use crate::alloc::allocator::{Allocator, AllocError};
+use crate::alloc::allocator::Allocator;
 use crate::alloc::bump::Bump;
 use crate::mem::Size;
 use crate::task;
