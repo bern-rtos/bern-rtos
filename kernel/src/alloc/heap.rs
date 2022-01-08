@@ -90,6 +90,7 @@ impl Heap {
         panic!("`self.free_list` contains a loop.");
     }
 
+    #[allow(unused)]
     fn align(ptr: *mut u8, align: usize) -> *mut u8 {
         unsafe {
             ptr.add(ptr.align_offset(align))

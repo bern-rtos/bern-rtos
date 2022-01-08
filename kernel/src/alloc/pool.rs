@@ -1,11 +1,10 @@
 use core::alloc::Layout;
-use core::borrow::Borrow;
 use core::cell::Cell;
 use core::ptr;
 use core::ptr::{NonNull, slice_from_raw_parts_mut};
 use crate::alloc::allocator::{Allocator, AllocError};
 use crate::mem::boxed::Box;
-use crate::mem::queue::{Node, Queue};
+use crate::mem::queue::mpmc_linked::{Node, Queue};
 
 
 pub enum PoolError {
@@ -56,7 +55,6 @@ impl Partition {
         let capacity = len / self.block_size.get();
 
         for i in 0..capacity {
-            let node = Node::new(Free::new());
             // Note(unsafe): We should stay within the memory boundries.
             unsafe {
                 self.push_free_block(ptr.add(i * self.block_size.get()));
@@ -91,7 +89,7 @@ impl Partition {
         })
     }
 
-    unsafe fn try_deallocate(&self, ptr: NonNull<u8>, layout: Layout) -> Result<(),PoolError> {
+    unsafe fn try_deallocate(&self, ptr: NonNull<u8>, _layout: Layout) -> Result<(),PoolError> {
         let ptr_raw = ptr.as_ptr();
         let range = self.range.as_ptr();
 
@@ -166,7 +164,7 @@ impl<const N: usize> Allocator for Pool<{ N }> {
 
 unsafe impl<const N: usize> Sync for Pool<{ N }> { }
 
-
+#[allow(unused)]
 macro_rules! new {
     ($partitions:tt) => {
         Pool {
