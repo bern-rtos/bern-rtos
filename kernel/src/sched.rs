@@ -10,7 +10,7 @@ use core::mem::MaybeUninit;
 use core::ptr::NonNull;
 
 use event::Event;
-use crate::task::{self, Task, Transition};
+use crate::exec::task::{self, Task, Transition};
 use crate::syscall;
 use crate::time;
 use crate::sync::critical_section;
@@ -23,6 +23,7 @@ use bern_arch::{ICore, IMemoryProtection, IScheduler, IStartup};
 use bern_arch::arch::{Arch, ArchCore};
 use bern_arch::memory_protection::{Access, Config, Permission, Type};
 use bern_conf::CONF;
+use crate::exec::interrupt::Interrupt;
 
 
 // These statics are MaybeUninit because, there currently no solution to
@@ -43,6 +44,7 @@ struct Scheduler {
     tasks_ready: [LinkedList<Task>; CONF.task.priorities as usize],
     tasks_sleeping: LinkedList<Task>,
     tasks_terminated: LinkedList<Task>,
+    interrupt_handlers: LinkedList<Interrupt>,
     events: LinkedList<Event>,
     event_counter: usize,
 }
@@ -119,6 +121,7 @@ pub fn init() {
             tasks_ready,
             tasks_sleeping: LinkedList::new(),
             tasks_terminated: LinkedList::new(),
+            interrupt_handlers: LinkedList::new(),
             events: LinkedList::new(),
             event_counter: 0,
         });
@@ -276,6 +279,17 @@ fn default_idle() {
     }
 }
 
+pub(crate) fn interrupt_handler_add(interrupt: Interrupt) {
+    let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
+
+    critical_section::exec(|| {
+        sched.interrupt_handlers.emplace_back(
+            interrupt,
+            unsafe { &*KERNEL_ALLOCATOR.as_ptr() }
+        ).ok();
+    });
+}
+
 pub(crate) fn event_register() -> Result<usize, AllocError> {
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
 
@@ -328,6 +342,19 @@ pub(crate) fn event_fire(id: usize) {
     if switch {
         Arch::trigger_context_switch();
     }
+}
+
+#[no_mangle]
+fn kernel_interrupt_handler(irqn: u16) {
+    let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
+
+    defmt::trace!("IRQ {} called.", irqn);
+    for handler in sched.interrupt_handlers.iter_mut() {
+        if handler.contains_interrupt(irqn) {
+            handler.call(irqn);
+        }
+    }
+
 }
 
 pub(crate) fn with_callee<F, R>(f: F) -> R

@@ -24,10 +24,11 @@ use core::mem;
 
 use crate::sched;
 use crate::sched::event;
-use crate::task::{RunnableResult, TaskBuilder};
+use crate::exec::task::{RunnableResult, TaskBuilder};
 
-use bern_arch::ISyscall;
-use bern_arch::arch::Arch;
+use bern_arch::{ICore, ISyscall};
+use bern_arch::arch::{Arch, ArchCore};
+use bern_arch::core::ExecMode;
 use crate::alloc::wrapper::Wrapper;
 
 
@@ -54,14 +55,23 @@ impl Service {
     }
 }
 
+fn mode_aware_syscall(service: Service, arg0: usize, arg1: usize, arg2: usize) -> usize {
+    match ArchCore::execution_mode() {
+        ExecMode::Kernel =>
+            syscall_handler(service, arg0, arg1, arg2),
+        ExecMode::Thread =>
+            Arch::syscall(service.service_id(), arg0, arg1, arg2),
+    }
+}
+
 /// Move the closure for the task entry point to the task stack.
 ///
 /// This will copy the `closure` to stack point store in the `builder`.
 pub(crate) fn move_closure_to_stack<F>(closure: F, builder: &mut TaskBuilder)
     where F: 'static + FnMut() -> RunnableResult
 {
-    Arch::syscall(
-        Service::MoveClosureToStack.service_id(),
+    mode_aware_syscall(
+        Service::MoveClosureToStack,
         &closure as *const _ as usize,
         mem::size_of::<F>() as usize,
         builder as *mut _ as usize
@@ -70,8 +80,8 @@ pub(crate) fn move_closure_to_stack<F>(closure: F, builder: &mut TaskBuilder)
 
 /// Add a task to the scheduler based on its `TaskBuilder` and entry point.
 pub(crate) fn task_spawn(builder: &mut TaskBuilder, runnable: &&mut (dyn FnMut() -> RunnableResult)) {
-    Arch::syscall(
-        Service::TaskSpawn.service_id(),
+    mode_aware_syscall(
+        Service::TaskSpawn,
         builder as *mut _ as usize,
         runnable as *const _ as usize,
         0
@@ -81,8 +91,8 @@ pub(crate) fn task_spawn(builder: &mut TaskBuilder, runnable: &&mut (dyn FnMut()
 
 /// Put the current task to sleep for `ms` milliseconds.
 pub fn sleep(ms: u32) {
-    Arch::syscall(
-        Service::TaskSleep.service_id(),
+    mode_aware_syscall(
+        Service::TaskSleep,
         ms as usize,
         0,
         0
@@ -94,8 +104,8 @@ pub fn sleep(ms: u32) {
 /// **Note:** If the calling task is the only ready task of its priority it will
 /// be put to running state again.
 pub fn yield_now() {
-    Arch::syscall(
-        Service::TaskYield.service_id(),
+    mode_aware_syscall(
+        Service::TaskYield,
         0,
         0,
         0
@@ -104,8 +114,8 @@ pub fn yield_now() {
 
 /// Terminate the current task voluntarily.
 pub fn task_exit() {
-    Arch::syscall(
-        Service::TaskExit.service_id(),
+    mode_aware_syscall(
+        Service::TaskExit,
         0,
         0,
         0
@@ -116,8 +126,8 @@ pub fn task_exit() {
 ///
 /// The ID is later used to await and fire events.
 pub(crate) fn event_register() -> usize {
-    Arch::syscall(
-        Service::EventRegister.service_id(),
+    mode_aware_syscall(
+        Service::EventRegister,
         0,
         0,
         0
@@ -126,8 +136,8 @@ pub(crate) fn event_register() -> usize {
 
 /// Wait until an event or a timeout occurs.
 pub(crate) fn event_await(id: usize, timeout: u32) -> Result<(), event::Error> {
-    let ret_code = Arch::syscall(
-        Service::EventAwait.service_id(),
+    let ret_code = mode_aware_syscall(
+        Service::EventAwait,
         id,
         timeout as usize,
         0
@@ -137,8 +147,8 @@ pub(crate) fn event_await(id: usize, timeout: u32) -> Result<(), event::Error> {
 
 /// Trigger an event given its ID.
 pub(crate) fn event_fire(id: usize) {
-    Arch::syscall(
-        Service::EventFire.service_id(),
+    mode_aware_syscall(
+        Service::EventFire,
         id,
         0,
         0
@@ -146,8 +156,8 @@ pub(crate) fn event_fire(id: usize) {
 }
 
 pub(crate) fn alloc(layout: Layout) -> *mut u8 {
-    Arch::syscall(
-        Service::Alloc.service_id(),
+    mode_aware_syscall(
+        Service::Alloc,
         layout.size(),
         layout.align(),
         0,
@@ -155,8 +165,8 @@ pub(crate) fn alloc(layout: Layout) -> *mut u8 {
 }
 
 pub(crate) fn dealloc(ptr: *mut u8, layout: Layout) {
-    Arch::syscall(
-        Service::Dealloc.service_id(),
+    mode_aware_syscall(
+        Service::Dealloc,
         ptr as usize,
         layout.size(),
         layout.align()

@@ -39,7 +39,7 @@ use bern_arch::memory_protection::{Config, Type, Access, Permission};
 use bern_arch::IMemoryProtection;
 use bern_conf::CONF;
 use crate::alloc::allocator::AllocError;
-use crate::process::Process;
+use crate::exec::process::Process;
 
 const MPU_MIN_SIZE: usize = 32;
 

@@ -14,7 +14,7 @@ mod tests {
     use crate::common::*;
     use bern_kernel as kernel;
     use kernel::sched;
-    use kernel::task::{Task, Priority};
+    use bern_kernel::exec::task::{Task, Priority};
 
     #[test_set_up]
     fn init_scheduler() {

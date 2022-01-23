@@ -3,7 +3,8 @@ use core::ptr::NonNull;
 use crate::alloc::allocator::Allocator;
 use crate::alloc::bump::Bump;
 use crate::mem::Size;
-use crate::task;
+use crate::exec::task;
+use crate::exec::interrupt;
 use bern_arch::arch::Arch;
 use bern_arch::IStartup;
 use bern_arch::startup::Region;
@@ -105,5 +106,9 @@ pub struct Context {
 impl Context {
     pub fn new_thread(&self) -> task::TaskBuilder {
         task::Task::new(self.process)
+    }
+
+    pub fn new_interrupt_handler(&self) -> interrupt::InterruptBuilder {
+        interrupt::Interrupt::new(self.process)
     }
 }

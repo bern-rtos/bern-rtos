@@ -1,5 +1,5 @@
 use core::cell::Cell;
-use crate::process::Process;
+use crate::exec::process::Process;
 use crate::sched;
 
 pub(crate) mod static_memory;
