@@ -24,7 +24,8 @@ use core::mem;
 
 use crate::sched;
 use crate::sched::event;
-use crate::exec::task::{RunnableResult, TaskBuilder};
+use crate::exec::runnable::RunnableResult;
+use crate::exec::thread::ThreadBuilder;
 
 use bern_arch::{ICore, ISyscall};
 use bern_arch::arch::{Arch, ArchCore};
@@ -36,7 +37,6 @@ use crate::alloc::wrapper::Wrapper;
 
 #[repr(u8)]
 enum Service {
-    MoveClosureToStack,
     TaskSpawn,
     TaskSleep,
     TaskYield,
@@ -64,26 +64,12 @@ fn mode_aware_syscall(service: Service, arg0: usize, arg1: usize, arg2: usize) -
     }
 }
 
-/// Move the closure for the task entry point to the task stack.
-///
-/// This will copy the `closure` to stack point store in the `builder`.
-pub(crate) fn move_closure_to_stack<F>(closure: F, builder: &mut TaskBuilder)
-    where F: 'static + FnMut() -> RunnableResult
-{
-    mode_aware_syscall(
-        Service::MoveClosureToStack,
-        &closure as *const _ as usize,
-        mem::size_of::<F>() as usize,
-        builder as *mut _ as usize
-    );
-}
-
 /// Add a task to the scheduler based on its `TaskBuilder` and entry point.
-pub(crate) fn task_spawn(builder: &mut TaskBuilder, runnable: &&mut (dyn FnMut() -> RunnableResult)) {
+pub(crate) fn thread_spawn(builder: &mut ThreadBuilder, entry: &&mut (dyn FnMut() -> RunnableResult)) {
     mode_aware_syscall(
         Service::TaskSpawn,
         builder as *mut _ as usize,
-        runnable as *const _ as usize,
+        entry as *const _ as usize,
         0
     );
 }
@@ -184,21 +170,12 @@ pub(crate) fn dealloc(ptr: *mut u8, layout: Layout) {
 #[no_mangle]
 fn syscall_handler(service: Service, arg0: usize, arg1: usize, arg2: usize) -> usize {
     match service {
-        Service::MoveClosureToStack => {
-            let builder: &mut TaskBuilder = unsafe { mem::transmute(arg2 as *mut TaskBuilder) };
-            TaskBuilder::move_closure_to_stack(
-                builder,
-                arg0 as *const u8,
-                arg1
-            );
-            0
-        },
         Service::TaskSpawn => {
-            let builder: &mut TaskBuilder = unsafe { mem::transmute(arg0 as *mut TaskBuilder) };
+            let builder: &mut ThreadBuilder = unsafe { mem::transmute(arg0 as *mut ThreadBuilder) };
             let runnable: &&mut (dyn FnMut() -> RunnableResult) = unsafe {
                 mem::transmute(arg1 as *mut &mut (dyn FnMut() -> RunnableResult))
             };
-            TaskBuilder::build(
+            ThreadBuilder::build(
                 builder,
                 runnable,
             );

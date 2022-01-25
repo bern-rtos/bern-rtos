@@ -1,7 +1,7 @@
 //! Generic event system.
 
 use crate::mem::linked_list::LinkedList;
-use crate::exec::task::Task;
+use crate::exec::runnable::Runnable;
 
 /// Event errors.
 #[allow(dead_code)]
@@ -28,7 +28,7 @@ pub struct Event {
     /// Event identifier (randomize to protect access)
     id: usize,
     /// Tasks waiting for the event
-    pub pending: LinkedList<Task>,
+    pub pending: LinkedList<Runnable>,
     /// Wake strategy on event
     wake: Wake,
     /// Apply priority inversion

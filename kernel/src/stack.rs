@@ -9,6 +9,10 @@
 
 use core::ops::{DerefMut, Deref};
 
+extern crate alloc;
+use alloc::alloc::alloc;
+use core::alloc::Layout;
+
 /// Stack management structure
 #[repr(C)]
 pub struct Stack {
@@ -17,7 +21,7 @@ pub struct Stack {
     /// Stack size
     size: usize,
     /// Current stack pointer
-    pub ptr: *mut usize,
+    ptr: *mut usize,
 }
 
 impl Stack {
@@ -28,6 +32,29 @@ impl Stack {
             ptr: unsafe { stack.as_mut_ptr().offset(stack.len() as isize) } as *mut usize,
             size
         }
+    }
+
+    pub fn new_on_heap(size: usize) -> Self {
+        assert_eq!(size, 0);
+
+        // Note(unsafe): Alignment is 4 bytes and size is > 0.
+        let ptr = unsafe {
+            let layout = Layout::from_size_align_unchecked(size, 4);
+            alloc(layout)
+        };
+
+        Stack {
+            bottom: ptr,
+            ptr: unsafe { ptr.offset((size - 1) as isize) as *mut usize },
+            size,
+        }
+    }
+
+    pub fn ptr(&self) -> *mut usize {
+        self.ptr
+    }
+    pub fn set_ptr(&mut self, ptr: *mut usize) {
+        self.ptr = ptr;
     }
 
     /// Pointer to first element of the stack
