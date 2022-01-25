@@ -59,7 +59,7 @@ impl Priority {
     pub(crate) const MAX: Priority = Priority(u8::MAX);
 
     pub const fn new(prio: u8) -> Self {
-        assert!(prio > Priority::LOWEST.0);
+        assert!(prio <= Priority::LOWEST.0);
         Priority(prio)
     }
 
