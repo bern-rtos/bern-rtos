@@ -52,7 +52,7 @@ impl Thread {
             process,
             stack: None,
             // set default to lowest priority above idle
-            priority: Priority(CONF.task.priorities - 2),
+            priority: Default::default(),
         }
     }
 }
@@ -76,18 +76,13 @@ impl ThreadBuilder {
 
     /// Set task priority.
     pub fn priority(&mut self, priority: Priority) -> &mut Self {
-        if priority.0 >= CONF.task.priorities as u8 {
-            panic!("Priority out of range. todo: check at compile time");
-        } else if priority.0 == CONF.task.priorities as u8 - 1  {
-            panic!("Priority reserved for idle task. Use `is_idle_task()` instead. todo: check at compile time")
-        }
         self.priority = priority;
         self
     }
 
     /// This task will replace the default idle task.
     pub fn idle_task(&mut self) -> &mut Self {
-        self.priority = Priority(CONF.task.priorities as u8 - 1);
+        self.priority = Priority::idle();
         self
     }
 

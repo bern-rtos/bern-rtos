@@ -3,8 +3,8 @@ use bern_arch::arch::Arch;
 use bern_arch::arch::memory_protection::{MemoryRegion, Size};
 use bern_arch::IMemoryProtection;
 use bern_arch::memory_protection::{Access, Config, Permission, Type};
+use bern_conf::CONF;
 use crate::exec::process::Process;
-use crate::mem::boxed::Box;
 use crate::sched::event::Event;
 use crate::stack::Stack;
 use crate::time;
@@ -48,13 +48,33 @@ pub enum Transition {
 /// Task priority.
 ///
 /// 0 is the highest priority.
-#[derive(PartialEq, Debug, Copy, Clone)]
-pub struct Priority(pub u8);
+#[derive(PartialEq, PartialOrd, Debug, Copy, Clone)]
+pub struct Priority(u8);
 // todo: check priority range at compile time
 
 impl Priority {
+    const _HIGHEST: Priority = Priority(0);
+    const LOWEST: Priority = Priority(CONF.task.priorities - 2);
+    const IDLE: Priority = Priority(CONF.task.priorities - 1);
+    pub(crate) const MAX: Priority = Priority(u8::MAX);
+
+    pub const fn new(prio: u8) -> Self {
+        assert!(prio > Priority::LOWEST.0);
+        Priority(prio)
+    }
+
+    pub const fn idle() -> Self {
+        Priority::IDLE
+    }
+
     pub fn is_interrupt_handler(self) -> bool {
         self.0 == 0
+    }
+}
+
+impl Default for Priority {
+    fn default() -> Self {
+        Priority::LOWEST
     }
 }
 
@@ -63,6 +83,13 @@ impl Into<usize> for Priority {
         self.0 as usize
     }
 }
+
+impl Into<u8> for Priority {
+    fn into(self) -> u8 {
+        self.0
+    }
+}
+
 
 
 // todo: manage lifetime of stack & runnable
