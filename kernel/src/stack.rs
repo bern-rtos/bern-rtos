@@ -12,6 +12,7 @@ use core::ops::{DerefMut, Deref};
 extern crate alloc;
 use alloc::alloc::alloc;
 use core::alloc::Layout;
+use crate::exec::process;
 
 /// Stack management structure
 #[repr(C)]
@@ -48,6 +49,20 @@ impl Stack {
             ptr: unsafe { ptr.offset((size - 1) as isize) as *mut usize },
             size,
         }
+    }
+
+    pub fn try_new_in(context: &process::Context, size: usize) -> Option<Self> {
+        let mut memory = match context
+            .process()
+            .allocator()
+            .alloc(unsafe {
+                Layout::from_size_align_unchecked(size, 32)
+            })
+        {
+            Ok(m) => m,
+            Err(_) => return None, // stack remains None
+        };
+        Some(Stack::new(unsafe { memory.as_mut() }, size))
     }
 
     pub fn ptr(&self) -> *mut usize {

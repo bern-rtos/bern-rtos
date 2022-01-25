@@ -1,16 +1,12 @@
-use core::alloc::Layout;
 use core::cell::Cell;
 use core::ptr::NonNull;
 use crate::alloc::allocator::Allocator;
 use crate::alloc::bump::Bump;
 use crate::mem::Size;
-use crate::exec::thread;
-use crate::exec::interrupt;
 use bern_arch::arch::Arch;
 use bern_arch::IStartup;
 use bern_arch::startup::Region;
 use crate::kernel::{KERNEL, State};
-use crate::stack::Stack;
 
 pub struct ProcessMemory {
     pub size: usize,
@@ -104,25 +100,7 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new_thread(&self) -> thread::ThreadBuilder {
-        thread::Thread::new(self.process)
-    }
-
-    pub fn new_interrupt_handler(&self) -> interrupt::InterruptBuilder {
-        interrupt::Interrupt::new(self.process)
-    }
-
-    pub fn new_stack(&self, size: usize) -> Option<Stack> {
-        let mut memory = match self
-            .process
-            .allocator()
-            .alloc(unsafe {
-                Layout::from_size_align_unchecked(size, 32)
-            })
-        {
-            Ok(m) => m,
-            Err(_) => return None, // stack remains None
-        };
-        Some(Stack::new(unsafe { memory.as_mut() }, size))
+    pub(crate) fn process(&self) -> &'static Process {
+        self.process
     }
 }

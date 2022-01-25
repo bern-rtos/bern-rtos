@@ -36,10 +36,7 @@ pub struct Box<T> {
 impl<T> Box<T> {
     /// Try to move a value to an allocated memory space.
     pub fn try_new_in(value: T, alloc: &'static dyn Allocator) -> Result<Self, AllocError> {
-        // Note(unsafe): Alignment is power of two.
-        let layout = unsafe {
-            Layout::from_size_align_unchecked(mem::size_of_val(&value), 4)
-        };
+        let layout = Layout::new::<T>();
         let memory = match alloc.alloc(layout) {
             Ok(m) => m,
             Err(e) => return Err(e),

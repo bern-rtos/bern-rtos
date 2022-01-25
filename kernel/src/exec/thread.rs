@@ -39,6 +39,7 @@ use bern_arch::memory_protection::{Config, Type, Access, Permission};
 use bern_arch::IMemoryProtection;
 use bern_conf::CONF;
 use crate::alloc::allocator::AllocError;
+use crate::exec::process;
 use crate::exec::process::Process;
 use crate::exec::runnable::{Priority, RunnableResult, Runnable, Transition};
 use crate::mem::boxed::Box;
@@ -47,9 +48,9 @@ pub struct Thread {}
 
 impl Thread {
     /// Create a new task using the [`TaskBuilder`]
-    pub fn new(process: &'static Process) -> ThreadBuilder {
+    pub fn new(context: &process::Context) -> ThreadBuilder {
         ThreadBuilder {
-            process,
+            process: context.process(),
             stack: None,
             // set default to lowest priority above idle
             priority: Default::default(),
@@ -107,7 +108,6 @@ impl ThreadBuilder {
     }
 
     // userland barrier ////////////////////////////////////////////////////////
-
     pub(crate) fn build(&mut self, entry: &&mut (dyn FnMut() -> RunnableResult)) {
         let mut stack = match self.stack.take() {
             Some(stack) => stack,

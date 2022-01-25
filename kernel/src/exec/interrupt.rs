@@ -1,17 +1,17 @@
 use crate::exec::interrupt::InterruptStack::Kernel;
-use crate::exec::process::Process;
+use crate::exec::process::{self, Process};
 use crate::mem::boxed::Box;
 
-pub struct Interrupt {
+pub struct InterruptHandler {
     process: &'static Process,
     handler: &'static mut dyn FnMut(&Context),
     stack: InterruptStack,
     irqn: [Option<u16>; 16],
 }
 
-impl Interrupt {
-    pub(crate) fn new(process: &'static Process) -> InterruptBuilder {
-        InterruptBuilder::new(process)
+impl InterruptHandler {
+    pub fn new(context: &process::Context) -> InterruptBuilder {
+        InterruptBuilder::new(context.process())
     }
 
     pub(crate) fn interrupts(&self) -> &[Option<u16>; 16] {
@@ -49,10 +49,10 @@ impl Context {
     }
 }
 
-#[derive(Eq, PartialEq, Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum InterruptStack {
     Kernel,
-    Process(usize),
+    //Process,
 }
 
 pub struct InterruptBuilder {
@@ -105,7 +105,7 @@ impl InterruptBuilder {
 
     pub(crate) fn build(&mut self, handler: &'static mut dyn FnMut(&Context)) {
         // Note(unsafe): The stack type is checked before this function call.
-        let interrupt = Interrupt {
+        let interrupt = InterruptHandler {
             process: self.process,
             handler,
             stack: unsafe { self.stack.unwrap_unchecked() },

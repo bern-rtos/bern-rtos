@@ -23,7 +23,7 @@ use bern_arch::{ICore, IMemoryProtection, IScheduler, IStartup};
 use bern_arch::arch::{Arch, ArchCore};
 use bern_arch::memory_protection::{Access, Config, Permission, Type};
 use bern_conf::CONF;
-use crate::exec::interrupt::Interrupt;
+use crate::exec::interrupt::InterruptHandler;
 
 
 // These statics are MaybeUninit because, there currently no solution to
@@ -44,7 +44,7 @@ struct Scheduler {
     tasks_ready: [LinkedList<Runnable>; CONF.task.priorities as usize],
     tasks_sleeping: LinkedList<Runnable>,
     tasks_terminated: LinkedList<Runnable>,
-    kernel_interrupt_handlers: LinkedList<Interrupt>,
+    interrupt_handlers: LinkedList<InterruptHandler>,
     events: LinkedList<Event>,
     event_counter: usize,
 }
@@ -121,7 +121,7 @@ pub fn init() {
             tasks_ready,
             tasks_sleeping: LinkedList::new(),
             tasks_terminated: LinkedList::new(),
-            kernel_interrupt_handlers: LinkedList::new(),
+            interrupt_handlers: LinkedList::new(),
             events: LinkedList::new(),
             event_counter: 0,
         });
@@ -242,7 +242,7 @@ pub(crate) fn tick_update() {
         // update pending -> ready list
         let preempt_prio= match sched.task_running.as_ref() {
             Some(task) => (*task).priority(),
-            None => Priority(u8::MAX),
+            None => Priority::MAX,
         };
 
         let mut cursor = sched.tasks_sleeping.cursor_front_mut();
@@ -281,11 +281,11 @@ fn default_idle() {
     }
 }
 
-pub(crate) fn interrupt_handler_add(interrupt: Interrupt) {
+pub(crate) fn interrupt_handler_add(interrupt: InterruptHandler) {
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
 
     critical_section::exec(|| {
-        sched.kernel_interrupt_handlers.emplace_back(
+        sched.interrupt_handlers.emplace_back(
             interrupt,
             unsafe { &*KERNEL_ALLOCATOR.as_ptr() }
         ).ok();
@@ -351,7 +351,7 @@ fn kernel_interrupt_handler(irqn: u16) {
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
 
     defmt::trace!("IRQ {} called.", irqn);
-    for handler in sched.kernel_interrupt_handlers.iter_mut() {
+    for handler in sched.interrupt_handlers.iter_mut() {
         if handler.contains_interrupt(irqn) {
             handler.call(irqn);
         }
@@ -409,7 +409,7 @@ fn switch_context(stack_ptr: u32) -> u32 {
                 unsafe { &mut *event.as_ptr() }.pending.insert_when(
                     pausing,
                     |pausing, task| {
-                        pausing.priority().0 < task.priority().0
+                        pausing.priority() < task.priority()
                     });
             }
             Transition::Terminating => {
