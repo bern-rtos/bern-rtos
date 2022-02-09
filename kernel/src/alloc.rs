@@ -3,6 +3,7 @@ pub mod bump;
 pub mod heap;
 pub mod pool;
 pub mod wrapper;
+pub mod const_pool;
 
 use crate::alloc::wrapper::Wrapper;
 
