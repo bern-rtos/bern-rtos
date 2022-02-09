@@ -1,5 +1,10 @@
 //! CPU core peripherals.
 
+pub enum ExecMode {
+    Kernel,
+    Thread,
+}
+
 /// CPU core peripherals.
 pub trait ICore {
     /// Setup core peripherals and return core object
@@ -10,4 +15,6 @@ pub trait ICore {
     fn start(&mut self);
     /// Break point instruction
     fn bkpt();
+
+    fn execution_mode() -> ExecMode;
 }

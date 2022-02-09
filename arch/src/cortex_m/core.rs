@@ -1,6 +1,6 @@
 //! ARM Cortex-M implementation of [`ICore`].
 
-use crate::core::ICore;
+use crate::core::{ExecMode, ICore};
 use cortex_m::{Peripherals, asm};
 use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m::peripheral::scb;
@@ -41,5 +41,13 @@ impl ICore for ArchCore {
 
     fn bkpt() {
         asm::bkpt();
+    }
+
+    fn execution_mode() -> ExecMode {
+        if cortex_m::register::control::read().spsel().is_msp() {
+            ExecMode::Kernel
+        } else {
+            ExecMode::Thread
+        }
     }
 }
