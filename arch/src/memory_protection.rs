@@ -1,6 +1,5 @@
 //! Memory Protection.
 
-use crate::arch::memory_protection::MemoryRegion;
 /// Memory Protection.
 ///
 /// # Implementation
@@ -105,7 +104,7 @@ pub trait IMemoryProtection {
     /// Compile register values for an unused memory region.
     fn prepare_unused_region(region: u8) -> Self::MemoryRegion;
     /// Apply 3 precompiled memory regions.
-    fn apply_regions(memory_regions: &[MemoryRegion; 3]);
+    fn apply_regions(memory_regions: &[Self::MemoryRegion; 3]);
 }
 
 /// Access Permission
@@ -138,7 +137,7 @@ pub enum Type {
     Peripheral,
 }
 
-/// Memory region configuration
+/// Memory region configurations
 pub struct Config<S> {
     /// Region base address
     pub addr: *const usize,
