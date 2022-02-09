@@ -15,8 +15,6 @@
 
 #![cfg_attr(target_os = "none", no_std)]
 #![feature(unsize)]
-#![feature(asm)]
-#![feature(naked_functions)]
 
 pub mod sched;
 pub mod syscall;
