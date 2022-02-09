@@ -13,7 +13,7 @@ homepage = "https://bern-rtos.org"
 
 [target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies]
 cortex-m-rt = "0.6.10"
-cortex-m = { version = "0.7.2", features = ["inline-asm"] }
+cortex-m = { version = "0.7.4", features = ["inline-asm"] }
 r0 = "1.0.0"
 
 [target.'cfg(not(target_os = "none"))'.dependencies]

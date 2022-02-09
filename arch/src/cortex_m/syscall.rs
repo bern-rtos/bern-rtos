@@ -1,5 +1,6 @@
 //! ARM Cortex-M implementation of [`ISyscall`].
 
+use core::arch::asm;
 use crate::arch::Arch;
 use crate::syscall::ISyscall;
 

@@ -12,7 +12,6 @@
 //! | ARM Cortex-M4 w/MPU | ARMv7E-M | `thumbv7em-none-eabi` |
 
 #![cfg_attr(target_os = "none", no_std)]
-#![feature(asm)]
 #![feature(naked_functions)]
 
 #![cfg_attr(not(target_os = "none"), never_type)]

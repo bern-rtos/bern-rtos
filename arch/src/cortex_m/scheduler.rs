@@ -1,6 +1,7 @@
 //! ARM Cortex-M implementation of [`IScheduler`] and context switch.
 
 use core::mem;
+use core::arch::asm;
 use cortex_m::peripheral::SCB;
 
 use crate::scheduler::IScheduler;
