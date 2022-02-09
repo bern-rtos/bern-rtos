@@ -14,7 +14,8 @@
 #![cfg_attr(target_os = "none", no_std)]
 #![feature(naked_functions)]
 
-#![cfg_attr(not(target_os = "none"), never_type)]
+//#![cfg(not(target_os = "none"))]
+//#![feature(never_type)]
 
 #![allow(unused)]
 
