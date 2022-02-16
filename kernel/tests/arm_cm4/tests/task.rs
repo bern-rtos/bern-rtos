@@ -1,6 +1,8 @@
 #![no_main]
 #![no_std]
 
+#![feature(default_alloc_error_handler)]
+
 mod common;
 
 use bern_kernel::exec::process::Process;
@@ -18,8 +20,10 @@ mod tests {
     use crate::common::Board;
     use stm32f4xx_hal::prelude::*;
     use bern_kernel as kernel;
+    use bern_kernel::exec::runnable::Priority;
+    use bern_kernel::exec::thread::Thread;
     use bern_kernel::sched;
-    use bern_kernel::exec::thread::Priority;
+    use bern_kernel::stack::Stack;
 
     #[test_set_up]
     fn init_scheduler() {
@@ -31,9 +35,9 @@ mod tests {
 
         /* idle task */
         IDLE_PROC.init(move |c| {
-            c.new_thread()
+            Thread::new(c)
                 .idle_task()
-                .stack(512)
+                .stack(Stack::try_new_in(c, 512).unwrap())
                 .spawn(move || {
                     loop {}
                 });
@@ -55,8 +59,8 @@ mod tests {
         let mut led = board.led.take().unwrap();
 
         PROC.init(move |c| {
-            c.new_thread()
-                .stack(1024)
+            Thread::new(c)
+                .stack(Stack::try_new_in(c, 1024).unwrap())
                 .spawn(move || {
                     loop {
                         led.toggle().ok();
@@ -65,9 +69,9 @@ mod tests {
                 });
 
             /* watchdog */
-            c.new_thread()
-                .priority(Priority(0))
-                .stack(1024)
+            Thread::new(c)
+                .priority(Priority::new(0))
+                .stack(Stack::try_new_in(c, 1024).unwrap())
                 .spawn(move || {
                     kernel::sleep(1000);
 

@@ -25,6 +25,16 @@ name = "arm_cm4-memory-protection"
 path = "tests/memory_protection.rs"
 harness = false
 
+[[test]]
+name = "arm_cm4-latency-isr-kernel"
+path = "tests/latency_isr_kernel.rs"
+harness = false
+
+[[test]]
+name = "arm_cm4-latency-isr-bypass"
+path = "tests/latency_isr_bypass.rs"
+harness = false
+
 [dependencies]
 bern-kernel = "0.2.*"
 bern-test = { version = "0.1.1" }
