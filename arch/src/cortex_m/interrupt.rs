@@ -7,6 +7,6 @@ extern {
 
 #[allow(non_snake_case)]
 #[exception]
-fn DefaultHandler(irqn: i16) {
-    unsafe { kernel_interrupt_handler(irqn as u16); }
+unsafe fn DefaultHandler(irqn: i16) {
+    kernel_interrupt_handler(irqn as u16);
 }

@@ -15,3 +15,4 @@ pub struct Arch;
 
 // re-exports
 pub use crate::cortex_m::core::ArchCore;
+pub use cortex_m_rt;
