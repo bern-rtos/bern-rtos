@@ -31,11 +31,9 @@ bern-test = { version = "0.1.1" }
 st-nucleo-f446 = { version = "*", path = "../../../platform/st_nucleo_f446"}
 
 cortex-m = "0.7.2"
-cortex-m-rt = "0.6.10"
 nb = "1.0.0"
 
 embedded-hal = "0.2.4"
-stm32f4xx-hal = { version = "0.8", features = ["rt", "stm32f446"] }
 
 defmt = "0.3.0"
 defmt-rtt = "0.3.0"

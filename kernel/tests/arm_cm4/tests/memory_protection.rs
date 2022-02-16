@@ -22,14 +22,14 @@ mod tests {
     use crate::common::*;
     use bern_kernel as kernel;
     use kernel::sched;
-    use kernel::task::{Task, Priority};
+    use bern_kernel::exec::thread::{Runnable, Priority};
 
     #[test_set_up]
     fn init_scheduler() {
         sched::init();
         MUTEX.register().ok();
         /* idle task */
-        Task::new()
+        Runnable::new()
             .idle_task()
             .static_stack(kernel::alloc_static_stack!(512))
             .spawn(move || {
@@ -39,7 +39,7 @@ mod tests {
             });
 
         /* watchdog */
-        Task::new()
+        Runnable::new()
             .priority(Priority(0))
             .static_stack(kernel::alloc_static_stack!(1024))
             .spawn(move || {
@@ -63,7 +63,7 @@ mod tests {
 
     #[test]
     fn normal_operation() {
-        Task::new()
+        Runnable::new()
             .static_stack(kernel::alloc_static_stack!(1024))
             .spawn(move || {
                 // just spawn a task and do nothing special
@@ -76,7 +76,7 @@ mod tests {
     #[test]
     fn gpio_access(board: &mut Board) {
         let mut led = board.led.take().unwrap();
-        Task::new()
+        Runnable::new()
             .static_stack(kernel::alloc_static_stack!(1024))
             .spawn(move || {
                 loop {

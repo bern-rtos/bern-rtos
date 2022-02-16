@@ -18,13 +18,13 @@ mod tests {
     use crate::common::*;
     use bern_kernel as kernel;
     use kernel::sched;
-    use kernel::task::{Task, Priority};
+    use bern_kernel::exec::thread::{Runnable, Priority};
 
     #[test_set_up]
     fn init_scheduler() {
         sched::init();
         /* idle task */
-        Task::new()
+        Runnable::new()
             .idle_task()
             .static_stack(kernel::alloc_static_stack!(128))
             .spawn(move || {
@@ -34,7 +34,7 @@ mod tests {
             });
 
         /* watchdog */
-        Task::new()
+        Runnable::new()
             .priority(Priority(0))
             .static_stack(kernel::alloc_static_stack!(512))
             .spawn(move || {
@@ -58,7 +58,7 @@ mod tests {
 
     #[test]
     fn not_registered() {
-        Task::new()
+        Runnable::new()
             .static_stack(kernel::alloc_static_stack!(1024))
             .spawn(move || {
                 match MUTEX.lock(1000) {
@@ -74,7 +74,7 @@ mod tests {
     fn wait_for_lock(_board: &mut Board) {
         MUTEX.register().ok();
         /* Taking a permit and blocking it */
-        Task::new()
+        Runnable::new()
             .priority(Priority(1))
             .static_stack(kernel::alloc_static_stack!(1024))
             .spawn(move || {
@@ -87,7 +87,7 @@ mod tests {
                 }
             });
         /* Wait for permit */
-        Task::new()
+        Runnable::new()
             .priority(Priority(1))
             .static_stack(kernel::alloc_static_stack!(1024))
             .spawn(move || {
@@ -113,7 +113,7 @@ mod tests {
     fn priority_inversion() {
         MUTEX.register().ok();
         /* T1: low priority task */
-        Task::new()
+        Runnable::new()
             .priority(Priority(3))
             .static_stack(kernel::alloc_static_stack!(1024))
             .spawn(move || {
@@ -125,7 +125,7 @@ mod tests {
                 }
             });
         /* T2: high priority task */
-        Task::new()
+        Runnable::new()
             .priority(Priority(1))
             .static_stack(kernel::alloc_static_stack!(1024))
             .spawn(move || {
@@ -137,7 +137,7 @@ mod tests {
             });
 
         /* T3: interfering medium priority task */
-        Task::new()
+        Runnable::new()
             .priority(Priority(2))
             .static_stack(kernel::alloc_static_stack!(1024))
             .spawn(move || {

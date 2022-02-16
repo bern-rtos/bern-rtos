@@ -3,7 +3,7 @@
 
 mod common;
 
-use bern_kernel::process::Process;
+use bern_kernel::exec::process::Process;
 use common::main as _;
 
 static PROC: &Process = bern_kernel::new_process!(test, 4096);
@@ -19,7 +19,7 @@ mod tests {
     use stm32f4xx_hal::prelude::*;
     use bern_kernel as kernel;
     use bern_kernel::sched;
-    use bern_kernel::task::Priority;
+    use bern_kernel::exec::thread::Priority;
 
     #[test_set_up]
     fn init_scheduler() {

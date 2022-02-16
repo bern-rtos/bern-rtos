@@ -15,11 +15,7 @@
 
 #![cfg_attr(target_os = "none", no_std)]
 #![feature(unsize)]
-#![feature(asm)]
-#![feature(naked_functions)]
 
-pub mod process;
-pub mod task;
 pub mod sched;
 pub mod syscall;
 pub mod time;
@@ -28,6 +24,7 @@ pub mod sync;
 pub mod mem;
 pub mod kernel;
 pub mod alloc;
+pub mod exec;
 
 pub use crate::syscall::*;
 pub use bern_kernel_macros::*;

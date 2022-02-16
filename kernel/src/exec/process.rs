@@ -3,7 +3,6 @@ use core::ptr::NonNull;
 use crate::alloc::allocator::Allocator;
 use crate::alloc::bump::Bump;
 use crate::mem::Size;
-use crate::task;
 use bern_arch::arch::Arch;
 use bern_arch::IStartup;
 use bern_arch::startup::Region;
@@ -96,14 +95,12 @@ impl Process {
 // Note(unsafe): The values of `Process` are read only.
 unsafe impl Sync for Process { }
 
-
-
 pub struct Context {
     process: &'static Process,
 }
 
 impl Context {
-    pub fn new_thread(&self) -> task::TaskBuilder {
-        task::Task::new(self.process)
+    pub(crate) fn process(&self) -> &'static Process {
+        self.process
     }
 }

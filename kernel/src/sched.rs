@@ -10,7 +10,7 @@ use core::mem::MaybeUninit;
 use core::ptr::NonNull;
 
 use event::Event;
-use crate::task::{self, Task, Transition};
+use crate::exec::runnable::{self, Priority, Runnable, Transition};
 use crate::syscall;
 use crate::time;
 use crate::sync::critical_section;
@@ -23,6 +23,7 @@ use bern_arch::{ICore, IMemoryProtection, IScheduler, IStartup};
 use bern_arch::arch::{Arch, ArchCore};
 use bern_arch::memory_protection::{Access, Config, Permission, Type};
 use bern_conf::CONF;
+use crate::exec::interrupt::InterruptHandler;
 
 
 // These statics are MaybeUninit because, there currently no solution to
@@ -39,10 +40,11 @@ static mut KERNEL_ALLOCATOR: MaybeUninit<Bump> = MaybeUninit::uninit();
 // todo: split scheduler into kernel and scheduler
 struct Scheduler {
     core: ArchCore,
-    task_running: Option<Box<Node<Task>>>,
-    tasks_ready: [LinkedList<Task>; CONF.task.priorities as usize],
-    tasks_sleeping: LinkedList<Task>,
-    tasks_terminated: LinkedList<Task>,
+    task_running: Option<Box<Node<Runnable>>>,
+    tasks_ready: [LinkedList<Runnable>; CONF.task.priorities as usize],
+    tasks_sleeping: LinkedList<Runnable>,
+    tasks_terminated: LinkedList<Runnable>,
+    interrupt_handlers: LinkedList<InterruptHandler>,
     events: LinkedList<Event>,
     event_counter: usize,
 }
@@ -106,7 +108,7 @@ pub fn init() {
     // Init static pools, this is unsafe but stable for now. Temporary solution
     // until const fn works with MaybeUninit.
     unsafe {
-        let mut tasks_ready: [LinkedList<Task>; CONF.task.priorities as usize] =
+        let mut tasks_ready: [LinkedList<Runnable>; CONF.task.priorities as usize] =
             MaybeUninit::uninit().assume_init();
         for element in tasks_ready.iter_mut() {
             *element = LinkedList::new();
@@ -119,6 +121,7 @@ pub fn init() {
             tasks_ready,
             tasks_sleeping: LinkedList::new(),
             tasks_terminated: LinkedList::new(),
+            interrupt_handlers: LinkedList::new(),
             events: LinkedList::new(),
             event_counter: 0,
         });
@@ -165,12 +168,12 @@ pub(crate) fn start() -> ! {
     sched.task_running = task;
     sched.core.start();
 
-    let stack_ptr = (*sched.task_running.as_ref().unwrap()).stack_ptr();
+    let stack_ptr = (*sched.task_running.as_ref().unwrap()).stack().ptr();
     Arch::start_first_task(stack_ptr);
 }
 
 /// Add a task to the scheduler.
-pub(crate) fn add(mut task: Task) {
+pub(crate) fn add_task(mut task: Runnable) {
     // NOTE(unsafe): scheduler must be initialized first
     // todo: replace with `assume_init_mut()` as soon as stable
 
@@ -179,12 +182,12 @@ pub(crate) fn add(mut task: Task) {
     critical_section::exec(|| {
         unsafe {
             let stack_ptr = Arch::init_task_stack(
-                task.stack_ptr(),
-                task::entry as *const usize,
+                task.stack().ptr(),
+                runnable::entry as *const usize,
                 task.runnable_ptr(),
                 syscall::task_exit as *const usize
             );
-            task.set_stack_ptr(stack_ptr);
+            task.stack_mut().set_ptr(stack_ptr);
         }
 
         let prio: usize = task.priority().into();
@@ -237,9 +240,9 @@ pub(crate) fn tick_update() {
     let mut trigger_switch = false;
     critical_section::exec(|| {
         // update pending -> ready list
-        let preempt_prio = match sched.task_running.as_ref() {
-            Some(task) => (*task).priority().into(),
-            None => usize::MAX,
+        let preempt_prio= match sched.task_running.as_ref() {
+            Some(task) => (*task).priority(),
+            None => Priority::MAX,
         };
 
         let mut cursor = sched.tasks_sleeping.cursor_front_mut();
@@ -249,7 +252,7 @@ pub(crate) fn tick_update() {
                 if let Some(node) = cursor.take() {
                     let prio: usize = (**node).priority().into();
                     sched.tasks_ready[prio].push_back(node);
-                    if prio < preempt_prio {
+                    if prio < preempt_prio.into() {
                         trigger_switch = true;
                     }
                 }
@@ -259,7 +262,9 @@ pub(crate) fn tick_update() {
         }
 
         #[cfg(feature = "time-slicing")]
-        if sched.tasks_ready[preempt_prio].len() > 0 {
+        if sched.tasks_ready[preempt_prio.into()].len() > 0 &&
+            !preempt_prio.is_interrupt_handler()
+        {
             trigger_switch = true;
         }
     });
@@ -274,6 +279,17 @@ fn default_idle() {
     loop {
         atomic::compiler_fence(Ordering::SeqCst);
     }
+}
+
+pub(crate) fn interrupt_handler_add(interrupt: InterruptHandler) {
+    let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
+
+    critical_section::exec(|| {
+        sched.interrupt_handlers.emplace_back(
+            interrupt,
+            unsafe { &*KERNEL_ALLOCATOR.as_ptr() }
+        ).ok();
+    });
 }
 
 pub(crate) fn event_register() -> Result<usize, AllocError> {
@@ -330,8 +346,21 @@ pub(crate) fn event_fire(id: usize) {
     }
 }
 
+#[no_mangle]
+fn kernel_interrupt_handler(irqn: u16) {
+    let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
+
+    defmt::trace!("IRQ {} called.", irqn);
+    for handler in sched.interrupt_handlers.iter_mut() {
+        if handler.contains_interrupt(irqn) {
+            handler.call(irqn);
+        }
+    }
+
+}
+
 pub(crate) fn with_callee<F, R>(f: F) -> R
-    where F: FnOnce(&Task) -> R
+    where F: FnOnce(&Runnable) -> R
 {
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
     let task = &***sched.task_running.as_ref().unwrap();
@@ -355,7 +384,7 @@ fn switch_context(stack_ptr: u32) -> u32 {
 
     Arch::disable_memory_protection();
     let new_stack_ptr = critical_section::exec(|| {
-        (*sched.task_running.as_mut().unwrap()).set_stack_ptr(stack_ptr as *mut usize);
+        (*sched.task_running.as_mut().unwrap()).stack_mut().set_ptr(stack_ptr as *mut usize);
 
         // Put the running task into its next state
         let mut pausing = sched.task_running.take().unwrap();
@@ -380,7 +409,7 @@ fn switch_context(stack_ptr: u32) -> u32 {
                 unsafe { &mut *event.as_ptr() }.pending.insert_when(
                     pausing,
                     |pausing, task| {
-                        pausing.priority().0 < task.priority().0
+                        pausing.priority() < task.priority()
                     });
             }
             Transition::Terminating => {
@@ -404,7 +433,7 @@ fn switch_context(stack_ptr: u32) -> u32 {
 
         Arch::apply_regions((*task.as_ref().unwrap()).memory_regions());
         sched.task_running = task;
-        let stack_ptr = (*sched.task_running.as_ref().unwrap()).stack_ptr();
+        let stack_ptr = (*sched.task_running.as_ref().unwrap()).stack().ptr();
         stack_ptr as u32
     });
 
