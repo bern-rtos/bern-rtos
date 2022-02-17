@@ -1,2 +1,5 @@
 target
+result
 venv
+*.pyc
+__pycache__/
