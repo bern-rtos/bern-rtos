@@ -44,8 +44,7 @@ def main():
 
     print("Plot boxplot")
     plt.clf()
-    #latencies.boxplot()
-    sns.boxplot(latencies)
+    sns.boxplot(data=latencies)
     plt.ylabel("Latency / s")
     plt.yscale('log')
     plt.xticks(rotation=60)
