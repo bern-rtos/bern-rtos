@@ -33,7 +33,7 @@ impl Allocator for Bump {
             let old = self.current.load(Ordering::Acquire);
             let padding = old.align_offset(layout.align());
             defmt::trace!(
-                "Try allocating {}B at 0x{:x}",
+                "Try to allocate {}B at 0x{:x}",
                 layout.size(),
                 old as usize + padding
             );
