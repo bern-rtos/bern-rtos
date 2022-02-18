@@ -4,7 +4,7 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 
 use syn::parse::{Parse, ParseStream};
-use syn::Result;
+use syn::{parse, Result};
 use syn::LitInt;
 use proc_macro2::{Span, TokenStream};
 use proc_macro2::Ident;
@@ -35,6 +35,19 @@ impl ToTokens for ProcessInfo {
         let process_ident = self.ident.clone();
         let process_ident_upper = Ident::new(&process_ident.to_string().to_uppercase(), Span::call_site());
         let size = self.memory_size.clone();
+
+        // Check memory size requirements
+        // todo: retrieve restrictions from arch
+        let value = self.memory_size.base10_parse::<u32>().unwrap();
+        let next = 2u32.pow((value as f32).log(2f32).ceil() as u32);
+        if (value & (value - 1)) != 0 {
+            tokens.extend(parse::Error::new(
+                Span::call_site(),
+                format!("Process memory size must be power of 2. \
+                Next valid size to {} is {}.", value, next),
+            ).to_compile_error());
+            return;
+        }
 
         let smprocess = Ident::new(&format!("__smprocess_{}", process_ident), Span::call_site());
         let emprocess = Ident::new(&format!("__emprocess_{}", process_ident), Span::call_site());
