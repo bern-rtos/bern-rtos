@@ -18,6 +18,8 @@ test_cases = [
     #("arm_cm4-latency-isr-kernel", "debug", 20e-3),
 ]
 
+measurement_iterations = 50
+
 
 def run_test_case(device, test_case, fs):
     test = test_case[0]
@@ -34,14 +36,14 @@ def run_test_case(device, test_case, fs):
         "--chip={}".format(chip),
         "--",
         "--test={}".format(test),
-        "--release" if build_type == "release" else ""
-    ], capture_output=True)
+        "--release" if build_type == "release" else ""],
+        capture_output=True,
+        cwd="../arm_cm4")
 
     # Measure latency
     print("Measure latency", end="")
-    iterations = 10
-    latency = np.zeros(iterations)
-    for i in range(0, iterations):
+    latency = np.zeros(measurement_iterations)
+    for i in range(0, measurement_iterations):
         print(".", end="")
         device.measure()
         latency[i] = device.evaluate_latency()

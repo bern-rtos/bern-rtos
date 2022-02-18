@@ -12,6 +12,8 @@ def main():
     sns.set(style="ticks")
     matplotlib.rcParams['font.sans-serif'] = "Fira Sans"
     matplotlib.rcParams['font.size'] = 10
+    matplotlib.rcParams['axes.titlesize'] = 14
+    matplotlib.rcParams['axes.titleweight'] = "bold"
 
     print("Read raw data")
     latencies = pd.read_csv("result/raw.csv", index_col=0)
@@ -27,16 +29,24 @@ def main():
     latencies.columns = new_columns
 
     print("Plot histogram")
-    ax = latencies.hist()
-    for column in ax:
-        for plot in column:
-            plot.set_xlabel("latency / s")
+    for column in latencies.columns:
+        plt.clf()
+        sns.histplot(latencies, x=column, stat="probability")
+        plt.title(column)
+        plt.xlabel("Latency / s")
+        plt.savefig("result/{}-hist.svg".format(column), bbox_inches='tight')
+
+    plt.clf()
+    sns.histplot(latencies, bins=100)
+    plt.title("Latency combined")
+    plt.xlabel("Latency / s")
     plt.savefig("result/hist.svg", bbox_inches='tight')
 
     print("Plot boxplot")
     plt.clf()
-    latencies.boxplot()
-    plt.ylabel("latency / s")
+    #latencies.boxplot()
+    sns.boxplot(latencies)
+    plt.ylabel("Latency / s")
     plt.yscale('log')
     plt.xticks(rotation=60)
     plt.savefig("result/box.svg", bbox_inches='tight')
