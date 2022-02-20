@@ -5,6 +5,7 @@
 use core::mem;
 use cortex_m::peripheral::{self, mpu, MPU};
 use cortex_m::asm;
+use bern_base_types::memory_size::Byte;
 
 /// Valid sizes for the MPU.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -61,6 +62,12 @@ impl Size {
             log2 += 1;
         }
         mem::transmute(log2 - 1)
+    }
+}
+
+impl Into<Size> for Byte {
+    fn into(self) -> Size {
+        unsafe { Size::from_bytes(self.0 as usize) }
     }
 }
 

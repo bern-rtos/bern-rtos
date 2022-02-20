@@ -9,7 +9,6 @@ use cortex_m::asm;
 use cortex_m_rt::exception;
 
 impl IMemoryProtection for Arch {
-    type Size = Size;
     type MemoryRegion = MemoryRegion;
 
     fn enable_memory_protection() {
@@ -22,7 +21,7 @@ impl IMemoryProtection for Arch {
         mpu.disable();
     }
 
-    fn enable_memory_region(region: u8, config: Config<Size>) {
+    fn enable_memory_region(region: u8, config: Config) {
         let mut mpu =  unsafe{ Mpu::take() };
 
         let memory_region = Self::prepare_memory_region(region, config);
@@ -34,7 +33,7 @@ impl IMemoryProtection for Arch {
         mpu.disable_region(region);
     }
 
-    fn prepare_memory_region(region: u8, config: Config<Self::Size>) -> Self::MemoryRegion {
+    fn prepare_memory_region(region: u8, config: Config) -> Self::MemoryRegion {
         let region_base_address = Mpu::prepare_region_base_address(
             config.addr as u32,
             RegionNumber::Use(region)
@@ -63,7 +62,7 @@ impl IMemoryProtection for Arch {
             (Permission::from(config.access.system), Permission::from(config.access.user)),
             attributes,
             Subregions::ALL,
-            config.size,
+            config.size.into(),
         );
 
         MemoryRegion {

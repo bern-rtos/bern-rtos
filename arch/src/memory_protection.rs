@@ -1,5 +1,7 @@
 //! Memory Protection.
 
+use bern_base_types::memory_size::Byte;
+
 /// Memory Protection.
 ///
 /// # Implementation
@@ -58,19 +60,6 @@
 ///   }
 ///   ```
 pub trait IMemoryProtection {
-    /// Size of a memory region.
-    ///
-    /// Size must be an enum adhering to the naming convention
-    /// `S<size number><unit prefix (_,K,M,G)>`, i.e.
-    /// ```no_run
-    /// #[repr(u8)]
-    /// pub enum Size {
-    ///     S64 = 5,
-    ///     S4K = 11,
-    ///     S128M = 26,
-    /// }
-    /// ```
-    type Size;
     /// Precalculated memory region configuration.
     type MemoryRegion;
 
@@ -93,14 +82,14 @@ pub trait IMemoryProtection {
     ///         executable: true
     /// });
     /// ```
-    fn enable_memory_region(region: u8, config: Config<Self::Size>);
+    fn enable_memory_region(region: u8, config: Config);
     /// Disable one memory region.
     fn disable_memory_region(region: u8);
     /// Compile register values from configuration and store in `MemoryRegion`.
     ///
     /// Same as [`Self::enable_memory_region()`] but return the register configuration
     /// instead of applying it to the actual registers.
-    fn prepare_memory_region(region: u8, config: Config<Self::Size>) -> Self::MemoryRegion;
+    fn prepare_memory_region(region: u8, config: Config) -> Self::MemoryRegion;
     /// Compile register values for an unused memory region.
     fn prepare_unused_region(region: u8) -> Self::MemoryRegion;
     /// Apply 3 precompiled memory regions.
@@ -138,13 +127,13 @@ pub enum Type {
 }
 
 /// Memory region configurations
-pub struct Config<S> {
+pub struct Config {
     /// Region base address
     pub addr: *const usize,
     /// Memory type
     pub memory: Type,
     /// Size of region
-    pub size: S,
+    pub size: Byte,
     /// Permissions
     pub access: Access,
     /// Memory region can be used to fetch instructions
