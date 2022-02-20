@@ -2,10 +2,10 @@ use core::cell::Cell;
 use core::ptr::NonNull;
 use crate::alloc::allocator::Allocator;
 use crate::alloc::bump::Bump;
-use crate::mem::Size;
 use bern_arch::arch::Arch;
 use bern_arch::IStartup;
 use bern_arch::startup::Region;
+use bern_base_types::memory_size::Byte;
 use crate::kernel::{KERNEL, State};
 
 pub struct ProcessMemory {
@@ -87,8 +87,8 @@ impl Process {
         self.memory.data_start
     }
 
-    pub(crate) fn size(&self) -> Size {
-        unsafe { Size::from_bytes(self.memory.size) }
+    pub(crate) fn size(&self) -> Byte {
+        Byte(self.memory.size as u32)
     }
 }
 

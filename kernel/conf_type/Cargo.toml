@@ -13,6 +13,7 @@ homepage = "https://bern-rtos.org"
 
 [dependencies]
 bern-arch = "0.2"
+bern-base-types = "*"
 
 [package.metadata.docs.rs]
 targets = [

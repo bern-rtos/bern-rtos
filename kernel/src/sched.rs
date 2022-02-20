@@ -14,7 +14,7 @@ use crate::exec::runnable::{self, Priority, Runnable, Transition};
 use crate::syscall;
 use crate::time;
 use crate::sync::critical_section;
-use crate::mem::{boxed::Box, linked_list::*, Size};
+use crate::mem::{boxed::Box, linked_list::*};
 use crate::alloc::allocator::AllocError;
 use crate::alloc::bump::Bump;
 use crate::kernel::static_memory;
@@ -22,6 +22,7 @@ use crate::kernel::static_memory;
 use bern_arch::{ICore, IMemoryProtection, IScheduler, IStartup};
 use bern_arch::arch::{Arch, ArchCore};
 use bern_arch::memory_protection::{Access, Config, Permission, Type};
+use bern_base_types::memory_size::U32Ext;
 use bern_conf::CONF;
 use crate::exec::interrupt::InterruptHandler;
 
@@ -88,7 +89,7 @@ pub fn init() {
         Config {
             addr: CONF.memory.sram.start_address as *const _,
             memory: Type::SramInternal,
-            size: Size::S4K, // todo: read from linker symbol or config
+            size: 4.kb().into(), // todo: read from linker symbol or config
             access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
             executable: false
         });

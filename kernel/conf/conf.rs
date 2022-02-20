@@ -13,7 +13,9 @@
 
 #![no_std]
 
+use bern_base_types::memory_size::Byte;
 use bern_conf_type::*;
+
 
 pub const CONF: Conf = Conf {
     task: Task {
@@ -26,21 +28,21 @@ pub const CONF: Conf = Conf {
     memory: Memory {
         flash: MemorySection {
             start_address: 0x0800_0000,
-            size: Size::S512K,
+            size: Byte::from_kb(512),
         },
         sram: MemorySection {
             start_address: 0x2000_0000,
-            size: Size::S128K,
+            size: Byte::from_kb(128),
         },
         peripheral: MemorySection {
             start_address: 0x4000_0000,
-            size: Size::S512M,
+            size: Byte::from_kb(512),
         },
         shared: MemorySection {
             // will be ignored, start of shared section is read via linker
             // symbol
             start_address: 0x2001FC00,
-            size: Size::S1K,
+            size: Byte::from_kb(1),
         }
     },
 };

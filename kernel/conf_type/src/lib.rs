@@ -6,7 +6,7 @@
 //! crate depend on it.
 #![no_std]
 
-pub use bern_arch::arch::memory_protection::Size;
+use bern_base_types::memory_size::Byte;
 
 /// Task related config
 pub struct Task {
@@ -30,7 +30,7 @@ pub struct MemorySection {
     /// Lowest address of the section
     pub start_address: usize,
     /// Section size
-    pub size: Size,
+    pub size: Byte,
 }
 
 /// Memory sections

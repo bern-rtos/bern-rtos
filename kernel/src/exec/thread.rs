@@ -33,7 +33,7 @@ use crate::time;
 use crate::stack::Stack;
 use crate::sched::event::Event;
 use core::ptr::NonNull;
-use bern_arch::arch::memory_protection::{MemoryRegion, Size};
+use bern_arch::arch::memory_protection::MemoryRegion;
 use bern_arch::arch::Arch;
 use bern_arch::memory_protection::{Config, Type, Access, Permission};
 use bern_arch::IMemoryProtection;
