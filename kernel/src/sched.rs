@@ -11,7 +11,7 @@ use core::ptr::NonNull;
 
 use event::Event;
 use crate::exec::runnable::{self, Priority, Runnable, Transition};
-use crate::syscall;
+use crate::{log, syscall};
 use crate::time;
 use crate::sync::critical_section;
 use crate::mem::{boxed::Box, linked_list::*};
@@ -351,7 +351,7 @@ pub(crate) fn event_fire(id: usize) {
 fn kernel_interrupt_handler(irqn: u16) {
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
 
-    defmt::trace!("IRQ {} called.", irqn);
+    log::trace!("IRQ {} called.", irqn);
     for handler in sched.interrupt_handlers.iter_mut() {
         if handler.contains_interrupt(irqn) {
             handler.call(irqn);
@@ -463,7 +463,7 @@ fn check_stack(stack_ptr: usize) -> StackSpace {
 /// Exception if a memory protection rule was violated.
 #[no_mangle]
 fn memory_protection_exception() {
-    defmt::warn!("Memory exception, terminating thread.");
+    log::warn!("Memory exception, terminating thread.");
     task_terminate();
 }
 

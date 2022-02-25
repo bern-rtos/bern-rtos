@@ -3,6 +3,7 @@ use core::mem::MaybeUninit;
 use core::ops::{Deref, DerefMut};
 use core::ptr::NonNull;
 use core::sync::atomic::{AtomicBool, Ordering};
+use crate::log;
 
 pub struct Item<T> {
     data: MaybeUninit<T>,
@@ -51,7 +52,7 @@ impl<T> DerefMut for Item<T> {
 
 impl<T> Drop for Item<T> {
     fn drop(&mut self) {
-        defmt::trace!("Dropping const item.");
+        log::trace!("Dropping const item.");
         self.lock.store(false, Ordering::Release);
     }
 }

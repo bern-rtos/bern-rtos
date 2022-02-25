@@ -2,6 +2,7 @@ use core::alloc::Layout;
 use core::ptr::{NonNull, slice_from_raw_parts_mut};
 use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 use crate::alloc::allocator::{Allocator, AllocError};
+use crate::log;
 
 /// The strict memory allocator can allocate memory but never release.
 pub struct Bump {
@@ -32,7 +33,7 @@ impl Allocator for Bump {
         loop { // CAS loop
             let old = self.current.load(Ordering::Acquire);
             let padding = old.align_offset(layout.align());
-            defmt::trace!(
+            log::trace!(
                 "Try to allocate {}B at 0x{:x}",
                 layout.size(),
                 old as usize + padding
@@ -62,7 +63,7 @@ impl Allocator for Bump {
     }
 
     unsafe fn dealloc(&self, ptr: NonNull<u8>, layout: Layout) {
-        defmt::warn!(
+        log::warn!(
             "BumpAllocator cannot deallocate memory (0x{:x}, {}B). Ignoring call from .",
             ptr.as_ptr(),
             layout.size()

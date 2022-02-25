@@ -25,6 +25,7 @@ pub mod mem;
 pub mod kernel;
 pub mod alloc;
 pub mod exec;
+pub mod log;
 
 pub use crate::syscall::*;
 pub use bern_kernel_macros::*;

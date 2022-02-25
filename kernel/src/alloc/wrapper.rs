@@ -2,7 +2,7 @@ use core::alloc::{GlobalAlloc, Layout};
 use core::ptr::NonNull;
 use crate::kernel::{KERNEL, State};
 use crate::alloc::allocator::Allocator;
-use crate::syscall;
+use crate::{log, syscall};
 use crate::sched;
 
 pub struct Wrapper { }
@@ -42,7 +42,7 @@ impl Wrapper {
             State::Startup => {
                 match KERNEL.process() {
                     None => {
-                        defmt::error!("Cannot allocate memory outside process.");
+                        log::error!("Cannot allocate memory outside process.");
                         f(None)
                     },
                     Some(p) => {

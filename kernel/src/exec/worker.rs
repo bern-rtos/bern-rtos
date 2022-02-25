@@ -1,5 +1,5 @@
 use core::cell::Cell;
-use core::{mem, ptr};
+use core::ptr;
 use core::ptr::NonNull;
 use core::sync::atomic::{AtomicU8, Ordering};
 use core::ops::{Deref, DerefMut};
@@ -12,7 +12,7 @@ use crate::exec::thread::Thread;
 use crate::mem::boxed::Box;
 use crate::mem::queue::mpmc_linked::{Node, Queue};
 use crate::stack::Stack;
-use crate::syscall;
+use crate::{log, syscall};
 
 //pub trait WorkTrait: 'static + FnOnce() { }
 pub trait Workable {
@@ -90,7 +90,7 @@ impl Workqueue {
             self.work.push_back(Box::from_raw(NonNull::new_unchecked(trait_node as *const _ as *mut _)));
         }
 
-        defmt::trace!("Submitting work to queue.");
+        log::trace!("Submitting work to queue.");
         syscall::event_fire(self.event_id.get());
         Ok(())
     }

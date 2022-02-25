@@ -19,6 +19,8 @@ bern-arch = "0.2"
 bern-kernel-macros = "0.2"
 bern-conf = "0.1"
 bern-base-types = "*"
+
+[target.'cfg(target_os = "none")'.dependencies]
 defmt = "0.3.0"
 
 [build-dependencies]
