@@ -7,5 +7,5 @@ pub mod const_pool;
 
 use crate::alloc::wrapper::Wrapper;
 
-#[global_allocator]
+#[cfg_attr(target_os = "none", global_allocator)]
 static ALLOCATOR: Wrapper = Wrapper::new();
