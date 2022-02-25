@@ -23,6 +23,7 @@
 #![allow(unused)]
 
 use core::alloc::Layout;
+use core::mem::size_of_val;
 use core::mem;
 use core::ptr;
 use core::ops::Deref;
@@ -89,21 +90,31 @@ impl ThreadBuilder {
 
     // todo: return result
     /// Spawns the task and takes the entry point as closure.
-    ///
-    /// **Note:** A task cannot access another tasks stack, thus all stack
-    /// initialization must be handled via syscalls.
     pub fn spawn<F>(&mut self, entry: F)
         where F: 'static + FnMut() -> RunnableResult
     {
-        let mut boxed_entry = match Box::try_new_in(entry, self.process.allocator()) {
-            Ok(b) => b,
-            Err(_) => { panic!("todo: allocate stack"); }
+        //let mut boxed_entry = match Box::try_new_in(entry, self.process.allocator()) {
+        //    Ok(b) => b,
+        //    Err(_) => { panic!("todo: allocate stack"); }
+        //};
+        let stack = match &mut self.stack {
+            None => panic!("Allocate a stack."),
+            Some(s) => s,
         };
+        let entry_size = size_of_val(&entry);
+        if stack.size() < entry_size {
+            panic!("Stack too small for closure.");
+        }
 
-        let entry_ptr = unsafe { &mut *Box::leak(boxed_entry).as_ptr() };
+        let entry_ref = unsafe {
+            let entry_ptr = stack.ptr().cast::<F>().offset(-1);
+            entry_ptr.write(entry);
+            stack.set_ptr((stack.ptr() as usize - entry_size) as *mut usize);
+            &(&mut *entry_ptr as &mut dyn FnMut() -> RunnableResult)
+        };
         syscall::thread_spawn(
             self,
-            &(entry_ptr as &mut dyn FnMut() -> RunnableResult)
+            entry_ref
         );
     }
 
@@ -151,4 +162,8 @@ mod tests {
     use super::*;
     use bern_arch::arch::Arch;
 
+    #[test]
+    fn empty() {
+
+    }
 }

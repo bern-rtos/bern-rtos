@@ -4,6 +4,7 @@
 /// Keep interrupt latency as short as possible, move work to PendSV.
 
 pub(crate) mod event;
+mod idle;
 
 use core::sync::atomic::{self, Ordering};
 use core::mem::MaybeUninit;
@@ -126,6 +127,8 @@ pub fn init() {
             event_counter: 0,
         });
     }
+
+    idle::init();
 }
 
 /// Set the kernel tick frequency.
@@ -146,14 +149,6 @@ pub(crate) fn start() -> ! {
     // NOTE(unsafe): scheduler must be initialized first
     // todo: replace with `assume_init_mut()` as soon as stable
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
-
-    // ensure an idle task is present
-    /*if sched.tasks_ready[(CONF.task.priorities as usize) -1].len() == 0 {
-        IDLE_PROC.create_thread()
-            .idle_task()
-            .stack(256)
-            .spawn(default_idle);
-    }*/
 
     let mut task = None;
     for list in sched.tasks_ready.iter_mut() {
@@ -176,7 +171,6 @@ pub(crate) fn start() -> ! {
 pub(crate) fn add_task(mut task: Runnable) {
     // NOTE(unsafe): scheduler must be initialized first
     // todo: replace with `assume_init_mut()` as soon as stable
-
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
 
     critical_section::exec(|| {
