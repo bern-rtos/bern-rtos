@@ -1,5 +1,5 @@
 [package]
-name = "bern-base-types"
+name = "bern-units"
 version = "0.1.0"
 authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
 edition = "2021"
@@ -7,6 +7,6 @@ license = "MIT"
 categories = ["embedded", "no-std"]
 keywords = ["embedded", "no_std", "cortex-m", "iot", "rtos"]
 description = "Base types for bern-kernel."
-documentation = "https://docs.rs/bern-base-types"
+documentation = "https://docs.rs/bern-units"
 repository = "https://gitlab.com/bern-rtos/kernel/bern-kernel"
 homepage = "https://bern-rtos.org"

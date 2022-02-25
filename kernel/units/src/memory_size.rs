@@ -27,41 +27,43 @@ impl Byte {
 }
 
 /// Extension trait that adds convenience methods to the `u32` type
+#[allow(non_snake_case)]
 pub trait U32Ext {
     /// Wrap in `Bps`
-    fn b(self) -> Byte;
+    fn B(self) -> Byte;
 
     /// Wrap in `Hertz`
-    fn kb(self) -> KiloByte;
+    fn kB(self) -> KiloByte;
 
     /// Wrap in `KiloHertz`
-    fn mb(self) -> MegaByte;
+    fn MB(self) -> MegaByte;
 
     /// Wrap in `MegaHertz`
-    fn gb(self) -> GigaByte;
+    fn GB(self) -> GigaByte;
 }
 
+#[allow(non_snake_case)]
 impl U32Ext for u32 {
-    fn b(self) -> Byte {
+    fn B(self) -> Byte {
         Byte (self)
     }
 
-    fn kb(self) -> KiloByte {
+    fn kB(self) -> KiloByte {
         KiloByte(self)
     }
 
-    fn mb(self) -> MegaByte {
+    fn MB(self) -> MegaByte {
         MegaByte(self)
     }
 
-    fn gb(self) -> GigaByte {
+    fn GB(self) -> GigaByte {
         GigaByte(self)
     }
 }
 
 impl From<u32> for Byte {
     fn from(b: u32) -> Self {
-        b.b()
+        b.B()
     }
 }
 

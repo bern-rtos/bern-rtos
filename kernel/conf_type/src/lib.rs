@@ -6,7 +6,7 @@
 //! crate depend on it.
 #![no_std]
 
-use bern_base_types::memory_size::Byte;
+use bern_units::memory_size::Byte;
 
 /// Task related config
 pub struct Task {

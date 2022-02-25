@@ -21,7 +21,7 @@ use crate::alloc::bump::Bump;
 use bern_arch::{ICore, IMemoryProtection, IScheduler, IStartup};
 use bern_arch::arch::{Arch, ArchCore};
 use bern_arch::memory_protection::{Access, Config, Permission, Type};
-use bern_base_types::memory_size::U32Ext;
+use bern_units::memory_size::U32Ext;
 use bern_conf::CONF;
 use crate::exec::interrupt::InterruptHandler;
 
@@ -88,7 +88,7 @@ pub fn init() {
         Config {
             addr: CONF.memory.sram.start_address as *const _,
             memory: Type::SramInternal,
-            size: 4.kb().into(), // todo: read from linker symbol or config
+            size: 4.kB().into(), // todo: read from linker symbol or config
             access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
             executable: false
         });

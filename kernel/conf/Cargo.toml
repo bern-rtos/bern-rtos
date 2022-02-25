@@ -16,7 +16,7 @@ path = "conf.rs"
 
 [dependencies]
 bern-conf-type = "0.1"
-bern-base-types = "*"
+bern-units = "*"
 
 [package.metadata.docs.rs]
 targets = [

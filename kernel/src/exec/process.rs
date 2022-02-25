@@ -5,7 +5,7 @@ use crate::alloc::bump::Bump;
 use bern_arch::arch::Arch;
 use bern_arch::IStartup;
 use bern_arch::startup::Region;
-use bern_base_types::memory_size::Byte;
+use bern_units::memory_size::Byte;
 use crate::kernel::{KERNEL, State};
 
 pub struct ProcessMemory {

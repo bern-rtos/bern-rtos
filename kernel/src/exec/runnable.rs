@@ -3,7 +3,7 @@ use bern_arch::arch::Arch;
 use bern_arch::arch::memory_protection::MemoryRegion;
 use bern_arch::IMemoryProtection;
 use bern_arch::memory_protection::{Access, Config, Permission, Type};
-use bern_base_types::memory_size::U32Ext;
+use bern_units::memory_size::U32Ext;
 use bern_conf::CONF;
 use crate::exec::process::Process;
 use crate::sched::event::Event;
@@ -124,7 +124,7 @@ impl Runnable {
                 Config {
                     addr: stack.bottom_ptr() as *const _,
                     memory: Type::SramInternal,
-                    size: 32.b(),
+                    size: 32.B(),
                     access: Access { user: Permission::NoAccess, system: Permission::NoAccess },
                     executable: false
                 }),
