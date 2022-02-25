@@ -2,9 +2,6 @@ use core::cell::Cell;
 use crate::exec::process::Process;
 use crate::sched;
 
-pub(crate) mod static_memory;
-
-
 #[link_section = ".kernel"]
 pub(crate) static KERNEL: Kernel = Kernel::new();
 
