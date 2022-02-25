@@ -7,6 +7,10 @@ use bern_arch::IStartup;
 use bern_arch::startup::Region;
 use bern_units::memory_size::Byte;
 use crate::kernel::{KERNEL, State};
+use crate::log;
+
+#[cfg(feature = "log-defmt")]
+use defmt::Formatter;
 
 pub struct ProcessMemory {
     pub size: usize,
@@ -68,7 +72,14 @@ impl Process {
     pub fn init<F>(&'static self, f: F) -> Result<(), ProcessError>
         where F: FnOnce(&Context)
     {
-        self.startup()?;
+        match self.startup() {
+            Ok(_) => { },
+            Err(e) => {
+                log::warn!("Cannot init process: {}", e);
+                return Err(e);
+            }
+        };
+
         KERNEL.start_init_process(&self);
 
         f(&Context {
@@ -102,5 +113,16 @@ pub struct Context {
 impl Context {
     pub(crate) fn process(&self) -> &'static Process {
         self.process
+    }
+}
+
+#[cfg(feature = "log-defmt")]
+impl defmt::Format for ProcessError {
+    fn format(&self, fmt: Formatter) {
+        match self {
+            ProcessError::NotInit => defmt::write!(fmt, "Kernel not initialized."),
+            ProcessError::AlreadyInit => defmt::write!(fmt, "Kernel already initialized."),
+            ProcessError::KernelAlreadyRunning => defmt::write!(fmt, "Kernel already running."),
+        }
     }
 }
