@@ -1,7 +1,7 @@
-#[cfg(target_os = "none")]
+#[cfg(feature = "log-defmt")]
 pub mod defmt;
 
-#[cfg(not(target_os = "none"))]
+#[cfg(all(not(feature = "log-defmt")))]
 mod stub;
 
 pub use {crate::trace, crate::info, crate::warn, crate::error};

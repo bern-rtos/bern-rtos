@@ -13,6 +13,7 @@ homepage = "https://bern-rtos.org"
 
 [features]
 time-slicing = []
+log-defmt = []
 
 [dependencies]
 bern-arch = "0.2"
