@@ -15,6 +15,7 @@
 
 #![cfg_attr(target_os = "none", no_std)]
 #![feature(unsize)]
+#![cfg_attr(not(target_os = "none"), feature(const_ptr_offset))]
 
 pub mod sched;
 pub mod syscall;
@@ -34,3 +35,4 @@ pub use bern_kernel_macros::*;
 use bern_arch::arch as _;
 pub use bern_arch;
 pub use kernel::*;
+
