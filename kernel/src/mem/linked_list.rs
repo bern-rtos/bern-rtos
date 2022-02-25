@@ -505,7 +505,7 @@ mod tests {
     fn memory_overflow() {
         const ELEMENT_LEN: usize = size_of::<Node<MyStruct>>();
         // Add some extra space for alignment
-        static mut BUFFER: [u8; ELEMENT_LEN*16 + 4] = [0; ELEMENT_LEN*16 + 4];
+        static mut BUFFER: [u8; ELEMENT_LEN*16 + 8] = [0; ELEMENT_LEN*16 + 8];
         static ALLOCATOR: Bump = unsafe {
             Bump::new(
                 NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
