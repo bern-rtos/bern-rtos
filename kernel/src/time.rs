@@ -1,33 +1,15 @@
 //! System time.
 
 use core::sync::atomic::{AtomicU32, Ordering};
+use bern_units::frequency::{ExtMilliHertz, Hertz};
 use crate::sched;
 
-// todo: finish
-pub(crate) struct Duration {
-    ticks: u64
-}
+static TICK_PER_MS: AtomicU32 = AtomicU32::new(0);
 
-#[allow(dead_code)]
-impl Duration {
-    pub const fn from_millis(millis: u64) -> Self {
-        Duration {
-            ticks: millis, // todo: scale
-        }
-    }
-    pub const fn infinite() -> Self {
-        Duration {
-            ticks: u64::MAX,
-        }
-    }
-
-    pub fn ticks(&self) -> u64 {
-        self.ticks
-    }
-}
-
-/// Current system tick count.
-static COUNT: AtomicU32 = AtomicU32::new(0); // todo: replace with u64
+/// Upper 32 bit of system tick.
+static TICK_HIGH: AtomicU32 = AtomicU32::new(0);
+/// Lower 32 bit of system tick.
+static TICK_LOW: AtomicU32 = AtomicU32::new(0);
 
 /// Update system tick count by adding 1.
 ///
@@ -35,11 +17,31 @@ static COUNT: AtomicU32 = AtomicU32::new(0); // todo: replace with u64
 #[no_mangle]
 #[inline(always)]
 fn system_tick_update() {
-    COUNT.fetch_add(1, Ordering::Relaxed);
+    if TICK_LOW.load(Ordering::Relaxed) == u32::MAX {
+        TICK_HIGH.fetch_add(1, Ordering::Relaxed);
+    }
+    TICK_LOW.fetch_add(1, Ordering::Relaxed);
+
     sched::tick_update();
 }
 
 /// Get the current system time in ticks.
 pub fn tick() -> u64 {
-    COUNT.load(Ordering::Relaxed) as u64
+    loop {
+        let low = TICK_LOW.load(Ordering::Relaxed);
+        let high = TICK_HIGH.load(Ordering::Relaxed);
+
+        // check if low count was updated inbetween
+        if low == TICK_LOW.load(Ordering::Relaxed) {
+            return (high as u64) << 32 | (low as u64);
+        }
+    }
+}
+
+pub fn set_tick_frequency<T, S>(tick_frequency: T, sysclock: S)
+    where Hertz: From<T> + From<S>
+{
+    let divisor = Hertz::from(sysclock).0 / Hertz::from(tick_frequency).0;
+    TICK_PER_MS.store(divisor, Ordering::Relaxed);
+    sched::update_tick_frequency(divisor);
 }

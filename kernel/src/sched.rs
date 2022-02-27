@@ -53,7 +53,7 @@ struct Scheduler {
 /// Initialize scheduler.
 ///
 /// **Note:** Must be called before any other non-const kernel functions.
-pub fn init() {
+pub(crate) fn init() {
     Arch::init_static_region(Arch::kernel_data());
 
     // Memory regions 0..2 are reserved for tasks
@@ -134,12 +134,11 @@ pub fn init() {
 /// Set the kernel tick frequency.
 ///
 /// **Note:** Must at least be called once before you start the scheduler.
-pub fn set_tick_frequency(tick_frequency: u32, clock_frequency: u32) {
+pub(crate) fn update_tick_frequency(ticks_per_ms: u32) {
     // NOTE(unsafe): scheduler must be initialized first
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
 
-    let divisor = clock_frequency / tick_frequency;
-    sched.core.set_systick_div(divisor);
+    sched.core.set_systick_div(ticks_per_ms);
 }
 
 /// Start the scheduler.

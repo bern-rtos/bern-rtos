@@ -26,6 +26,10 @@ impl Kernel {
         }
     }
 
+    pub(crate) fn init(&self) {
+        sched::init();
+    }
+
     pub(crate) fn start(&self) -> ! {
         self.state.replace(State::Running);
 
@@ -50,6 +54,11 @@ impl Kernel {
 // Note(unsafe): Values within `KERNEL` are only changed at startup, this
 // guarantees non-reentrant/single thread operation.
 unsafe impl Sync for Kernel { }
+
+
+pub fn init() {
+    KERNEL.init();
+}
 
 pub fn start() -> ! {
     KERNEL.start();
