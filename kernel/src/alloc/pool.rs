@@ -2,6 +2,7 @@ use core::alloc::Layout;
 use core::cell::Cell;
 use core::ptr;
 use core::ptr::{NonNull, slice_from_raw_parts_mut};
+use bern_units::memory_size::Byte;
 use crate::alloc::allocator::{Allocator, AllocError};
 use crate::mem::boxed::Box;
 use crate::mem::queue::mpmc_linked::{Node, Queue};
@@ -157,7 +158,11 @@ impl<const N: usize> Allocator for Pool<{ N }> {
         }
     }
 
-    fn capacity(&self) -> usize {
+    fn capacity(&self) -> Byte {
+        todo!()
+    }
+
+    fn usage(&self) -> Byte {
         todo!()
     }
 }

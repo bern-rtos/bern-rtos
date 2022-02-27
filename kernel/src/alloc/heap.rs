@@ -6,6 +6,7 @@ use core::cell::Cell;
 use core::mem::size_of;
 use core::ptr;
 use core::ptr::{NonNull, slice_from_raw_parts_mut};
+use bern_units::memory_size::Byte;
 use crate::alloc::allocator::{Allocator, AllocError};
 use crate::mem::linked_list::{LinkedList, Node};
 use crate::mem::boxed::Box;
@@ -178,7 +179,11 @@ impl Allocator for Heap {
         ));
     }
 
-    fn capacity(&self) -> usize {
+    fn capacity(&self) -> Byte {
+        unimplemented!()
+    }
+
+    fn usage(&self) -> Byte {
         unimplemented!()
     }
 }

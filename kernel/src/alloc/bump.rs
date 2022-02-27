@@ -1,11 +1,14 @@
 use core::alloc::Layout;
 use core::ptr::{NonNull, slice_from_raw_parts_mut};
 use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
+use bern_units::memory_size::{Byte, ExtByte};
 use crate::alloc::allocator::{Allocator, AllocError};
 use crate::log;
 
 /// The strict memory allocator can allocate memory but never release.
 pub struct Bump {
+    /// Start of memory block.
+    start: NonNull<u8>,
     /// End of memory block.
     end: NonNull<u8>,
     /// Current allocation pointer.
@@ -21,6 +24,7 @@ impl Bump {
     /// intended range.
     pub const unsafe fn new(start: NonNull<u8>, end: NonNull<u8>) -> Self {
         Bump {
+            start,
             end,
             current: AtomicPtr::new(start.as_ptr()),
             wastage: AtomicUsize::new(0),
@@ -39,7 +43,7 @@ impl Allocator for Bump {
                 old as usize + padding
             );
 
-            if self.capacity() < (layout.size() + padding) {
+            if self.capacity() < ((layout.size() + padding) as u32).B() {
                 return Err(AllocError::OutOfMemory);
             }
 
@@ -70,9 +74,13 @@ impl Allocator for Bump {
         );
     }
 
-    fn capacity(&self) -> usize {
-        self.end.as_ptr() as usize -
-            self.current.load(Ordering::Relaxed) as usize
+    fn capacity(&self) -> Byte {
+        Byte((self.end.as_ptr() as usize - self.start.as_ptr() as usize) as u32)
+    }
+
+    fn usage(&self) -> Byte {
+        Byte((self.end.as_ptr() as usize -
+            self.current.load(Ordering::Relaxed) as usize) as u32)
     }
 }
 
