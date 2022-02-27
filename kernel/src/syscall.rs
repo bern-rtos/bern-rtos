@@ -3,7 +3,7 @@
 //! # Example
 //!
 //! Launch a task that wait for 100 iterations and the terminates.
-//! ```no_run
+//! ```ignore
 //! fn main() -> ! {
 //!     /*...*/
 //!     sched::init();

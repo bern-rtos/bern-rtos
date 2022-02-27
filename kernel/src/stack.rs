@@ -3,7 +3,7 @@
 //! # Example
 //! You typically want to use a macro allocate a static stack ([`alloc_static_stack`]) and create the
 //! management object accordingly:
-//! ```no_run
+//! ```ignore
 //! let stack: bern_kernel::stack::Stack = alloc_static_stack!(512);
 //! ```
 
@@ -90,7 +90,7 @@ impl Stack {
 /// **Note:** The alignment structs are dependent on the memory protection
 /// hardware and must thus be implemented in the architecture specific code.
 /// e.g.:
-/// ```rust,no_run
+/// ```rust,ignore
 /// #[repr(align(64))]
 /// pub struct A64;
 ///
@@ -132,7 +132,7 @@ impl<A, T> DerefMut for Aligned<A, T> {
 ///
 /// The macro checks whether the size meets the size and alignment requirements
 /// of the memory protection hardware in use. e.g.
-/// ```no_run
+/// ```ignore
 /// let stack: bern_kernel::stack::Stack = alloc_static_stack!(512);
 /// // ok
 ///

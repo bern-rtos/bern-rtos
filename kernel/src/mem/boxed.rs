@@ -15,7 +15,7 @@
 //!
 //! Allocating a data structure in a static pool will return a boxed pointer to
 //! the new value:
-//! ```no_run
+//! ```ignore
 //! static POOL: ArrayPool<Node<MyStruct>, 10> = ArrayPool::new([None; 10]);
 //! let boxed: Box<MyStruct> = POOL.insert(Node::new(MyStruct { id: 42 })).unwrap();
 //! ```

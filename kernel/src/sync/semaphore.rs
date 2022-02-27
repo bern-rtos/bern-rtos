@@ -14,7 +14,7 @@ use crate::sched::event;
 /// - synchronize multiple tasks
 ///
 /// # Example
-/// ```no_run
+/// ```ignore
 /// // put the mutex in a section where all tasks have access
 /// #[link_section = ".shared"]
 /// // create a counting semaphore that can be taken 4 times

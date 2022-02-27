@@ -16,7 +16,7 @@ use super::Error;
 /// - to protect data races on shared data or peripherals
 ///
 /// # Example
-/// ```no_run
+/// ```ignore
 /// // put the mutex in a section where all tasks have access
 /// #[link_section = ".shared"]
 /// // create mutex containing an integer with an initial values of 42

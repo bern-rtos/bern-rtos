@@ -72,21 +72,21 @@ impl<T> DerefMut for Node<T> {
 /// # Examples
 ///
 /// Create a new list:
-/// ```no_run
+/// ```ignore
 /// let mut list_a = LinkedList::new();
 /// let mut list_b = LinkedList::new();
 /// ```
 ///
 /// Add element to the end of a list with an allocator:
-/// ```
-/// static ALLOCATOR: StrictAllocator = StrictAllocator::new(NonNull::new_unchecked(0x2001E000 as *mut u8), 5_000);
+/// ```ignore
+/// static ALLOCATOR: Bump = unsafe { Bump::new(NonNull::new_unchecked(0x2001E000 as *mut u8), 5_000) };
 /// list_a.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
 /// list_a.emplace_back(MyStruct { id: 54 }, &ALLOCATOR);
 ///```
 /// Nodes in the same list can be allocated in different memory sections.
 ///
 /// Move an element from one to another list:
-/// ```
+/// ```ignore
 /// let node = list_a.pop_front();
 /// list_a.push_back(node);
 ///```
@@ -186,7 +186,7 @@ impl<T> LinkedList<T> {
     /// # Example
     /// Insert task `pausing` before the element where the next wake-up time
     /// `next_wut()` is larger than the one of `pausing`.
-    /// ```no_run
+    /// ```ignore
     /// /* create and populate list */
     /// let pausing: Task = /* omitted */;
     /// tasks_sleeping.insert_when(

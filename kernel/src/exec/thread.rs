@@ -2,7 +2,7 @@
 //!
 //! # Example
 //! Create a task using the builder pattern:
-//! ```no_run
+//! ```ignore
 //! let mut heartbeat = board.shield.led_1;
 //! Task::new()
 //!     .priority(Priority(0))

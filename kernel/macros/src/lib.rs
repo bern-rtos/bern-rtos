@@ -12,7 +12,7 @@ use quote::ToTokens;
 /// Generates an enum with values and a map to match the enum to another type.
 ///
 /// e.g.
-/// ```no_run
+/// ```ignore
 /// enum_map!{
 ///     Size, u8;
 ///     S128 = 5, 128;
@@ -20,7 +20,7 @@ use quote::ToTokens;
 /// }
 /// ```
 /// expands to
-/// ```no_run
+/// ```ignore
 /// #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 /// #[repr(u8)]
 /// pub enum Size {
