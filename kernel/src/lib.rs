@@ -30,6 +30,7 @@ pub mod log;
 
 pub use crate::syscall::*;
 pub use bern_kernel_macros::*;
+pub use bern_units as units;
 
 #[allow(unused_imports)]
 use bern_arch::arch as _;

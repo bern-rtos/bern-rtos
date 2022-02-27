@@ -22,7 +22,7 @@ use crate::alloc::bump::Bump;
 use bern_arch::{ICore, IMemoryProtection, IScheduler, IStartup};
 use bern_arch::arch::{Arch, ArchCore};
 use bern_arch::memory_protection::{Access, Config, Permission, Type};
-use bern_units::memory_size::U32Ext;
+use bern_units::memory_size::ExtByte;
 use bern_conf::CONF;
 use crate::exec::interrupt::InterruptHandler;
 

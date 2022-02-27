@@ -28,21 +28,21 @@ pub const CONF: Conf = Conf {
     memory: Memory {
         flash: MemorySection {
             start_address: 0x0800_0000,
-            size: Byte::from_kb(512),
+            size: Byte::from_kB(512),
         },
         sram: MemorySection {
             start_address: 0x2000_0000,
-            size: Byte::from_kb(128),
+            size: Byte::from_kB(128),
         },
         peripheral: MemorySection {
             start_address: 0x4000_0000,
-            size: Byte::from_kb(512),
+            size: Byte::from_kB(512),
         },
         shared: MemorySection {
             // will be ignored, start of shared section is read via linker
             // symbol
             start_address: 0x2001FC00,
-            size: Byte::from_kb(1),
+            size: Byte::from_kB(1),
         }
     },
 };
