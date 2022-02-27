@@ -12,17 +12,14 @@ use core::ptr::NonNull;
 
 use event::Event;
 use crate::exec::runnable::{self, Priority, Runnable, Transition};
-use crate::{log, syscall};
+use crate::{KERNEL, log, syscall};
 use crate::time;
 use crate::sync::critical_section;
 use crate::mem::{boxed::Box, linked_list::*};
 use crate::alloc::allocator::AllocError;
-use crate::alloc::bump::Bump;
 
-use bern_arch::{ICore, IMemoryProtection, IScheduler, IStartup};
+use bern_arch::{ICore, IMemoryProtection, IScheduler};
 use bern_arch::arch::{Arch, ArchCore};
-use bern_arch::memory_protection::{Access, Config, Permission, Type};
-use bern_units::memory_size::ExtByte;
 use bern_conf::CONF;
 use crate::exec::interrupt::InterruptHandler;
 
@@ -35,8 +32,6 @@ use crate::exec::interrupt::InterruptHandler;
 
 #[link_section = ".kernel"]
 static mut SCHEDULER: MaybeUninit<Scheduler> = MaybeUninit::uninit();
-#[link_section = ".kernel"]
-static mut KERNEL_ALLOCATOR: MaybeUninit<Bump> = MaybeUninit::uninit();
 
 // todo: split scheduler into kernel and scheduler
 struct Scheduler {
@@ -54,57 +49,7 @@ struct Scheduler {
 ///
 /// **Note:** Must be called before any other non-const kernel functions.
 pub(crate) fn init() {
-    Arch::init_static_region(Arch::kernel_data());
-
-    // Memory regions 0..2 are reserved for tasks
-    Arch::disable_memory_region(0);
-    Arch::disable_memory_region(1);
-    Arch::disable_memory_region(2);
-
-    // Allow flash read/exec
-    Arch::enable_memory_region(
-        3,
-        Config {
-            addr: CONF.memory.flash.start_address as *const _,
-            memory: Type::Flash,
-            size: CONF.memory.flash.size,
-            access: Access { user: Permission::ReadOnly, system: Permission::ReadOnly },
-            executable: true
-        });
-
-    // Allow peripheral RW
-    Arch::enable_memory_region(
-        4,
-        Config {
-            addr: CONF.memory.peripheral.start_address as *const _,
-            memory: Type::Peripheral,
-            size: CONF.memory.peripheral.size,
-            access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
-            executable: false
-        });
-
-    // Allow .data & .bss read/write
-    Arch::enable_memory_region(
-        5,
-        Config {
-            addr: CONF.memory.sram.start_address as *const _,
-            memory: Type::SramInternal,
-            size: 4.kB().into(), // todo: read from linker symbol or config
-            access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
-            executable: false
-        });
-
-    Arch::disable_memory_region(6);
-    Arch::disable_memory_region(7);
-
     let core = ArchCore::new();
-
-    unsafe {
-        KERNEL_ALLOCATOR = MaybeUninit::new(
-            Bump::new(
-                NonNull::new_unchecked(Arch::kernel_heap().start as *mut u8),
-                NonNull::new_unchecked(Arch::kernel_heap().end as *mut u8)));
-    }
 
     // Init static pools, this is unsafe but stable for now. Temporary solution
     // until const fn works with MaybeUninit.
@@ -186,7 +131,7 @@ pub(crate) fn add_task(mut task: Runnable) {
         let prio: usize = task.priority().into();
         sched.tasks_ready[prio].emplace_back(
             task,
-            unsafe { &*KERNEL_ALLOCATOR.as_ptr() }
+            KERNEL.allocator()
         ).ok();
     });
 }
@@ -280,7 +225,7 @@ pub(crate) fn interrupt_handler_add(interrupt: InterruptHandler) {
     critical_section::exec(|| {
         sched.interrupt_handlers.emplace_back(
             interrupt,
-            unsafe { &*KERNEL_ALLOCATOR.as_ptr() }
+            KERNEL.allocator()
         ).ok();
     });
 }
@@ -293,7 +238,7 @@ pub(crate) fn event_register() -> Result<usize, AllocError> {
         sched.event_counter = id;
         let result = sched.events.emplace_back(
             Event::new(id),
-            unsafe { &*KERNEL_ALLOCATOR.as_ptr() }
+            KERNEL.allocator()
         );
         result.map(|_| id)
     })
