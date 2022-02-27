@@ -46,6 +46,7 @@ enum Service {
     EventFire,
     Alloc,
     Dealloc,
+    KernelStats,
 }
 
 impl Service {
@@ -159,6 +160,15 @@ pub(crate) fn dealloc(ptr: *mut u8, layout: Layout) {
     );
 }
 
+pub fn print_kernel_stats() {
+    mode_aware_syscall(
+        Service::KernelStats,
+        0,
+        0,
+        0,
+    );
+}
+
 // userland barrier ////////////////////////////////////////////////////////////
 
 /// System Call handler.
@@ -230,6 +240,10 @@ fn syscall_handler(service: Service, arg0: usize, arg1: usize, arg2: usize) -> u
                 Layout::from_size_align_unchecked(size, align)
             };
             Wrapper::dealloc_handler(ptr, layout);
+            0
+        }
+        Service::KernelStats => {
+            sched::print_thread_stats();
             0
         }
     }

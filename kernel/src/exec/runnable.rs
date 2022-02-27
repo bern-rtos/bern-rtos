@@ -10,6 +10,8 @@ use crate::sched::event::Event;
 use crate::stack::Stack;
 use crate::time;
 
+#[cfg(feature = "log-defmt")]
+use defmt::Formatter;
 
 pub trait RunnableTrait: 'static + FnMut() -> RunnableResult {}
 pub type RunnableResult = (); // todo: replace with '!' when possible
@@ -197,4 +199,14 @@ impl Runnable {
 /// and second one is part of the trait object type
 pub(crate) fn entry(entry_fn: &mut &mut (dyn FnMut() -> RunnableResult)) {
     (entry_fn)();
+}
+
+#[cfg(feature = "log-defmt")]
+impl defmt::Format for Runnable {
+    fn format(&self, fmt: Formatter) {
+        defmt::write!(fmt, "None    {:02}          {}%",
+            self.priority.0,
+            self.stack.usage(),
+        )
+    }
 }

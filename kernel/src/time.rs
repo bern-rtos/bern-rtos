@@ -1,7 +1,7 @@
 //! System time.
 
 use core::sync::atomic::{AtomicU32, Ordering};
-use bern_units::frequency::{ExtMilliHertz, Hertz};
+use bern_units::frequency::Hertz;
 use crate::sched;
 
 static TICK_PER_MS: AtomicU32 = AtomicU32::new(0);
@@ -27,15 +27,19 @@ fn system_tick_update() {
 
 /// Get the current system time in ticks.
 pub fn tick() -> u64 {
+    let tick;
     loop {
-        let low = TICK_LOW.load(Ordering::Relaxed);
         let high = TICK_HIGH.load(Ordering::Relaxed);
+        let low = TICK_LOW.load(Ordering::Relaxed);
 
-        // check if low count was updated inbetween
-        if low == TICK_LOW.load(Ordering::Relaxed) {
-            return (high as u64) << 32 | (low as u64);
+        // check if high count was updated inbetween
+        if high == TICK_HIGH.load(Ordering::Relaxed) {
+            tick = (high as u64) << 32 | (low as u64);
+            break;
         }
     }
+
+    tick
 }
 
 pub fn set_tick_frequency<T, S>(tick_frequency: T, sysclock: S)
@@ -45,3 +49,6 @@ pub fn set_tick_frequency<T, S>(tick_frequency: T, sysclock: S)
     TICK_PER_MS.store(divisor, Ordering::Relaxed);
     sched::update_tick_frequency(divisor);
 }
+
+#[cfg(feature = "log-defmt")]
+defmt::timestamp!("{=u64}", tick());

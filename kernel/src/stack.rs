@@ -81,6 +81,11 @@ impl Stack {
     pub fn size(&self) -> usize {
         self.size
     }
+
+    /// Stack usage percentage.
+    pub fn usage(&self) -> u8 {
+        (((self.ptr as usize - self.bottom as usize) as f32 / self.size as f32) * 100f32) as u8
+    }
 }
 
 /// A newtype with alignment of at least `A` bytes

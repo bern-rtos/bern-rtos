@@ -360,6 +360,37 @@ pub(crate) fn with_callee<F, R>(f: F) -> R
     f(task)
 }
 
+pub(crate) fn print_thread_stats() {
+    let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
+    log::info!("Thread stats");
+    log::info!("============");
+    log::info!("Name    Priority    Stack usage    State");
+    log::info!("----    --------    -----------    -----");
+
+    let running = unsafe { sched.task_running.as_ref().unwrap_unchecked() };
+    log::info!("{}            Running", ***running);
+
+    for ready in sched.tasks_ready.iter() {
+        for thread in ready.iter() {
+            log::info!("{}            Ready", thread);
+        }
+    }
+
+    for sleeping in sched.tasks_sleeping.iter() {
+        log::info!("{}            Sleeping (wut: {})", sleeping, sleeping.next_wut());
+    }
+
+    for event in sched.events.iter() {
+        for blocked in event.pending.iter() {
+            log::info!("{}            Blocked (id: {})", blocked, event.id());
+        }
+    }
+
+    for terminated in sched.tasks_terminated.iter() {
+        log::info!("{}            Terminated", terminated);
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /// Switch context from current to next task.
