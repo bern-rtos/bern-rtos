@@ -12,6 +12,7 @@ use core::ops::{DerefMut, Deref};
 extern crate alloc;
 use alloc::alloc::alloc;
 use core::alloc::Layout;
+use bern_units::memory_size::Byte;
 use crate::exec::process;
 
 /// Stack management structure
@@ -82,9 +83,13 @@ impl Stack {
         self.size
     }
 
-    /// Stack usage percentage.
-    pub fn usage(&self) -> u8 {
-        (((self.ptr as usize - self.bottom as usize) as f32 / self.size as f32) * 100f32) as u8
+    /// Stack usage.
+    pub fn usage(&self) -> Byte {
+        Byte((self.ptr as usize - self.bottom as usize) as u32)
+    }
+
+    pub fn capacity(&self) -> Byte {
+        Byte(self.size as u32)
     }
 }
 

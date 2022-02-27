@@ -22,7 +22,7 @@
 use core::alloc::Layout;
 use core::mem;
 
-use crate::sched;
+use crate::{kernel, sched};
 use crate::sched::event;
 use crate::exec::runnable::RunnableResult;
 use crate::exec::thread::ThreadBuilder;
@@ -243,6 +243,7 @@ fn syscall_handler(service: Service, arg0: usize, arg1: usize, arg2: usize) -> u
             0
         }
         Service::KernelStats => {
+            kernel::print_stats();
             sched::print_thread_stats();
             0
         }

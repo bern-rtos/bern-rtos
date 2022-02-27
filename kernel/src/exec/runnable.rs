@@ -204,9 +204,11 @@ pub(crate) fn entry(entry_fn: &mut &mut (dyn FnMut() -> RunnableResult)) {
 #[cfg(feature = "log-defmt")]
 impl defmt::Format for Runnable {
     fn format(&self, fmt: Formatter) {
-        defmt::write!(fmt, "None    {:02}          {}%",
+        defmt::write!(fmt, "None    {:02}          {:05}B/{:05}B ({}%)",
             self.priority.0,
-            self.stack.usage(),
+            self.stack.usage().0,
+            self.stack.capacity().0,
+            (self.stack.usage().0 as f32 / self.stack.capacity().0 as f32 * 100f32) as u8,
         )
     }
 }

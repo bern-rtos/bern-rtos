@@ -8,7 +8,8 @@ use bern_conf::CONF;
 use bern_units::memory_size::ExtByte;
 use crate::alloc::bump::Bump;
 use crate::exec::process::Process;
-use crate::sched;
+use crate::{log, sched};
+use crate::alloc::allocator::Allocator;
 
 #[link_section = ".kernel"]
 pub(crate) static KERNEL: Kernel = Kernel::new();
@@ -130,4 +131,15 @@ pub fn init() {
 
 pub fn start() -> ! {
     KERNEL.start();
+}
+
+
+pub(crate) fn print_stats() {
+    log::info!("Kernel stats");
+    log::info!("============");
+    log::info!("Allocator: {}B/{}B ({}%)",
+        KERNEL.allocator().usage().0,
+        KERNEL.allocator().capacity().0,
+        (KERNEL.allocator().usage().0 as f32 / KERNEL.allocator().capacity().0 as f32 * 100f32) as u8,
+    );
 }
