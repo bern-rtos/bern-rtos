@@ -6,13 +6,13 @@
 #![feature(default_alloc_error_handler)]
 
 use bern_kernel::exec::process::Context;
-use crate::common_latency::Board;
+use crate::common_timing::Board;
 use st_nucleo_f446::hal;
 use hal::interrupt;
 
-mod common_latency;
+mod common_timing;
 
-pub fn spawn_interrupt_thread(_c: &Context, _board: Board) {
+pub fn spawn_timing_thread(_c: &Context, _board: Board) {
 
 }
 

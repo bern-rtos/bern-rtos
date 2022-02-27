@@ -26,13 +26,13 @@ path = "tests/memory_protection.rs"
 harness = false
 
 [[test]]
-name = "arm_cm4-latency-isr-kernel"
-path = "tests/latency_isr_kernel.rs"
+name = "arm_cm4-timing-isr-kernel"
+path = "tests/timing_isr_kernel.rs"
 harness = false
 
 [[test]]
-name = "arm_cm4-latency-isr-bypass"
-path = "tests/latency_isr_bypass.rs"
+name = "arm_cm4-timing-isr-bypass"
+path = "tests/timing_isr_bypass.rs"
 harness = false
 
 [dependencies]

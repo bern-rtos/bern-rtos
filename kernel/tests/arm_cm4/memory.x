@@ -36,3 +36,21 @@ SECTIONS {
     } > RAM
     __sikernel = LOADADDR(.kernel);
 } INSERT AFTER .shared_global;
+
+SECTIONS {
+    .process_default_idle : ALIGN(256)
+    {
+        /* Process static memory */
+        . = ALIGN(8);
+        __smprocess_default_idle = .;
+        KEEP(*(.process.default_idle))
+        . = ALIGN(8);
+        __emprocess_default_idle = .;
+
+        . = __smprocess_default_idle + 256;
+        _ehprocess_default_idle = .;
+
+        ASSERT(__smprocess_default_idle > 0, "ERROR(bern-kernel): Section was optimized out, please place a variable in default idle.");
+    } > RAM
+    __siprocess_default_idle = LOADADDR(.process_default_idle);
+} INSERT AFTER .shared_global;
