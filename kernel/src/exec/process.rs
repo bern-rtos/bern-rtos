@@ -1,4 +1,5 @@
 use core::cell::Cell;
+use core::ops::Deref;
 use core::ptr::NonNull;
 use crate::alloc::allocator::Allocator;
 use crate::alloc::bump::Bump;
@@ -8,9 +9,67 @@ use bern_arch::startup::Region;
 use bern_units::memory_size::Byte;
 use crate::kernel::{KERNEL, State};
 use crate::log;
+use crate::mem::boxed::Box;
+use crate::mem::linked_list::Node;
 
 #[cfg(feature = "log-defmt")]
 use defmt::Formatter;
+
+pub struct Process {
+    inner: Node<ProcessInternal>,
+}
+
+impl Process {
+    pub const fn new(memory: ProcessMemory) -> Self {
+        let proc_allocator = unsafe {
+            Bump::new(
+                NonNull::new_unchecked(memory.heap_start as *mut _),
+                NonNull::new_unchecked(memory.heap_end as *mut _)
+            )};
+
+        Process {
+            inner: Node::new(ProcessInternal {
+                memory,
+                proc_allocator,
+                init: Cell::new(false),
+            })
+        }
+    }
+
+    pub fn init<F>(&'static self, f: F) -> Result<(), ProcessError>
+        where F: FnOnce(&Context)
+    {
+        KERNEL.register_process(self.node());
+
+        match self.inner.startup() {
+            Ok(_) => { },
+            Err(e) => {
+                log::warn!("Cannot init process: {}", e);
+                return Err(e);
+            }
+        };
+
+        KERNEL.start_init_process(self.inner.deref());
+
+        f(&Context {
+            process: self.inner.deref()
+        });
+
+        KERNEL.end_init_process();
+        self.inner.init.set(true);
+
+        return Ok(());
+    }
+
+    pub(crate) fn node(&self) -> Box<Node<ProcessInternal>> {
+        unsafe {
+            Box::from_raw(NonNull::new_unchecked(&self.inner as *const _ as *mut _))
+        }
+    }
+}
+
+unsafe impl Sync for Process { }
+
 
 pub struct ProcessMemory {
     pub size: usize,
@@ -23,7 +82,7 @@ pub struct ProcessMemory {
     pub heap_end: *const u8,
 }
 
-pub struct Process {
+pub struct ProcessInternal {
     memory: ProcessMemory,
     proc_allocator: Bump,
     init: Cell<bool>,
@@ -35,21 +94,7 @@ pub enum ProcessError {
     KernelAlreadyRunning,
 }
 
-impl Process {
-    pub const fn new(memory: ProcessMemory) -> Self {
-        let proc_allocator = unsafe {
-            Bump::new(
-                NonNull::new_unchecked(memory.heap_start as *mut _),
-                NonNull::new_unchecked(memory.heap_end as *mut _)
-            )};
-
-        Process {
-            memory,
-            proc_allocator,
-            init: Cell::new(false),
-        }
-    }
-
+impl ProcessInternal {
     fn startup(&self) -> Result<(), ProcessError> {
         if self.init.get() {
             return Err(ProcessError::AlreadyInit);
@@ -69,27 +114,6 @@ impl Process {
         return Ok(());
     }
 
-    pub fn init<F>(&'static self, f: F) -> Result<(), ProcessError>
-        where F: FnOnce(&Context)
-    {
-        match self.startup() {
-            Ok(_) => { },
-            Err(e) => {
-                log::warn!("Cannot init process: {}", e);
-                return Err(e);
-            }
-        };
-
-        KERNEL.start_init_process(&self);
-
-        f(&Context {
-            process: self
-        });
-
-        KERNEL.end_init_process();
-        return Ok(());
-    }
-
     pub(crate) fn allocator(&self) -> &dyn Allocator {
         &self.proc_allocator
     }
@@ -104,14 +128,14 @@ impl Process {
 }
 
 // Note(unsafe): The values of `Process` are read only.
-unsafe impl Sync for Process { }
+unsafe impl Sync for ProcessInternal { }
 
 pub struct Context {
-    process: &'static Process,
+    process: &'static ProcessInternal,
 }
 
 impl Context {
-    pub(crate) fn process(&self) -> &'static Process {
+    pub(crate) fn process(&self) -> &'static ProcessInternal {
         self.process
     }
 }
@@ -124,5 +148,17 @@ impl defmt::Format for ProcessError {
             ProcessError::AlreadyInit => defmt::write!(fmt, "Kernel already initialized."),
             ProcessError::KernelAlreadyRunning => defmt::write!(fmt, "Kernel already running."),
         }
+    }
+}
+
+#[cfg(feature = "log-defmt")]
+impl defmt::Format for ProcessInternal {
+    fn format(&self, fmt: Formatter) {
+        defmt::write!(fmt, "None    {}    {:05}B/{:05}B ({}%)",
+                      self.init.get(),
+                      self.proc_allocator.usage().0,
+                      self.proc_allocator.capacity().0,
+                      (self.proc_allocator.usage().0 as f32 / self.proc_allocator.capacity().0 as f32 * 100f32) as u8
+        )
     }
 }

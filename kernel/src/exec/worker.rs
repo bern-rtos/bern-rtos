@@ -6,7 +6,7 @@ use core::ops::{Deref, DerefMut};
 use crate::alloc::allocator::AllocError;
 use crate::alloc::const_pool::{ConstBox, Item};
 use crate::exec::process;
-use crate::exec::process::Process;
+use crate::exec::process::ProcessInternal;
 use crate::exec::runnable::Priority;
 use crate::exec::thread::Thread;
 use crate::mem::boxed::Box;
@@ -64,7 +64,7 @@ impl<T> DerefMut for WorkItem<T> {
 }
 
 pub struct Workqueue {
-    process: &'static Process,
+    _process: &'static ProcessInternal,
     work: Queue<&'static dyn Workable>,
     event_id: Cell<usize>,
     ref_count: AtomicU8,
@@ -143,7 +143,7 @@ impl<'a> WorkqueueBuilder<'a> {
 
         let worker =
             Box::try_new_in(Workqueue {
-                process: self.context.process(),
+                _process: self.context.process(),
                 work: Queue::new(),
                 event_id: Cell::new(id),
                 ref_count: Default::default(),

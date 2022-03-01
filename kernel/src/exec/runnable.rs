@@ -5,7 +5,7 @@ use bern_arch::IMemoryProtection;
 use bern_arch::memory_protection::{Access, Config, Permission, Type};
 use bern_units::memory_size::ExtByte;
 use bern_conf::CONF;
-use crate::exec::process::Process;
+use crate::exec::process::ProcessInternal;
 use crate::sched::event::Event;
 use crate::stack::Stack;
 use crate::time;
@@ -98,7 +98,7 @@ impl Into<u8> for Priority {
 // todo: manage lifetime of stack & runnable
 /// Task control block
 pub struct Runnable {
-    process: &'static Process,
+    process: &'static ProcessInternal,
     transition: Transition,
     runnable_ptr: *mut usize,
     next_wut: u64,
@@ -109,7 +109,7 @@ pub struct Runnable {
 }
 
 impl Runnable {
-    pub(crate) fn new(process: &'static Process, runnable_ptr: *mut usize, stack: Stack, priority: Priority) -> Self {
+    pub(crate) fn new(process: &'static ProcessInternal, runnable_ptr: *mut usize, stack: Stack, priority: Priority) -> Self {
         // prepare memory region configs
         let memory_regions = [
             Arch::prepare_memory_region(
@@ -185,7 +185,7 @@ impl Runnable {
         self.blocking_event = Some(event);
     }
 
-    pub(crate) fn process(&self) -> &Process {
+    pub(crate) fn process(&self) -> &ProcessInternal {
         self.process
     }
 }

@@ -41,7 +41,7 @@ use bern_arch::IMemoryProtection;
 use bern_conf::CONF;
 use crate::alloc::allocator::AllocError;
 use crate::exec::process;
-use crate::exec::process::Process;
+use crate::exec::process::ProcessInternal;
 use crate::exec::runnable::{Priority, RunnableResult, Runnable, Transition};
 use crate::mem::boxed::Box;
 
@@ -62,7 +62,7 @@ impl Thread {
 /// Builder to create a new task
 pub struct ThreadBuilder {
     /// Parent process
-    process: &'static Process,
+    process: &'static ProcessInternal,
     /// Task stack
     stack: Option<Stack>,
     /// Task priority

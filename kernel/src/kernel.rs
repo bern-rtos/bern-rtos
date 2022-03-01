@@ -7,9 +7,15 @@ use bern_arch::memory_protection::{Access, Config, Permission, Type};
 use bern_conf::CONF;
 use bern_units::memory_size::ExtByte;
 use crate::alloc::bump::Bump;
-use crate::exec::process::Process;
+use crate::exec::process::ProcessInternal;
 use crate::{log, sched};
 use crate::alloc::allocator::Allocator;
+use crate::mem::boxed::Box;
+use crate::mem::linked_list::{LinkedList, Node};
+
+#[cfg(feature = "log-defmt")]
+use defmt::Formatter;
+
 
 #[link_section = ".kernel"]
 pub(crate) static KERNEL: Kernel = Kernel::new();
@@ -24,9 +30,11 @@ pub struct Kernel {
     /// Kernel state.
     state: Cell<State>,
     /// Currently initializing process.
-    init_process: Cell<Option<&'static Process>>,
+    init_process: Cell<Option<&'static ProcessInternal>>,
     /// Allocator for kernel modules.
     allocator: UnsafeCell<MaybeUninit<Bump>>,
+    /// List of processes.
+    processes: LinkedList<ProcessInternal>,
 }
 
 impl Kernel {
@@ -35,6 +43,7 @@ impl Kernel {
             state: Cell::new(State::Startup),
             init_process: Cell::new(None),
             allocator: UnsafeCell::new(MaybeUninit::uninit()),
+            processes: LinkedList::new(),
         }
     }
 
@@ -59,18 +68,22 @@ impl Kernel {
         self.state.get()
     }
 
-    pub(crate) fn start_init_process(&self, process: &'static Process) {
+    pub(crate) fn start_init_process(&self, process: &'static ProcessInternal) {
         self.init_process.replace(Some(process));
     }
     pub(crate) fn end_init_process(&self) {
         self.init_process.replace(None);
     }
-    pub(crate) fn process(&self) -> Option<&Process> {
+    pub(crate) fn process(&self) -> Option<&ProcessInternal> {
         self.init_process.get()
     }
 
     pub(crate) fn allocator(&self) -> &Bump {
         unsafe { (*self.allocator.get()).assume_init_ref() }
+    }
+
+    pub(crate) fn register_process(&self, process_node: Box<Node<ProcessInternal>>) {
+        self.processes.push_back(process_node);
     }
 }
 
@@ -134,6 +147,16 @@ pub fn start() -> ! {
 }
 
 
+#[cfg(feature = "log-defmt")]
+impl defmt::Format for State {
+    fn format(&self, fmt: Formatter) {
+        match self {
+            State::Startup => defmt::write!(fmt, "Starting up"),
+            State::Running => defmt::write!(fmt, "Running"),
+        }
+    }
+}
+
 pub(crate) fn print_stats() {
     log::info!("Kernel stats");
     log::info!("============");
@@ -142,4 +165,12 @@ pub(crate) fn print_stats() {
         KERNEL.allocator().capacity().0,
         (KERNEL.allocator().usage().0 as f32 / KERNEL.allocator().capacity().0 as f32 * 100f32) as u8,
     );
+
+    log::info!("Process stats");
+    log::info!("=============");
+    log::info!("Name    Init    Allocator");
+    log::info!("----    ----    ---------");
+    for proc in KERNEL.processes.iter() {
+        log::info!("{}", proc);
+    }
 }
