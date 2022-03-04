@@ -43,7 +43,7 @@ impl Allocator for Bump {
                 old as usize + padding
             );
 
-            if self.capacity() < ((layout.size() + padding) as u32).B() {
+            if (self.capacity() - self.usage()) < ((layout.size() + padding) as u32).B() {
                 return Err(AllocError::OutOfMemory);
             }
 
@@ -72,6 +72,7 @@ impl Allocator for Bump {
             ptr.as_ptr(),
             layout.size()
         );
+        self.wastage.fetch_add(layout.size(), Ordering::Relaxed);
     }
 
     fn capacity(&self) -> Byte {
@@ -79,10 +80,76 @@ impl Allocator for Bump {
     }
 
     fn usage(&self) -> Byte {
-        Byte((self.end.as_ptr() as usize -
-            self.current.load(Ordering::Relaxed) as usize) as u32)
+        Byte((self.current.load(Ordering::Relaxed) as usize -
+            self.start.as_ptr() as usize) as u32)
     }
 }
 
 // Note(unsafe): We use atomic pointers.
 unsafe impl Sync for Bump { }
+
+
+#[cfg(all(test, not(target_os = "none")))]
+mod tests {
+    use core::mem::{align_of, size_of, transmute};
+    use super::*;
+
+    struct MyStruct {
+        a: u32,
+        b: u8,
+    }
+
+    #[test]
+    fn alloc_and_dealloc() {
+        // Manually align array to 32 bit by using `u32`.
+        static mut BUFFER: [u32; 128/4] = [0; 128/4];
+
+        let bump = unsafe { Bump::new(
+            NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
+            NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
+        )};
+        assert_eq!(bump.capacity().0, 128);
+
+        let layout = Layout::from_size_align(size_of::<MyStruct>(), align_of::<MyStruct>()).unwrap();
+        let raw = bump.alloc(layout).unwrap();
+
+        let memory = raw.cast::<MyStruct>();
+        let s = unsafe { &mut *memory.as_ptr() };
+
+        // Check that we can actually write to the variable.
+        s.a = 42;
+        s.b = 10;
+
+        let usage = size_of::<MyStruct>() as u32;
+        assert_eq!(bump.usage().0, (usage + bump.wastage.load(Ordering::Relaxed) as u32));
+        let wastage = bump.wastage.load(Ordering::Relaxed);
+
+        unsafe {
+            bump.dealloc(raw.cast::<u8>(), layout);
+        }
+        // Memory can not be reused only wasted with the bump allocator.
+        assert_eq!(bump.usage().0, usage);
+        assert_eq!(bump.wastage.load(Ordering::Relaxed), wastage + size_of::<MyStruct>());
+    }
+
+    #[test]
+    fn overflow() {
+        static mut BUFFER: [u8; 128] = [0; 128];
+
+        let bump = unsafe { Bump::new(
+            NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
+            NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
+        )};
+        assert_eq!(bump.capacity().0, 128);
+
+        let layout = Layout::from_size_align(16, 1).unwrap();
+        for i in 0..8 {
+            let _dump = bump.alloc(layout).unwrap();
+        }
+
+        assert_eq!(bump.usage(), bump.capacity());
+
+        let err = bump.alloc(layout).err().unwrap();
+        assert_eq!(err, AllocError::OutOfMemory);
+    }
+}

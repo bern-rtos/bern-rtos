@@ -3,7 +3,7 @@ use core::ptr::NonNull;
 use bern_units::memory_size::Byte;
 
 #[allow(unused)]
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum AllocError {
     OutOfMemory,
     WrongAlignment,
