@@ -1,9 +1,11 @@
+#![allow(unused)]
+
 use crate::exec::interrupt::InterruptStack::Kernel;
-use crate::exec::process::{self, Process};
+use crate::exec::process::{self, ProcessInternal};
 use crate::mem::boxed::Box;
 
 pub struct InterruptHandler {
-    process: &'static Process,
+    process: &'static ProcessInternal,
     handler: &'static mut dyn FnMut(&Context),
     stack: InterruptStack,
     irqn: [Option<u16>; 16],
@@ -56,13 +58,13 @@ pub enum InterruptStack {
 }
 
 pub struct InterruptBuilder {
-    process: &'static Process,
+    process: &'static ProcessInternal,
     stack: Option<InterruptStack>,
     irqn: [Option<u16>; 16],
 }
 
 impl InterruptBuilder {
-    fn new(process: &'static Process) -> Self {
+    fn new(process: &'static ProcessInternal) -> Self {
         InterruptBuilder {
             process,
             stack: None,
