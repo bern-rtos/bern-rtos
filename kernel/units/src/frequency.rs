@@ -1,13 +1,15 @@
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+use derive_more::{Add, Sub, Mul, Div};
+
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Add, Sub, Mul, Div)]
 pub struct MilliHertz(pub u32);
 
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Add, Sub, Mul, Div)]
 pub struct Hertz(pub u32);
 
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Add, Sub, Mul, Div)]
 pub struct KiloHertz(pub u32);
 
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Add, Sub, Mul, Div)]
 pub struct MegaHertz(pub u32);
 
 

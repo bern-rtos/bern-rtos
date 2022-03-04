@@ -10,3 +10,6 @@ description = "Base types for bern-kernel."
 documentation = "https://docs.rs/bern-units"
 repository = "https://gitlab.com/bern-rtos/kernel/bern-kernel"
 homepage = "https://bern-rtos.org"
+
+[dependencies]
+derive_more = "0.99.17"

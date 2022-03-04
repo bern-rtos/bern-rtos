@@ -1,19 +1,21 @@
+use derive_more::{Add, Sub, Mul, Div};
+
 //#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
 //pub struct MicroSecond(pub u64);
 
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Add, Sub, Mul, Div)]
 pub struct MilliSecond(pub u64);
 
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Add, Sub, Mul, Div)]
 pub struct Second(pub u64);
 
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Add, Sub, Mul, Div)]
 pub struct Minute(pub u64);
 
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Add, Sub, Mul, Div)]
 pub struct Hour(pub u64);
 
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Add, Sub, Mul, Div)]
 pub struct Day(pub u64);
 
 /// Second is implemented specifically because const trait implementations are not

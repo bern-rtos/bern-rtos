@@ -1,13 +1,15 @@
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+use derive_more::{Add, Sub, Mul, Div};
+
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Add, Sub, Mul, Div)]
 pub struct Byte(pub u32);
 
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Add, Sub, Mul, Div)]
 pub struct KiloByte(pub u32);
 
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Add, Sub, Mul, Div)]
 pub struct MegaByte(pub u32);
 
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Add, Sub, Mul, Div)]
 pub struct GigaByte(pub u32);
 
 /// Byte is implemented specifically because const trait implementations are not
