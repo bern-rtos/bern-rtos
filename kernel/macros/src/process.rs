@@ -125,7 +125,7 @@ SECTIONS {{
 
         ASSERT(__emprocess_{0} <= __ehprocess_{0}, "ERROR(bern-kernel): No memory left in process {0}.");
         ASSERT(__smprocess_{0} > 0, "ERROR(bern-kernel): Section was optimized out, please place a variable in {0}.");
-    }} > RAM
+    }} > RAM AT > FLASH
     __siprocess_{0} = LOADADDR(.process_{0});
 }} INSERT AFTER .shared_global;
 "###,

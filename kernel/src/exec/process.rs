@@ -31,7 +31,6 @@ impl Process {
             inner: Node::new(ProcessInternal {
                 memory,
                 proc_allocator,
-                init: Cell::new(false),
             })
         }
     }
@@ -39,15 +38,13 @@ impl Process {
     pub fn init<F>(&'static self, f: F) -> Result<(), ProcessError>
         where F: FnOnce(&Context)
     {
+        let k = &KERNEL;
+        if KERNEL.is_process_registered(self.inner.deref()) {
+            return Err(ProcessError::AlreadyInit);
+        }
+        // Note(unsafe): Process is not initialized more than once.
+        unsafe { self.inner.init_memory(); }
         KERNEL.register_process(self.node());
-
-        match self.inner.startup() {
-            Ok(_) => { },
-            Err(e) => {
-                log::warn!("Cannot init process: {}", e);
-                return Err(e);
-            }
-        };
 
         KERNEL.start_init_process(self.inner.deref());
 
@@ -56,9 +53,8 @@ impl Process {
         });
 
         KERNEL.end_init_process();
-        self.inner.init.set(true);
 
-        return Ok(());
+        Ok(())
     }
 
     pub(crate) fn node(&self) -> Box<Node<ProcessInternal>> {
@@ -85,9 +81,9 @@ pub struct ProcessMemory {
 pub struct ProcessInternal {
     memory: ProcessMemory,
     proc_allocator: Bump,
-    init: Cell<bool>,
 }
 
+#[derive(Debug)]
 pub enum ProcessError {
     NotInit,
     AlreadyInit,
@@ -95,23 +91,15 @@ pub enum ProcessError {
 }
 
 impl ProcessInternal {
-    fn startup(&self) -> Result<(), ProcessError> {
-        if self.init.get() {
-            return Err(ProcessError::AlreadyInit);
-        }
-
-        if KERNEL.state() == State::Running {
-            return Err(ProcessError::KernelAlreadyRunning);
-        }
-
+    ///
+    /// # Safety
+    /// Only call this method once.
+    unsafe fn init_memory(&self) {
         Arch::init_static_region(Region {
             start: self.memory.data_start as *const _,
             end: self.memory.data_end as *const _,
             data: Some(self.memory.data_load as *const _)
         });
-
-        self.init.set(false);
-        return Ok(());
     }
 
     pub(crate) fn allocator(&self) -> &dyn Allocator {
@@ -154,8 +142,7 @@ impl defmt::Format for ProcessError {
 #[cfg(feature = "log-defmt")]
 impl defmt::Format for ProcessInternal {
     fn format(&self, fmt: Formatter) {
-        defmt::write!(fmt, "None    {}    {:05}B/{:05}B ({}%)",
-                      self.init.get(),
+        defmt::write!(fmt, "None    {:05}B/{:05}B ({}%)",
                       self.proc_allocator.usage().0,
                       self.proc_allocator.capacity().0,
                       (self.proc_allocator.usage().0 as f32 / self.proc_allocator.capacity().0 as f32 * 100f32) as u8

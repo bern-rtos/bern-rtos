@@ -4,11 +4,14 @@ use core::sync::atomic::{AtomicU32, Ordering};
 use bern_units::frequency::Hertz;
 use crate::sched;
 
+#[link_section = ".kernel"]
 static TICK_PER_MS: AtomicU32 = AtomicU32::new(0);
 
 /// Upper 32 bit of system tick.
+#[link_section = ".kernel"]
 static TICK_HIGH: AtomicU32 = AtomicU32::new(0);
 /// Lower 32 bit of system tick.
+#[link_section = ".kernel"]
 static TICK_LOW: AtomicU32 = AtomicU32::new(0);
 
 /// Update system tick count by adding 1.

@@ -48,6 +48,7 @@ impl Kernel {
     }
 
     pub(crate) fn init(&self) {
+        setup_memory_regions();
         unsafe {
             let allocator = Bump::new(
                 NonNull::new_unchecked(Arch::kernel_heap().start as *mut u8),
@@ -55,7 +56,6 @@ impl Kernel {
             *self.allocator.get() = MaybeUninit::new(allocator);
         };
 
-        setup_memory_regions();
         sched::init();
     }
 
@@ -84,6 +84,15 @@ impl Kernel {
 
     pub(crate) fn register_process(&self, process_node: Box<Node<ProcessInternal>>) {
         self.processes.push_back(process_node);
+    }
+
+    pub(crate) fn is_process_registered(&self, process: &ProcessInternal) -> bool {
+        for proc in self.processes.iter() {
+            if proc.start_addr() == process.start_addr() {
+                return true;
+            }
+        }
+        false
     }
 }
 
