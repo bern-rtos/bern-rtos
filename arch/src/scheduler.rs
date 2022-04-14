@@ -12,7 +12,7 @@
 /// 3. Pop CPU register from new stack
 ///
 /// On a ARM Cortex-M4 for example (simplified):
-/// ```no_run
+/// ```ignore
 /// #[no_mangle]
 /// #[naked]
 /// extern "C" fn PendSV() {

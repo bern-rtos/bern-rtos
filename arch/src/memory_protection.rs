@@ -10,7 +10,7 @@ use bern_base_types::memory_size::Byte;
 /// ## Memory Protection Exception
 /// A violation of a memory rule will trigger an exception. The exception must
 /// call `memory_protection_exception()` to notify the kernel, i.e.:
-/// ```no_run
+/// ```ignore
 /// extern "Rust" {
 ///     pub fn memory_protection_exception();
 /// }
@@ -30,13 +30,13 @@ use bern_base_types::memory_size::Byte;
 /// A hardware implementation must provide
 /// - Alignment structs for all available alignments with naming convention
 ///   `A<size number><unit prefix (_,K,M,G)>`, i.e.
-///   ```no_run
+///   ```ignore
 ///   #[repr(align(4_096))]
 ///   pub struct A4K;
 ///   ```
 /// - A macro `alignment_from_size!()` that returns valid alignment for given
 ///   memory size, i.e.
-///   ```no_run
+///   ```ignore
 ///   #[macro_export]
 ///   macro_rules! alignment_from_size {
 ///       (4_096) => { $crate::arch::memory_protection::A4K };
@@ -49,7 +49,7 @@ use bern_base_types::memory_size::Byte;
 ///
 /// - A macro `size_from_raw!()` that returns a valid size type from raw number,
 ///   i.e.
-///   ```no_run
+///   ```ignore
 ///   #[macro_export]
 ///   macro_rules! size_from_raw {
 ///       (4_096) => { $crate::arch::memory_protection::Size::S4K };
@@ -71,7 +71,7 @@ pub trait IMemoryProtection {
     ///
     /// # Example
     /// Protect all flash memory from write access, instruction fetch allowed.
-    /// ```no_run
+    /// ```ignore
     /// Arch::enable_memory_region(
     ///    0,
     ///    Config {
