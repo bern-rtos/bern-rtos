@@ -1,35 +1,44 @@
 #[macro_export]
 macro_rules ! trace {
-    ($ ($args: tt)*) => {
+    ( $($arg:expr),+ ) => {
         {
+            $(let _ = $arg;)+
+        }
+    }
+}
 
+#[macro_export]
+macro_rules ! debug {
+    ( $($arg:expr),+ ) => {
+        {
+            $(let _ = $arg;)+
         }
     }
 }
 
 #[macro_export]
 macro_rules ! info {
-    ($ ($args: tt)*) => {
+    ( $($arg:expr),+ ) => {
         {
-
+            $(let _ = $arg;)+
         }
     }
 }
 
 #[macro_export]
 macro_rules ! warn {
-    ($ ($args: tt)*) => {
+    ( $($arg:expr),+ ) => {
         {
-
+            $(let _ = $arg;)+
         }
     }
 }
 
 #[macro_export]
 macro_rules ! error {
-    ($ ($args: tt)*) => {
+    ( $($arg:expr),+ ) => {
         {
-
+            $(let _ = $arg;)+
         }
     }
 }

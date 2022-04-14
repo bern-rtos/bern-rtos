@@ -8,6 +8,15 @@ macro_rules!trace {
 }
 
 #[macro_export]
+macro_rules!debug {
+    ($ ($args: tt)*) => {
+        {
+            defmt::debug!($($args)*);
+        }
+    }
+}
+
+#[macro_export]
 macro_rules!info {
     ($ ($args: tt)*) => {
         {
