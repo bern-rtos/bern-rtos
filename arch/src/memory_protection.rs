@@ -1,6 +1,6 @@
 //! Memory Protection.
 
-use bern_base_types::memory_size::Byte;
+use bern_units::memory_size::Byte;
 
 /// Memory Protection.
 ///
@@ -94,6 +94,8 @@ pub trait IMemoryProtection {
     fn prepare_unused_region(region: u8) -> Self::MemoryRegion;
     /// Apply 3 precompiled memory regions.
     fn apply_regions(memory_regions: &[Self::MemoryRegion; 3]);
+    /// Minimal region size that can be protected.
+    fn min_region_size() -> Byte;
 }
 
 /// Access Permission

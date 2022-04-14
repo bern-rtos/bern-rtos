@@ -5,7 +5,7 @@
 use core::mem;
 use cortex_m::peripheral::{self, mpu, MPU};
 use cortex_m::asm;
-use bern_base_types::memory_size::Byte;
+use bern_units::memory_size::Byte;
 
 /// Valid sizes for the MPU.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
