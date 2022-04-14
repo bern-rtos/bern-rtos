@@ -49,6 +49,8 @@ mockall::mock!{
 
     impl IStartup for Arch {
         fn init_static_region(region: Region);
+        fn kernel_data() -> Region;
+        fn kernel_heap() -> Region;
     }
 }
 
