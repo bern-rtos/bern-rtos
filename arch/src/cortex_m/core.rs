@@ -22,7 +22,7 @@ impl ICore for ArchCore {
     }
 
     fn set_systick_div(&mut self, divisor: u32) {
-        self.peripherals.SYST.set_reload(48_000);
+        self.peripherals.SYST.set_reload(divisor - 1);
         self.peripherals.SYST.clear_current();
     }
 
