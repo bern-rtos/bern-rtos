@@ -13,9 +13,7 @@
 
 #![cfg_attr(target_os = "none", no_std)]
 #![feature(naked_functions)]
-
-//#![cfg(not(target_os = "none"))]
-//#![feature(never_type)]
+#![cfg_attr(not(target_os = "none"), feature(never_type))]
 
 #![allow(unused)]
 
@@ -40,7 +38,7 @@ pub mod mock;
 #[cfg(not(target_os = "none"))]
 pub use crate::mock as arch;
 
-#[cfg(arm_cortex_m)]
+#[cfg(all(arm_cortex_m, target_os = "none"))]
 pub mod cortex_m;
-#[cfg(arm_cortex_m)]
+#[cfg(all(arm_cortex_m, target_os = "none"))]
 pub use crate::cortex_m as arch;

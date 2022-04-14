@@ -15,7 +15,7 @@ use crate::arch::register::{StackFrame, StackFrameExtension, StackSettings};
 /// Exception is triggered by `cortex_m::peripheral::SCB::PendSV()`.
 #[allow(named_asm_labels)]
 #[no_mangle]
-#[naked] // todo: move to separate assembly file and introduce at link time
+#[naked]
 extern "C" fn PendSV() {
     // Based on "Definitive Guide to Cortex-M3/4", p. 349
     #[cfg(has_fpu)]
@@ -92,7 +92,7 @@ impl IScheduler for Arch {
         stack_frame.r0 = arg as u32;
         stack_frame.lr = exit as u32;
         stack_frame.pc = entry as u32;
-        stack_frame.xpsr = 0x01000000; // todo: document
+        stack_frame.xpsr = 0x01000000;  // Thumb mode
 
         // we don't have to initialize r4-r11
         stack_offset += mem::size_of::<StackFrameExtension>() / mem::size_of::<usize>();
@@ -110,8 +110,8 @@ impl IScheduler for Arch {
         unsafe {
             asm!(
             "ldmia r0!, {{r2,r3}}",
-            "msr   psp, r0",           // set process stack pointer -> task stack
-            "msr   control, r3",        // switch to thread mode
+            "msr   psp, r0",            // set process stack pointer -> task stack
+            "msr   control, r3",
             "isb",
             "pop   {{r4-r11}}",
             "pop   {{r0-r3,r12,lr}}",   // force function entry
