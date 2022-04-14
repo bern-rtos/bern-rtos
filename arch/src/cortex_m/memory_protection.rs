@@ -7,6 +7,7 @@ pub use crate::arch::mpu::{Size, MemoryRegion};
 
 use cortex_m::asm;
 use cortex_m_rt::exception;
+use bern_units::memory_size::{Byte, ExtByte};
 
 impl IMemoryProtection for Arch {
     type MemoryRegion = MemoryRegion;
@@ -41,11 +42,11 @@ impl IMemoryProtection for Arch {
 
         let attributes = match config.memory {
             Type::SramInternal => Attributes::Normal {
-                shareable: true,
-                cache_policy: (CachePolicy::WriteThrough, CachePolicy::WriteThrough),
+                shareable: false,
+                cache_policy: (CachePolicy::WriteBack { wa: true }, CachePolicy::WriteBack { wa: true }),
             },
             Type::SramExternal => Attributes::Normal {
-                shareable: true,
+                shareable: false,
                 cache_policy: (CachePolicy::WriteBack { wa: true }, CachePolicy::WriteBack { wa: true }),
             },
             Type::Flash => Attributes::Normal {
@@ -82,6 +83,10 @@ impl IMemoryProtection for Arch {
         let mut mpu = unsafe { Mpu::take() };
 
         mpu.set_regions(memory_regions);
+    }
+
+    fn min_region_size() -> Byte {
+        32.B()
     }
 }
 
