@@ -11,6 +11,7 @@ use crate::syscall::ISyscall;
 use crate::core::ICore;
 use crate::sync::ISync;
 use crate::startup::{IStartup, Region};
+use crate::core::ExecMode;
 
 // re-exports
 pub use crate::mock::MockArch as Arch;
@@ -20,16 +21,15 @@ mockall::mock!{
     pub Arch {}
 
     impl IMemoryProtection for Arch {
-        type Size = u32;
         type MemoryRegion = u32;
 
         fn enable_memory_protection();
         fn disable_memory_protection();
-        fn enable_memory_region(region: u8, config: Config<Self::Size>);
+        fn enable_memory_region(region: u8, config: Config);
         fn disable_memory_region(region: u8);
-        fn prepare_memory_region(region: u8, config: Config<Self::Size>) -> Self::MemoryRegion;
-        fn prepare_unused_region(region: u8) -> Self::MemoryRegion;
-        fn apply_regions(memory_regions: &[Self::MemoryRegion; 3]);
+        fn prepare_memory_region(region: u8, config: Config) -> u32;
+        fn prepare_unused_region(region: u8) -> u32;
+        fn apply_regions(memory_regions: &[u32; 3]);
     }
 
     impl IScheduler for Arch {
@@ -62,5 +62,10 @@ mockall::mock!{
         fn set_systick_div(&mut self, divisor: u32);
         fn start(&mut self);
         fn bkpt();
+        fn execution_mode() -> ExecMode;
     }
+}
+
+pub mod memory_protection {
+    pub type MemoryRegion = u32;
 }

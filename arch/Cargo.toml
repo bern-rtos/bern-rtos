@@ -19,7 +19,7 @@ cortex-m-rt = "0.7.1"
 cortex-m = { version = "0.7.4", features = ["inline-asm"] }
 
 [target.'cfg(not(target_os = "none"))'.dependencies]
-mockall = "0.9.1"
+mockall = "0.11"
 
 [package.metadata.docs.rs]
 targets = [
