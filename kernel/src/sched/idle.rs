@@ -13,7 +13,7 @@ extern "C" {
 #[link_section = ".kernel.process"]
 static BERN_DEFAULT_IDLE: Process = Process::new(
     unsafe { ProcessMemory {
-        size: 1024,
+        size: 256,
 
         data_start: (&__smprocess_default_idle) as *const _ as *const u8,
         data_end: (&__emprocess_default_idle) as *const _ as *const u8,
