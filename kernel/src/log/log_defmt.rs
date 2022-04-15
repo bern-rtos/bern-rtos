@@ -2,7 +2,8 @@
 macro_rules!trace {
     ($ ($args: tt)*) => {
         {
-            defmt::trace!($($args)*);
+            // Note(unsafe): ???
+            unsafe { defmt::trace!($($args)*); }
         }
     }
 }
@@ -11,7 +12,8 @@ macro_rules!trace {
 macro_rules!debug {
     ($ ($args: tt)*) => {
         {
-            defmt::debug!($($args)*);
+            // Note(unsafe): ???
+            unsafe { defmt::debug!($($args)*);  }
         }
     }
 }
@@ -20,7 +22,8 @@ macro_rules!debug {
 macro_rules!info {
     ($ ($args: tt)*) => {
         {
-            defmt::info!($($args)*);
+            // Note(unsafe): ???
+            unsafe { defmt::info!($($args)*); }
         }
     }
 }
@@ -29,7 +32,8 @@ macro_rules!info {
 macro_rules!warn {
     ($ ($args: tt)*) => {
         {
-            defmt::warn!($($args)*);
+            // Note(unsafe): ???
+            unsafe { defmt::warn!($($args)*); }
         }
     }
 }
@@ -38,7 +42,8 @@ macro_rules!warn {
 macro_rules!error {
     ($ ($args: tt)*) => {
         {
-            defmt::error!($($args)*);
+            // Note(unsafe): ???
+            unsafe { defmt::error!($($args)*); }
         }
     }
 }
