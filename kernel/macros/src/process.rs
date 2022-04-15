@@ -103,7 +103,7 @@ impl ToTokens for ProcessInfo {
             .write(true)
             .append(true)
             .create(true)
-            .open(out.join("bern.x"))
+            .open(out.join("bern_user.x"))
             .unwrap();
 
         write!(file, r###"

@@ -22,7 +22,7 @@ fn main() {
     println!("cargo:rustc-link-search={}", out.display());
     println!("cargo:rerun-if-changed=memory.x");
 
-    File::create(out.join("bern.x"))
+    File::create(out.join("bern_user.x"))
         .unwrap();
-    println!("cargo:rerun-if-changed=bern.x");
+    println!("cargo:rerun-if-changed=bern_user.x");
 }
