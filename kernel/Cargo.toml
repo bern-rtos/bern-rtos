@@ -1,0 +1,37 @@
+[package]
+name = "bern-kernel"
+version = "0.2.5"
+authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
+edition = "2021"
+license = "MIT"
+categories = ["embedded", "no-std"]
+keywords = ["embedded", "no_std", "cortex-m", "iot", "rtos"]
+description = "Preemptive real-time kernel for microcontrollers."
+documentation = "https://docs.rs/bern-kernel"
+repository = "https://gitlab.com/bern-rtos/kernel/bern-kernel"
+homepage = "https://bern-rtos.org"
+
+[features]
+time-slicing = []
+log-defmt = ["defmt"]
+
+[dependencies]
+bern-arch = "0.2"
+bern-kernel-macros = "0.2"
+bern-conf = "0.1"
+bern-units = "0.1.0"
+
+[target.'cfg(target_os = "none")'.dependencies]
+defmt = { version = "0.3.1", optional = true }
+
+[build-dependencies]
+toml = "0.5.8"
+serde = "1.0.125"
+serde_derive = "1.0.125"
+
+[package.metadata.docs.rs]
+targets = [
+    "thumbv7em-none-eabi",
+    "thumbv7em-none-eabihf",
+    "thumbv7m-none-eabi",
+]
