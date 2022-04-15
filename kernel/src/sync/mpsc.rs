@@ -61,6 +61,7 @@ mod tests {
             tx_a.send(44).unwrap();
             tx_a.send(45).unwrap();
         });
+        prod_a.join().unwrap();
 
         let tx_b = tx.clone();
         let prod_b = thread::spawn(move || {
@@ -70,7 +71,7 @@ mod tests {
             tx_b.send(55).unwrap();
         });
 
-        prod_a.join().unwrap();
+
         prod_b.join().unwrap();
 
         assert_eq!(rx.recv().unwrap(), 42);
