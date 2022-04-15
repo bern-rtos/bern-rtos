@@ -1,0 +1,9 @@
+[package]
+edition = "2018"
+name = "xtask"
+publish = false
+version = "0.0.0"
+
+[dependencies]
+anyhow = "1.0.40"
+duct = "0.13.5"
