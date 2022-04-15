@@ -20,7 +20,7 @@ static TICK_LOW: AtomicU32 = AtomicU32::new(0);
 #[no_mangle]
 #[inline(always)]
 fn system_tick_update() {
-    if TICK_LOW.load(Ordering::Relaxed) == u32::MAX {
+    if TICK_LOW.load(Ordering::Acquire) == u32::MAX {
         TICK_HIGH.fetch_add(1, Ordering::Relaxed);
     }
     TICK_LOW.fetch_add(1, Ordering::Relaxed);
@@ -32,7 +32,7 @@ fn system_tick_update() {
 pub fn tick() -> u64 {
     let tick;
     loop {
-        let high = TICK_HIGH.load(Ordering::Relaxed);
+        let high = TICK_HIGH.load(Ordering::Acquire);
         let low = TICK_LOW.load(Ordering::Relaxed);
 
         // check if high count was updated inbetween
