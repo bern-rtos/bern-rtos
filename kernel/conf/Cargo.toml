@@ -2,7 +2,7 @@
 name = "bern-conf"
 version = "0.1.1"
 authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 categories = ["embedded", "no-std"]
 keywords = ["embedded", "no_std", "cortex-m", "iot", "rtos"]
