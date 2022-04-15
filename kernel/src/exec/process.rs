@@ -1,6 +1,5 @@
 use core::ops::Deref;
 use core::ptr::NonNull;
-use core::sync::atomic::{compiler_fence, Ordering};
 use crate::alloc::allocator::Allocator;
 use crate::alloc::bump::Bump;
 use bern_arch::arch::Arch;
@@ -38,7 +37,6 @@ impl Process {
     pub fn init<F>(&'static self, f: F) -> Result<(), ProcessError>
         where F: FnOnce(&Context)
     {
-        let k = &KERNEL;
         if KERNEL.is_process_registered(self.inner.deref()) {
             return Err(ProcessError::AlreadyInit);
         }

@@ -12,7 +12,7 @@ use core::ptr::NonNull;
 
 use event::Event;
 use crate::exec::runnable::{self, Priority, Runnable, Transition};
-use crate::{KERNEL, log, syscall, trace};
+use crate::{KERNEL, log, syscall};
 use crate::time;
 use crate::sync::critical_section;
 use crate::mem::{boxed::Box, linked_list::*};

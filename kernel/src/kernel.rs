@@ -1,6 +1,6 @@
 use core::cell::{Cell, UnsafeCell};
 use core::mem::MaybeUninit;
-use core::ptr::{NonNull, null, null_mut};
+use core::ptr::{NonNull, null_mut};
 use core::sync::atomic::{AtomicPtr, Ordering};
 use bern_arch::arch::Arch;
 use bern_arch::{IMemoryProtection, IStartup};
@@ -9,7 +9,7 @@ use bern_conf::CONF;
 use bern_units::memory_size::ExtByte;
 use crate::alloc::bump::Bump;
 use crate::alloc::allocator::Allocator;
-use crate::exec::process::{Process, ProcessInternal};
+use crate::exec::process::{ProcessInternal};
 use crate::{log, sched, trace};
 use crate::mem::boxed::Box;
 use crate::mem::linked_list::{LinkedList, Node};
