@@ -14,7 +14,6 @@
 //!   other tasks of equal priority
 
 #![cfg_attr(target_os = "none", no_std)]
-#![feature(unsize)]
 #![cfg_attr(not(target_os = "none"), feature(const_ptr_offset))]
 
 pub mod sched;
