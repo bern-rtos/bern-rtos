@@ -18,7 +18,7 @@ pub type RunnableResult = (); // todo: replace with '!' when possible
 
 
 /// Transition for next context switch
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 #[repr(u8)]
 pub enum Transition {
     /// No transition
@@ -204,7 +204,7 @@ pub(crate) fn entry(entry_fn: &mut &mut (dyn FnMut() -> RunnableResult)) {
 #[cfg(feature = "log-defmt")]
 impl defmt::Format for Runnable {
     fn format(&self, fmt: Formatter) {
-        defmt::write!(fmt, "None    {:02}          {:05}B/{:05}B ({}%)",
+        defmt::write!(fmt, "None    {:02}          {:05}B/{:05}B ({:02}%)",
             self.priority.0,
             self.stack.usage().0,
             self.stack.capacity().0,

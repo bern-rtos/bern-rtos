@@ -1,19 +1,19 @@
-use core::cell::Cell;
 use core::ops::Deref;
 use core::ptr::NonNull;
+use core::sync::atomic::{compiler_fence, Ordering};
 use crate::alloc::allocator::Allocator;
 use crate::alloc::bump::Bump;
 use bern_arch::arch::Arch;
 use bern_arch::IStartup;
 use bern_arch::startup::Region;
 use bern_units::memory_size::Byte;
-use crate::kernel::{KERNEL, State};
-use crate::log;
+use crate::kernel::KERNEL;
 use crate::mem::boxed::Box;
 use crate::mem::linked_list::Node;
 
 #[cfg(feature = "log-defmt")]
 use defmt::Formatter;
+use crate::trace;
 
 pub struct Process {
     inner: Node<ProcessInternal>,
@@ -95,6 +95,13 @@ impl ProcessInternal {
     /// # Safety
     /// Only call this method once.
     unsafe fn init_memory(&self) {
+        trace!("Process memory: data 0x{:08X} - 0x{:08X}, alloc 0x{:08X} - 0x{:08X}",
+            self.memory.data_start,
+            self.memory.data_end,
+            self.memory.heap_start,
+            self.memory.heap_end
+        );
+
         Arch::init_static_region(Region {
             start: self.memory.data_start as *const _,
             end: self.memory.data_end as *const _,

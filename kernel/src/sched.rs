@@ -12,7 +12,7 @@ use core::ptr::NonNull;
 
 use event::Event;
 use crate::exec::runnable::{self, Priority, Runnable, Transition};
-use crate::{KERNEL, log, syscall};
+use crate::{KERNEL, log, syscall, trace};
 use crate::time;
 use crate::sync::critical_section;
 use crate::mem::{boxed::Box, linked_list::*};
@@ -312,8 +312,9 @@ pub(crate) fn print_thread_stats() {
     log::info!("Name    Priority    Stack usage            State");
     log::info!("----    --------    -----------            -----");
 
-    let running = unsafe { sched.task_running.as_ref().unwrap_unchecked() };
-    log::info!("{}    Running", ***running);
+    if let Some(running)= sched.task_running.as_ref() {
+        log::info!("{}    Running", ***running);
+    }
 
     for ready in sched.tasks_ready.iter() {
         for thread in ready.iter() {
@@ -353,19 +354,24 @@ fn switch_context(stack_ptr: u32) -> u32 {
 
     Arch::disable_memory_protection();
     let new_stack_ptr = critical_section::exec(|| {
-        (*sched.task_running.as_mut().unwrap()).stack_mut().set_ptr(stack_ptr as *mut usize);
 
         // Put the running task into its next state
         let mut pausing = sched.task_running.take().unwrap();
-        let prio: usize = (*pausing).priority().into();
+        let prio: usize = pausing.priority().into();
         // Did pausing task break hardware specific boundaries?
         if stack_ptr == 0 {
-            pausing.set_transition(Transition::Terminating);
+            if *pausing.transition() != Transition::Terminating {
+                log::warn!("Stack overflow pervented, terminating thread.");
+                pausing.set_transition(Transition::Terminating);
+            }
+        } else {
+            pausing.stack_mut().set_ptr(stack_ptr as *mut usize);
         }
-        match (*pausing).transition() {
+
+        match pausing.transition() {
             Transition::None => sched.tasks_ready[prio].push_back(pausing),
             Transition::Sleeping => {
-                (*pausing).set_transition(Transition::None);
+                pausing.set_transition(Transition::None);
                 sched.tasks_sleeping.insert_when(
                     pausing,
                     |pausing, task| {
@@ -373,8 +379,8 @@ fn switch_context(stack_ptr: u32) -> u32 {
                     });
             },
             Transition::Blocked => {
-                let event = (*pausing).blocking_event().unwrap(); // cannot be none
-                (*pausing).set_transition(Transition::None);
+                let event = pausing.blocking_event().unwrap(); // cannot be none
+                pausing.set_transition(Transition::None);
                 unsafe { &mut *event.as_ptr() }.pending.insert_when(
                     pausing,
                     |pausing, task| {
@@ -382,7 +388,7 @@ fn switch_context(stack_ptr: u32) -> u32 {
                     });
             }
             Transition::Terminating => {
-                (*pausing).set_transition(Transition::None);
+                pausing.set_transition(Transition::None);
                 sched.tasks_terminated.push_back(pausing);
             },
             _ => (),
@@ -420,10 +426,12 @@ enum StackSpace {
 #[no_mangle]
 fn check_stack(stack_ptr: usize) -> StackSpace {
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
-    let stack = (*sched.task_running.as_ref().unwrap()).stack();
-    if stack_ptr > (stack.bottom_ptr() as usize) {
+    let stack = (*sched.task_running.as_mut().unwrap()).stack_mut();
+    if stack_ptr > (stack.bottom_ptr() as usize) + Into::<usize>::into(Arch::min_region_size()) {
         StackSpace::Sufficient
     } else {
+        // Mark stack as full for debug purposes
+        stack.set_ptr(stack.bottom_ptr() as *mut _);
         StackSpace::Insufficient
     }
 }

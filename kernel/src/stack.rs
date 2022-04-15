@@ -85,7 +85,7 @@ impl Stack {
 
     /// Stack usage.
     pub fn usage(&self) -> Byte {
-        Byte((self.ptr as usize - self.bottom as usize) as u32)
+        self.capacity() - Byte((self.ptr as usize - self.bottom as usize) as u32)
     }
 
     pub fn capacity(&self) -> Byte {

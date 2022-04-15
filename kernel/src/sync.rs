@@ -15,6 +15,7 @@ pub use mutex::{Mutex, MutexGuard};
 pub use semaphore::{Semaphore, SemaphorePermit};
 
 /// Common error type for all sync primitives
+#[derive(Debug)]
 pub enum Error {
     /// Would block task
     WouldBlock,
