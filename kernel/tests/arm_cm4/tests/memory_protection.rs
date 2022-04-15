@@ -3,7 +3,7 @@
 
 mod common;
 use common::main as _;
-use bern_kernel::sync::mutex::Mutex;
+use bern_kernel::sync::Mutex;
 
 fn overflow_stack(a: u32) -> u32 {
     overflow_stack(a + 1)
@@ -12,9 +12,6 @@ fn overflow_stack(a: u32) -> u32 {
 struct MyStruct {
     a: u32,
 }
-
-#[link_section = ".shared"]
-static MUTEX: Mutex<MyStruct> = Mutex::new(MyStruct{ a: 42 });
 
 #[bern_test::tests]
 mod tests {
@@ -26,8 +23,8 @@ mod tests {
 
     #[test_set_up]
     fn init_scheduler() {
-        sched::init();
-        MUTEX.register().ok();
+        kernel::init();
+        let mutex = Mutex::new(MyStruct{ a: 42 });
         /* idle task */
         Runnable::new()
             .idle_task()

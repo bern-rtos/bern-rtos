@@ -14,23 +14,13 @@ mod tests {
     use crate::common::*;
     use bern_kernel as kernel;
     use kernel::sched;
-    use bern_kernel::exec::thread::{Runnable, Priority};
+    use bern_kernel::exec::thread::{Runnable, Priority, Thread};
 
     #[test_set_up]
     fn init_scheduler() {
         sched::init();
-        /* idle task */
-        Runnable::new()
-            .idle_task()
-            .static_stack(kernel::alloc_static_stack!(128))
-            .spawn(move || {
-                loop {
-                    cortex_m::asm::nop();
-                }
-            });
-
         /* watchdog */
-        Runnable::new()
+        Thread::new()
             .priority(Priority(0))
             .static_stack(kernel::alloc_static_stack!(512))
             .spawn(move || {
@@ -54,7 +44,7 @@ mod tests {
 
     #[test]
     fn not_registered() {
-        Runnable::new()
+        Thread::new()
             .static_stack(kernel::alloc_static_stack!(1024))
             .spawn(move || {
                 match SEMAPHORE.acquire(1000) {
@@ -70,7 +60,7 @@ mod tests {
     fn wait_for_permit(_board: &mut Board) {
         SEMAPHORE.register().ok();
         /* Taking a permit and blocking it */
-        Runnable::new()
+        Thread::new()
             .priority(Priority(1))
             .static_stack(kernel::alloc_static_stack!(1024))
             .spawn(move || {
@@ -83,7 +73,7 @@ mod tests {
                 }
             });
         /* Wait for permit */
-        Runnable::new()
+        Thread::new()
             .priority(Priority(1))
             .static_stack(kernel::alloc_static_stack!(1024))
             .spawn(move || {
