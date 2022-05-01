@@ -1,3 +1,4 @@
+use core::fmt::Debug;
 use core::ptr::NonNull;
 use bern_arch::arch::Arch;
 use bern_arch::arch::memory_protection::MemoryRegion;
@@ -12,6 +13,9 @@ use crate::time;
 
 #[cfg(feature = "log-defmt")]
 use defmt::Formatter;
+
+#[cfg(feature = "log-rtt")]
+use core::fmt::Display;
 
 pub trait RunnableTrait: 'static + FnMut() -> RunnableResult {}
 pub type RunnableResult = (); // todo: replace with '!' when possible
@@ -209,6 +213,18 @@ impl defmt::Format for Runnable {
             self.stack.usage().0,
             self.stack.capacity().0,
             (self.stack.usage().0 as f32 / self.stack.capacity().0 as f32 * 100f32) as u8,
+        )
+    }
+}
+
+#[cfg(feature = "log-rtt")]
+impl Display for Runnable {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "None    {:02}          {:05}B/{:05}B ({:02}%)",
+              self.priority.0,
+              self.stack.usage().0,
+              self.stack.capacity().0,
+              (self.stack.usage().0 as f32 / self.stack.capacity().0 as f32 * 100f32) as u8,
         )
     }
 }

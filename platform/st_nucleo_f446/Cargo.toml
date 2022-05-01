@@ -10,11 +10,11 @@ embedded-hal = "0.2.4"
 stm32f4xx-hal = { version = "0.13.1", features = ["rt", "stm32f411"] }
 
 [dev-dependencies]
-bern-kernel = { version = "*", features = ["log-defmt"] }
+bern-kernel = { version = "*", features = ["log-rtt"] }
 #bern-kernel = { version = "*", features = ["log-defmt", "log-defmt-rtt"] }
 
-defmt = "0.3.1"
-defmt-rtt = "0.3.0"
+#defmt = "0.3.1"
+#defmt-rtt = "0.3.0"
 
 
 # Optimize all dependencies
