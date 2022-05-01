@@ -137,7 +137,7 @@ fn setup_memory_regions() {
         Config {
             addr: CONF.memory.sram.start_address as *const _,
             memory: Type::SramInternal,
-            size: 4.kB().into(), // todo: read from linker symbol or config
+            size: CONF.memory.shared.size,
             access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
             executable: false
         });

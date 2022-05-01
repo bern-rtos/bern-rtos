@@ -42,7 +42,7 @@ pub const CONF: Conf = Conf {
             // will be ignored, start of shared section is read via linker
             // symbol
             start_address: 0x2001FC00,
-            size: Byte::from_kB(1),
+            size: Byte::from_kB(2),
         }
     },
 };

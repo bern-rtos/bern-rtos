@@ -6,8 +6,10 @@ SECTIONS {
      * alignment requirements. Thus, we place a marker to give .data + .bss a
      * fixed size.
      */
-    .shared_global ORIGIN(RAM) + 4K : {
+    .shared_global ORIGIN(RAM) + 2K : {
         __eshared_global = .;
+
+        ASSERT(__eshared_global > __euninit, "ERROR(bern-kernel): Shared memory section overflow.");
     } > RAM
 } INSERT AFTER .uninit;
 
