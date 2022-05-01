@@ -67,6 +67,7 @@ Additional information:
 #ifndef SEGGER_SYSVIEW_CONF_H
 #define SEGGER_SYSVIEW_CONF_H
 
+#include "../SEGGER/SEGGER_SYSVIEW_ConfDefaults.h"
 /*********************************************************************
 *
 *       Defines, configurable

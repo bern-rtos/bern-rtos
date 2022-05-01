@@ -1,0 +1,17 @@
+[package]
+name = "segger-systemview"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cty = "0.2"
+
+[build-dependencies]
+bindgen = "0.58"
+cc = "1.0"
+
+[dev-dependencies]
+st-nucleo-f446 = { path = "../../platform/st_nucleo_f446" }
+cortex-m = "0.7"
+cortex-m-rt = "0.7"
+panic-halt = "0.2"

@@ -1,22 +1,28 @@
 #![no_std]
 #![no_main]
 
-use cortex_m;
 use cortex_m_rt::entry;
 use panic_halt as _;
 
+use core::fmt::Write;
+
 use st_nucleo_f446::StNucleoF446;
-use segger_systemview::SystemView;
+use segger_systemview::{SystemView, info, warn, error};
+
+use st_nucleo_f446::hal::prelude::*;
 
 #[entry]
 fn main() -> ! {
-    let _board = StNucleoF446::new();
+    let board = StNucleoF446::new();
+    let mut delay = board.delay;
 
     let _systemview = SystemView::new();
 
     loop {
-
-
+        info!("hello world");
+        warn!("hello world");
+        error!("hello world");
+        delay.delay_ms(10_u16);
     }
 }
 
