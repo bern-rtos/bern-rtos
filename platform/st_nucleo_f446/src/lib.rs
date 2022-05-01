@@ -28,19 +28,19 @@ pub struct ShieldBfh {
     pub led_6: EPin<Output<PushPull>>,
     pub led_7: EPin<Output<PushPull>>,
 
-    pub button_0: EPin<Input<PullUp>>, // PB6
-    pub button_1: EPin<Input<PullUp>>, // PB0
-    pub button_2: EPin<Input<PullUp>>, // PB2
-    pub button_3: EPin<Input<PullUp>>, // PB3
-    pub button_4: EPin<Input<PullUp>>, // PB4
-    pub button_5: EPin<Input<PullUp>>, // PB5
-    pub button_6: EPin<Input<PullUp>>, // PB1
-    pub button_7: EPin<Input<PullUp>>, // PB7
+    pub button_0: EPin<Input>, // PB6
+    pub button_1: EPin<Input>, // PB0
+    pub button_2: EPin<Input>, // PB2
+    pub button_3: EPin<Input>, // PB3
+    pub button_4: EPin<Input>, // PB4
+    pub button_5: EPin<Input>, // PB5
+    pub button_6: EPin<Input>, // PB1
+    pub button_7: EPin<Input>, // PB7
 }
 
 pub struct StNucleoF446 {
     pub led: Option<EPin<Output<PushPull>>>,
-    pub button: EPin<Input<Floating>>,
+    pub button: EPin<Input>,
     pub vcp: Option<Vcp>, // allow taking vcp and passing the board on, not optimal
     pub shield: ShieldBfh,
 }
@@ -55,7 +55,7 @@ impl StNucleoF446 {
 
         /* system clock */
         let rcc = stm32_peripherals.RCC.constrain();
-        let clocks = rcc.cfgr.sysclk(72.mhz()).freeze();
+        let clocks = rcc.cfgr.sysclk(72.MHz()).freeze();
 
         /* gpio's */
         let gpioa = stm32_peripherals.GPIOA.split();
