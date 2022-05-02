@@ -71,7 +71,7 @@ impl Kernel {
 
     pub(crate) fn start_init_process(&self, process: &'static ProcessInternal) {
         self.init_process.store(process as *const _ as *mut _, Ordering::Relaxed);
-        trace!("Set init process to 0x{:08X}", process as *const _);
+        trace!("Set init process to 0x{:08X}", process as *const _ as usize);
     }
     pub(crate) fn end_init_process(&self) {
         self.init_process.store(null_mut(), Ordering::Release);
