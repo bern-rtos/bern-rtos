@@ -14,7 +14,7 @@
 #![allow(unused)]
 
 use core::{mem, ptr};
-use core::ptr::NonNull;
+use core::ptr::{NonNull};
 use core::mem::MaybeUninit;
 use core::cell::RefCell;
 use core::borrow::BorrowMut;
@@ -126,6 +126,7 @@ impl<T> LinkedList<T> {
         // Note(unsafe): Pointer requirements are met.
         unsafe {
             (*node_raw.as_ref()).prev.store(tail, Ordering::Relaxed);
+            (*node_raw.as_ref()).next.store(ptr::null_mut(), Ordering::Relaxed);
 
             match tail.as_mut() {
                 None => self.head.store(node_raw.as_ptr(), Ordering::Relaxed),
@@ -154,6 +155,7 @@ impl<T> LinkedList<T> {
                 }
 
                 (*node).next.store(ptr::null_mut(), Ordering::Relaxed);
+                (*node).prev.store(ptr::null_mut(), Ordering::Relaxed);
                 self.len.fetch_sub(1, Ordering::Relaxed);
                 Box::from_raw(NonNull::new_unchecked(node))
             })
@@ -170,8 +172,14 @@ impl<T> LinkedList<T> {
         // Note(unsafe): Pointer requirements are met.
         unsafe {
             match (*node_ptr.as_ref()).prev.load(Ordering::Acquire).as_mut() {
-                None => self.head.store(new_node_ptr.as_ptr(), Ordering::Relaxed),
-                Some(prev) => (*prev).next.store(new_node_ptr.as_ptr(), Ordering::Relaxed),
+                None => {
+                    self.head.store(new_node_ptr.as_ptr(), Ordering::Relaxed);
+                    (*new_node_ptr.as_ref()).prev.store(ptr::null_mut(), Ordering::Relaxed);
+                },
+                Some(prev) => {
+                    (*prev).next.store(new_node_ptr.as_ptr(), Ordering::Relaxed);
+                    (*new_node_ptr.as_ref()).prev.store(prev, Ordering::Relaxed);
+                },
             }
 
             (*node_ptr.as_ref()).prev.store(new_node_ptr.as_ptr(), Ordering::Release);
