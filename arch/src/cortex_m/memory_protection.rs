@@ -99,8 +99,8 @@ extern "Rust" {
 }
 
 #[allow(non_snake_case)]
-#[exception]
-fn MemoryManagement() -> () {
+#[no_mangle]
+pub unsafe extern "C" fn MemoryManagement() -> () {
     unsafe {
         memory_protection_exception();
     }
