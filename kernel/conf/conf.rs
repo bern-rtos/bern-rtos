@@ -36,12 +36,12 @@ pub const CONF: Conf = Conf {
         },
         peripheral: MemorySection {
             start_address: 0x4000_0000,
-            size: Byte::from_kB(512),
+            size: Byte::from_MB(512),
         },
         shared: MemorySection {
             // will be ignored, start of shared section is read via linker
             // symbol
-            start_address: 0x2001FC00,
+            start_address: 0,
             size: Byte::from_kB(2),
         }
     },
