@@ -12,6 +12,7 @@ use crate::core::ICore;
 use crate::sync::ISync;
 use crate::startup::{IStartup, Region};
 use crate::core::ExecMode;
+use bern_units::memory_size::Byte;
 
 // re-exports
 pub use crate::mock::MockArch as Arch;
@@ -30,6 +31,7 @@ mockall::mock!{
         fn prepare_memory_region(region: u8, config: Config) -> u32;
         fn prepare_unused_region(region: u8) -> u32;
         fn apply_regions(memory_regions: &[u32; 3]);
+        fn min_region_size() -> Byte;
     }
 
     impl IScheduler for Arch {
