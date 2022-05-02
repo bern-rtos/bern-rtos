@@ -13,40 +13,39 @@ use crate::arch::register::{StackFrame, StackFrameExtension, StackSettings};
 /// Storing and loading registers in context switch.
 ///
 /// Exception is triggered by `cortex_m::peripheral::SCB::PendSV()`.
-#[allow(named_asm_labels)]
 #[no_mangle]
 #[naked]
-extern "C" fn PendSV() {
+pub unsafe extern "C" fn PendSV() {
     // Based on "Definitive Guide to Cortex-M3/4", p. 349
     #[cfg(has_fpu)]
     unsafe {
         asm!(
         "mrs      r1, psp",
         "mov      r2, lr",
-        "tst      r2, #10",         // was FPU used?
+        "tst      r2, #0x10",        // was FPU used?
         "ite      eq",
-        "subeq    r0, r1, #104",    // psp with FPU registers after register push
-        "subne    r0, r1, #40",     // psp without FPU registers after register push
+        "subeq    r0, r1, #104",     // psp with FPU registers after register push
+        "subne    r0, r1, #40",      // psp without FPU registers after register push
         "push     {{r1,r2}}",
-        "bl       check_stack",     // in: psp (r0), out: store context (1), stack would overflow (0)
+        "bl       check_stack",      // in: psp (r0), out: store context (1), stack would overflow (0)
         "pop      {{r1,r2}}",
-        "cmp      r0, #1",          // stack invalid?
-        "itt      ne",              // if stack invalid
-        "movne    r0, 0",           // set psp to 0, signal `switch_context` an error
-        "bne      switch",
+        "cmp      r0, #1",           // stack invalid?
+        "itt      ne",               // if stack invalid
+        "movne    r0, 0",            // set psp to 0, signal `switch_context` an error
+        "bne      0",
         // else store
-        "tst      r2, #10",         // was FPU used?
+        "tst      r2, #0x10",        // was FPU used?
         "it       eq",
         "vstmdbeq r1!, {{s16-s31}}", // push FPU registers
         "mrs      r3, control",
-        "stmdb    r1!, {{r2-r11}}", // push LR, control and remaining registers
+        "stmdb    r1!, {{r2-r11}}",  // push LR, control and remaining registers
         "mov      r0, r1",
-        "switch:  bl switch_context",
+        "0:       bl switch_context",
         "ldmia    r0!, {{r2-r11}}",
         "msr      control, r3",
         "isb",
         "mov      lr, r2",
-        "tst      lr, #10",         // was FPU used?
+        "tst      lr, #0x10",        // was FPU used?
         "it       eq",
         "vldmiaeq r0!, {{s16-s31}}", // pop FPU registers
         "msr      psp, r0",
@@ -67,12 +66,12 @@ extern "C" fn PendSV() {
         "cmp      r0, #1",          // stack invalid?
         "itt      ne",              // if stack invalid
         "movne    r0, 0",           // set psp to 0, signal `switch_context` an error
-        "bne      switch",
+        "bne      0",
         // else store
         "mrs      r3, control",
         "stmdb    r1!, {{r2-r11}}", // push LR, control and remaining registers
         "mov      r0, r1",
-        "switch:  bl switch_context",
+        "0:       bl switch_context",
         "ldmia    r0!, {{r2-r11}}",
         "msr      control, r3",
         "isb",
