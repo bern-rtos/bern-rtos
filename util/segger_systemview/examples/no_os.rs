@@ -7,28 +7,36 @@ use panic_halt as _;
 use core::fmt::Write;
 
 use st_nucleo_f446::StNucleoF446;
+use rtos_trace::RtosTrace;
 use segger_systemview::{SystemView, info, warn, error};
 
 use st_nucleo_f446::hal::prelude::*;
+
+const TRACE: SystemView = SystemView::new();
 
 #[entry]
 fn main() -> ! {
     let board = StNucleoF446::new();
     let mut delay = board.delay;
 
-    let _systemview = SystemView::new();
+    TRACE.init();
+
+    SystemView::task_new(0);
+    SystemView::task_exec_begin(0);
 
     loop {
+        SystemView::task_exec_begin(0);
         info!("hello world");
         warn!("hello world");
         error!("hello world");
-        delay.delay_ms(10_u16);
+        SystemView::task_exec_end();
+        delay.delay_ms(100_u16);
     }
 }
 
 
 #[allow(non_snake_case)]
 #[no_mangle]
-pub fn SystemCoreClock() -> cty::c_uint {
+pub unsafe extern "C" fn SystemCoreClock() -> cty::c_uint {
     72_000_000
 }

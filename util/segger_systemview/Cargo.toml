@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 cty = "0.2"
+rtos-trace = "*"
 
 [build-dependencies]
 bindgen = "0.58"
