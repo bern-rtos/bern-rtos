@@ -69,7 +69,7 @@ impl Allocator for Bump {
     unsafe fn dealloc(&self, ptr: NonNull<u8>, layout: Layout) {
         log::warn!(
             "BumpAllocator cannot deallocate memory (0x{:x}, {}B). Ignoring call from .",
-            ptr.as_ptr(),
+            ptr.as_ptr() as usize,
             layout.size()
         );
         self.wastage.fetch_add(layout.size(), Ordering::Relaxed);
