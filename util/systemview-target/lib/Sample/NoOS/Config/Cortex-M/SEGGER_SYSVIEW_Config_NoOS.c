@@ -56,7 +56,7 @@ Revision: $Rev: 9599 $
 
 // SystemcoreClock can be used in most CMSIS compatible projects.
 // In non-CMSIS projects define SYSVIEW_CPU_FREQ.
-extern unsigned int SystemCoreClock;
+extern unsigned int SystemCoreClock(void);
 
 /*********************************************************************
 *
@@ -71,10 +71,10 @@ extern unsigned int SystemCoreClock;
 #define SYSVIEW_DEVICE_NAME     "Cortex-M4"
 
 // Frequency of the timestamp. Must match SEGGER_SYSVIEW_Conf.h
-#define SYSVIEW_TIMESTAMP_FREQ  (SystemCoreClock)
+#define SYSVIEW_TIMESTAMP_FREQ  (SystemCoreClock())
 
 // System Frequency. SystemcoreClock is used in most CMSIS compatible projects.
-#define SYSVIEW_CPU_FREQ        (SystemCoreClock)
+#define SYSVIEW_CPU_FREQ        (SystemCoreClock())
 
 // The lowest RAM address used for IDs (pointers)
 #define SYSVIEW_RAM_BASE        (0x10000000)

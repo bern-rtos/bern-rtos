@@ -6,17 +6,10 @@ pub mod log;
 use wrapper::*;
 pub use rtos_trace::RtosTrace;
 
-pub struct SystemView { }
-
+pub struct SystemView;
 
 impl SystemView {
-    pub const fn new() -> SystemView {
-        SystemView {
-
-        }
-    }
-
-    pub fn init(&self) {
+    pub fn init() {
         unsafe {
             SEGGER_SYSVIEW_Conf();
         }
