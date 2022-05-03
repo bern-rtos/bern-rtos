@@ -70,6 +70,10 @@ impl Priority {
         Priority(prio)
     }
 
+    pub fn is_idle(&self) -> bool {
+        self.0 == Priority::IDLE.0
+    }
+
     pub const fn idle() -> Self {
         Priority::IDLE
     }
@@ -102,6 +106,7 @@ impl Into<u8> for Priority {
 // todo: manage lifetime of stack & runnable
 /// Task control block
 pub struct Runnable {
+    id: u32,
     process: &'static ProcessInternal,
     transition: Transition,
     runnable_ptr: *mut usize,
@@ -146,6 +151,7 @@ impl Runnable {
             priority,
             blocking_event: None,
             memory_regions,
+            id: 0,
         }
     }
 
@@ -191,6 +197,13 @@ impl Runnable {
 
     pub(crate) fn process(&self) -> &ProcessInternal {
         self.process
+    }
+
+    pub(crate) fn id(&self) -> u32 {
+        self.id
+    }
+    pub(crate) fn set_id(&mut self, id: u32) {
+        self.id = id;
     }
 }
 

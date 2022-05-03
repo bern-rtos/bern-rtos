@@ -31,6 +31,7 @@ use bern_arch::{ICore, ISyscall};
 use bern_arch::arch::{Arch, ArchCore};
 use bern_arch::core::ExecMode;
 use crate::alloc::wrapper::Wrapper;
+use rtos_trace::trace;
 
 
 // todo: create with proc macro
@@ -179,7 +180,9 @@ pub fn print_kernel_stats() {
 #[allow(unused_variables)]
 #[no_mangle]
 fn syscall_handler(service: Service, arg0: usize, arg1: usize, arg2: usize) -> usize {
-    match service {
+    trace::isr_enter();
+
+    let r = match service {
         Service::TaskSpawn => {
             let builder: &mut ThreadBuilder = unsafe { mem::transmute(arg0 as *mut ThreadBuilder) };
             let runnable: &&mut (dyn FnMut() -> RunnableResult) = unsafe {
@@ -247,5 +250,8 @@ fn syscall_handler(service: Service, arg0: usize, arg1: usize, arg2: usize) -> u
             sched::print_thread_stats();
             0
         }
-    }
+    };
+
+    trace::isr_exit();
+    r
 }

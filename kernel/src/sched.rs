@@ -6,7 +6,6 @@
 pub(crate) mod event;
 mod idle;
 
-use core::sync::atomic::{self, Ordering};
 use core::mem::MaybeUninit;
 use core::ptr::NonNull;
 
@@ -21,6 +20,7 @@ use crate::alloc::allocator::AllocError;
 use bern_arch::{ICore, IMemoryProtection, IScheduler};
 use bern_arch::arch::{Arch, ArchCore};
 use bern_conf::CONF;
+use rtos_trace::trace;
 use crate::exec::interrupt::InterruptHandler;
 
 
@@ -43,6 +43,7 @@ struct Scheduler {
     interrupt_handlers: LinkedList<InterruptHandler>,
     events: LinkedList<Event>,
     event_counter: usize,
+    task_id_counter: u32,
 }
 
 /// Initialize scheduler.
@@ -70,6 +71,8 @@ pub(crate) fn init() {
             interrupt_handlers: LinkedList::new(),
             events: LinkedList::new(),
             event_counter: 0,
+            // Start with ID 1 because 0 signals an initialized thread ID.
+            task_id_counter: 1,
         });
     }
 
@@ -118,6 +121,13 @@ pub(crate) fn add_task(mut task: Runnable) {
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
 
     critical_section::exec(|| {
+        task.set_id(sched.task_id_counter);
+        // Idle is handled separately in tracing mode
+        if !task.priority().is_idle() {
+            trace::task_new(task.id());
+        }
+        sched.task_id_counter += 1;
+
         unsafe {
             let stack_ptr = Arch::init_task_stack(
                 task.stack().ptr(),
@@ -144,6 +154,7 @@ pub(crate) fn sleep(ms: u32) {
 
     critical_section::exec(|| {
         let task = &mut *sched.task_running.as_mut().unwrap();
+        trace::task_ready_end(task.id());
         task.sleep(ms);
         task.set_transition(Transition::Sleeping);
     });
@@ -163,6 +174,7 @@ pub(crate) fn task_terminate() {
 
     critical_section::exec(|| {
         let task = &mut *sched.task_running.as_mut().unwrap();
+        trace::task_ready_end(task.id());
         task.set_transition(Transition::Terminating);
     });
     Arch::trigger_context_switch();
@@ -186,10 +198,13 @@ pub(crate) fn tick_update() {
         let mut cursor = sched.tasks_sleeping.cursor_front_mut();
         while let Some(task) = cursor.inner() {
             if task.next_wut() <= now as u64 {
+                trace::task_ready_begin(task.id());
+
                 // todo: this is inefficient, we know that node exists
                 if let Some(node) = cursor.take() {
                     let prio: usize = (**node).priority().into();
                     sched.tasks_ready[prio].push_back(node);
+
                     if prio < preempt_prio.into() {
                         trigger_switch = true;
                     }
@@ -209,13 +224,6 @@ pub(crate) fn tick_update() {
 
     if trigger_switch {
         Arch::trigger_context_switch();
-    }
-}
-
-#[allow(unused)]
-fn default_idle() {
-    loop {
-        atomic::compiler_fence(Ordering::SeqCst);
     }
 }
 
@@ -272,6 +280,8 @@ pub(crate) fn event_fire(id: usize) {
     critical_section::exec(|| {
         if let Some(e) = sched.events.iter_mut().find(|e| e.id() == id) {
             if let Some(t) = e.pending.pop_front() {
+                trace::task_ready_begin(t.id());
+
                 let prio: usize = (*t).priority().into();
                 sched.tasks_ready[prio].push_back(t);
             }
@@ -286,6 +296,8 @@ pub(crate) fn event_fire(id: usize) {
 
 #[no_mangle]
 fn kernel_interrupt_handler(irqn: u16) {
+    trace::isr_enter();
+
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
 
     log::trace!("IRQ {} called.", irqn);
@@ -295,6 +307,7 @@ fn kernel_interrupt_handler(irqn: u16) {
         }
     }
 
+    trace::isr_exit();
 }
 
 pub(crate) fn with_callee<F, R>(f: F) -> R
@@ -348,13 +361,14 @@ pub(crate) fn print_thread_stats() {
 /// switch implementation.
 #[no_mangle]
 fn switch_context(stack_ptr: u32) -> u32 {
+    trace::task_exec_end();
+
     // NOTE(unsafe): scheduler must be initialized first
     // todo: replace with `assume_init_mut()` as soon as stable
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
 
     Arch::disable_memory_protection();
     let new_stack_ptr = critical_section::exec(|| {
-
         // Put the running task into its next state
         let mut pausing = sched.task_running.take().unwrap();
         let prio: usize = pausing.priority().into();
@@ -406,7 +420,15 @@ fn switch_context(stack_ptr: u32) -> u32 {
             panic!("Idle task must not be suspended");
         }
 
-        Arch::apply_regions((*task.as_ref().unwrap()).memory_regions());
+        let t = &(*task.as_ref().unwrap());
+        Arch::apply_regions(t.memory_regions());
+
+
+        if t.priority().is_idle() {
+            trace::system_idle();
+        } else {
+            trace::task_exec_begin(t.id());
+        }
         sched.task_running = task;
         let stack_ptr = (*sched.task_running.as_ref().unwrap()).stack().ptr();
         stack_ptr as u32
@@ -439,8 +461,12 @@ fn check_stack(stack_ptr: usize) -> StackSpace {
 /// Exception if a memory protection rule was violated.
 #[no_mangle]
 fn memory_protection_exception() {
+    trace::isr_enter();
+
     log::warn!("Memory exception, terminating thread.");
     task_terminate();
+
+    trace::isr_exit();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

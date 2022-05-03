@@ -10,6 +10,8 @@ members = [
     "arch",
     "platform/st_nucleo_f446",
     "platform/segger_cortex_m_trace",
+    "util/rtos_trace",
+    "util/systemview-target",
 ]
 
 exclude = ["xtask"]
@@ -23,6 +25,8 @@ bern-units = { path = "kernel/units" }
 bern-arch = { path = "arch" }
 bern-test = { path = "../bern-test" }
 bern-test-macros = { path = "../bern-test/macros" }
+rtos-trace = { path = "util/rtos_trace" }
+systemview-target = { path = "util/systemview_target" }
 
 
 [profile.release]
