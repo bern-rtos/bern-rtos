@@ -47,40 +47,102 @@
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
-File    : SEGGER_SYSVIEW_Conf.h
-Purpose : SEGGER SystemView configuration file.
-          Set defines which deviate from the defaults (see SEGGER_SYSVIEW_ConfDefaults.h) here.          
-Revision: $Rev: 21292 $
-
-Additional information:
-  Required defines which must be set are:
-    SEGGER_SYSVIEW_GET_TIMESTAMP
-    SEGGER_SYSVIEW_GET_INTERRUPT_ID
-  For known compilers and cores, these might be set to good defaults
-  in SEGGER_SYSVIEW_ConfDefaults.h.
-  
-  SystemView needs a (nestable) locking mechanism.
-  If not defined, the RTT locking mechanism is used,
-  which then needs to be properly configured.
+File    : SEGGER_SYSVIEW_Config_NoOS.c
+Purpose : Sample setup configuration of SystemView without an OS.
+Revision: $Rev: 9599 $
 */
+#include "SEGGER_SYSVIEW.h"
+#include "SEGGER_SYSVIEW_Conf.h"
 
-#ifndef SEGGER_SYSVIEW_CONF_H
-#define SEGGER_SYSVIEW_CONF_H
+// SystemcoreClock can be used in most CMSIS compatible projects.
+// In non-CMSIS projects define SYSVIEW_CPU_FREQ.
+extern unsigned int SystemCoreClock(void);
 
-#include "../SEGGER/SEGGER_SYSVIEW_ConfDefaults.h"
 /*********************************************************************
 *
 *       Defines, configurable
 *
 **********************************************************************
 */
+// The application name to be displayed in SystemViewer
+#define SYSVIEW_APP_NAME        "Demo Application"
+
+// The target device name
+#define SYSVIEW_DEVICE_NAME     "Cortex-M4"
+
+// Frequency of the timestamp. Must match SEGGER_SYSVIEW_Conf.h
+#define SYSVIEW_TIMESTAMP_FREQ  (SystemCoreClock())
+
+// System Frequency. SystemcoreClock is used in most CMSIS compatible projects.
+#define SYSVIEW_CPU_FREQ        (SystemCoreClock())
+
+// The lowest RAM address used for IDs (pointers)
+#define SYSVIEW_RAM_BASE        (0x00000000)
+
+// Define as 1 if the Cortex-M cycle counter is used as SystemView timestamp. Must match SEGGER_SYSVIEW_Conf.h
+#ifndef   USE_CYCCNT_TIMESTAMP
+  #define USE_CYCCNT_TIMESTAMP    1
+#endif
+
+// Define as 1 if the Cortex-M cycle counter is used and there might be no debugger attached while recording.
+#ifndef   ENABLE_DWT_CYCCNT
+  #define ENABLE_DWT_CYCCNT       (USE_CYCCNT_TIMESTAMP & SEGGER_SYSVIEW_POST_MORTEM_MODE)
+#endif
 
 /*********************************************************************
-* TODO: Add your defines here.                                       *
+*
+*       Defines, fixed
+*
 **********************************************************************
 */
+#define DEMCR                     (*(volatile unsigned long*) (0xE000EDFCuL))   // Debug Exception and Monitor Control Register
+#define TRACEENA_BIT              (1uL << 24)                                   // Trace enable bit
+#define DWT_CTRL                  (*(volatile unsigned long*) (0xE0001000uL))   // DWT Control Register
+#define NOCYCCNT_BIT              (1uL << 25)                                   // Cycle counter support bit
+#define CYCCNTENA_BIT             (1uL << 0)                                    // Cycle counter enable bit
 
+/********************************************************************* 
+*
+*       _cbSendSystemDesc()
+*
+*  Function description
+*    Sends SystemView description strings.
+*/
+static void _cbSendSystemDesc(void) {
+  SEGGER_SYSVIEW_SendSysDesc("N="SYSVIEW_APP_NAME",D="SYSVIEW_DEVICE_NAME);
+  SEGGER_SYSVIEW_SendSysDesc("I#15=SysTick");
+  SEGGER_SYSVIEW_SendSysDesc("I#11=SysCall");
+}
 
-#endif  // SEGGER_SYSVIEW_CONF_H
+/*********************************************************************
+*
+*       Global functions
+*
+**********************************************************************
+*/
+void SEGGER_SYSVIEW_Conf(void) {
+#if USE_CYCCNT_TIMESTAMP
+#if ENABLE_DWT_CYCCNT
+  //
+  // If no debugger is connected, the DWT must be enabled by the application
+  //
+  if ((DEMCR & TRACEENA_BIT) == 0) {
+    DEMCR |= TRACEENA_BIT;
+  }
+#endif
+  //
+  //  The cycle counter must be activated in order
+  //  to use time related functions.
+  //
+  if ((DWT_CTRL & NOCYCCNT_BIT) == 0) {       // Cycle counter supported?
+    if ((DWT_CTRL & CYCCNTENA_BIT) == 0) {    // Cycle counter not enabled?
+      DWT_CTRL |= CYCCNTENA_BIT;              // Enable Cycle counter
+    }
+  }
+#endif
+  SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ, 
+                      0, _cbSendSystemDesc);
+  SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
+}
 
 /*************************** End of file ****************************/

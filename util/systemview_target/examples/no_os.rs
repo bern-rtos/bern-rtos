@@ -8,18 +8,17 @@ use core::fmt::Write;
 
 use st_nucleo_f446::StNucleoF446;
 use rtos_trace::RtosTrace;
-use segger_systemview::{SystemView, info, warn, error};
+use systemview_target::{SystemView, info, warn, error};
 
 use st_nucleo_f446::hal::prelude::*;
 
-const TRACE: SystemView = SystemView::new();
 
 #[entry]
 fn main() -> ! {
     let board = StNucleoF446::new();
     let mut delay = board.delay;
 
-    TRACE.init();
+    SystemView::init();
 
     SystemView::task_new(0);
     SystemView::task_exec_begin(0);

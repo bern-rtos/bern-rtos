@@ -48,10 +48,34 @@ impl RtosTrace for SystemView {
         }
     }
 
-    fn task_ready_end(_id: u32) {
-        //unsafe {
-            //SEGGER_SYSVIEW_OnTaskStopReady(id, cause);
-        //}
+    fn task_ready_end(id: u32) {
+        unsafe {
+            SEGGER_SYSVIEW_OnTaskStopReady(id, 0);
+        }
+    }
+
+    fn system_idle() {
+        unsafe {
+            SEGGER_SYSVIEW_OnIdle();
+        }
+    }
+
+    fn isr_enter() {
+        unsafe {
+            SEGGER_SYSVIEW_RecordEnterISR();
+        }
+    }
+
+    fn isr_exit() {
+        unsafe {
+            SEGGER_SYSVIEW_RecordExitISR();
+        }
+    }
+
+    fn isr_exit_to_scheduler() {
+        unsafe {
+            SEGGER_SYSVIEW_RecordExitISRToScheduler();
+        }
     }
 
     fn marker(id: u32) {
