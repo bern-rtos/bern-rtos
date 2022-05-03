@@ -4,7 +4,7 @@
 
 #![feature(default_alloc_error_handler)]
 
-use defmt_rtt as _;
+//use defmt_rtt as _;
 
 #[allow(unused_imports)]
 use bern_kernel::log::{debug, error, info, trace, warn};
@@ -31,6 +31,11 @@ use bern_kernel::exec::worker::{WorkItem, Workqueue};
 use bern_kernel::stack::Stack;
 use bern_kernel::units::frequency::ExtMilliHertz;
 
+//use bern_kernel::log::rtt_target::{rtt_init_print};
+
+use systemview_target::SystemView;
+rtos_trace::global_trace!{SystemView}
+
 #[link_section=".process.my_process"]
 static mut SOME_ARR: [u8; 8] = [1,2,3,4,5,6,7,8];
 
@@ -39,6 +44,9 @@ static PROC: &Process = bern_kernel::new_process!(my_process, 8192);
 #[entry]
 fn main() -> ! {
     let mut board = StNucleoF446::new();
+
+    SystemView::init();
+    //rtt_init_print!();
 
     bern_kernel::init();
     bern_kernel::time::set_tick_frequency(
@@ -57,7 +65,7 @@ fn main() -> ! {
 
     PROC.init(move |c| {
         let asdf = Box::new(42);
-        info!("{:x}", &asdf as *const _);
+        info!("{:x}", &asdf as *const _ as usize);
 
         let button_event = Arc::new(Semaphore::new(0));
 
@@ -163,6 +171,7 @@ fn main() -> ! {
     bern_kernel::start();
 }
 
+#[allow(unconditional_recursion)]
 fn recursion(a: u32) {
     recursion(a + 1);
 }
@@ -170,7 +179,8 @@ fn recursion(a: u32) {
 #[panic_handler] // built-in ("core") attribute
 fn core_panic(info: &core::panic::PanicInfo) -> ! {
     error!("Application panicked!");
-    error!("{}", defmt::Display2Format(info));
+    //error!("{}", defmt::Display2Format(info));
+    error!("{}", info);
 
     cortex_m::asm::bkpt();
 
@@ -192,3 +202,9 @@ fn EXTI15_10() {
     }
 
 }*/
+
+#[allow(non_snake_case)]
+#[no_mangle]
+pub unsafe extern "C" fn SystemCoreClock() -> u32 {
+    48_000_000
+}
