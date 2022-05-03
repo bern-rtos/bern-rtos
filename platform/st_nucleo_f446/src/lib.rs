@@ -12,6 +12,8 @@ use hal::serial::{
     Tx,
     Rx,
 };
+use stm32f4xx_hal::pac::TIM2;
+use stm32f4xx_hal::timer::Delay;
 
 pub struct Vcp {
     pub tx: Tx<USART2>,
@@ -43,6 +45,7 @@ pub struct StNucleoF446 {
     pub button: EPin<Input>,
     pub vcp: Option<Vcp>, // allow taking vcp and passing the board on, not optimal
     pub shield: ShieldBfh,
+    pub delay: Delay<TIM2, 1_000_000>,
 }
 
 impl StNucleoF446 {
@@ -121,6 +124,8 @@ impl StNucleoF446 {
             hal::pac::NVIC::unmask(hal::pac::interrupt::EXTI15_10);
         }
 
+        let delay = stm32_peripherals.TIM2.delay(&clocks);
+
         /* assemble... */
         StNucleoF446 {
             led: Some(led),
@@ -148,6 +153,7 @@ impl StNucleoF446 {
                 button_6: shield_button_6,
                 button_7: shield_button_7,
             },
+            delay,
         }
     }
 }
