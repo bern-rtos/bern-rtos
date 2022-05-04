@@ -11,7 +11,7 @@ members = [
     "platform/st_nucleo_f446",
     "platform/segger_cortex_m_trace",
     "util/rtos_trace",
-    "util/systemview-target",
+    "util/systemview_target",
 ]
 
 exclude = ["xtask"]
