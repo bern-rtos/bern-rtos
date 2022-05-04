@@ -96,6 +96,8 @@ pub trait IMemoryProtection {
     fn apply_regions(memory_regions: &[Self::MemoryRegion; 3]);
     /// Minimal region size that can be protected.
     fn min_region_size() -> Byte;
+    /// Returns the number of memory regions.
+    fn n_memory_regions() -> u8;
 }
 
 /// Access Permission

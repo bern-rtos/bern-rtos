@@ -141,8 +141,9 @@ fn setup_memory_regions() {
             executable: false
         });
 
-    Arch::disable_memory_region(6);
-    Arch::disable_memory_region(7);
+    for i in 6..Arch::n_memory_regions() {
+        Arch::disable_memory_region(i);
+    }
 }
 
 // Note(unsafe): Values within `KERNEL` are only changed at startup, this

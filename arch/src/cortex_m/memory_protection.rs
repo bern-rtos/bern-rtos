@@ -88,6 +88,11 @@ impl IMemoryProtection for Arch {
     fn min_region_size() -> Byte {
         32.B()
     }
+
+    // todo: read from MPU
+    fn n_memory_regions() -> u8 {
+        8
+    }
 }
 
 

@@ -32,6 +32,7 @@ mockall::mock!{
         fn prepare_unused_region(region: u8) -> u32;
         fn apply_regions(memory_regions: &[u32; 3]);
         fn min_region_size() -> Byte;
+        fn n_memory_regions() -> u8;
     }
 
     impl IScheduler for Arch {
