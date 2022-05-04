@@ -6,16 +6,18 @@ rustflags = [
   # See https://github.com/rust-embedded/cortex-m-quickstart/pull/95
   "-C", "link-arg=--nmagic",
 
-  # LLD (shipped with the Rust toolchain) is used as the default linker
   "-C", "link-arg=-Tlink.x",
-  "-C", "link-arg=-Tdefmt.x",
   "-C", "link-arg=-Tbern.x",
-
-
+  
   "-C", "inline-threshold=275", # use with opt "s"
 
   "-C", "link-arg=-Map=output.map",
   "-C", "link-arg=--demangle",
+]
+
+[target.'cfg(all(target_arch = "arm", target_os = "none", feature = "log-defmt"))']
+rustflags = [
+  "-C", "link-arg=-Tdefmt.x",
 ]
 
 [build]
