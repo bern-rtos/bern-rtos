@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
-project("bern-next")
+project("bern-rtos")
 
 
 add_custom_target(
