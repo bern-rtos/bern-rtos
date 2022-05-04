@@ -11,6 +11,8 @@ use proc_macro2::Ident;
 use syn::Token;
 use quote::{ToTokens, quote};
 
+use bern_conf::CONF;
+
 pub struct ProcessInfo {
     ident: Ident,
     memory_size: LitInt
@@ -125,12 +127,14 @@ SECTIONS {{
 
         ASSERT(__emprocess_{0} <= __ehprocess_{0}, "ERROR(bern-kernel): No memory left in process {0}.");
         ASSERT(__smprocess_{0} > 0, "ERROR(bern-kernel): Section was optimized out, please place a variable in {0}.");
-    }} > RAM AT > FLASH
+    }} > {2} AT > {3}
     __siprocess_{0} = LOADADDR(.process_{0});
 }} INSERT AFTER .shared_global;
 "###,
                process_name,
-               process_size
+               process_size,
+               CONF.data_placement.processes,
+               CONF.memory_map.flash.link_name
         ).unwrap();
     }
 }

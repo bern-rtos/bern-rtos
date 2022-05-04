@@ -61,8 +61,8 @@ pub struct Priority(u8);
 
 impl Priority {
     const _HIGHEST: Priority = Priority(0);
-    const LOWEST: Priority = Priority(CONF.task.priorities - 2);
-    const IDLE: Priority = Priority(CONF.task.priorities - 1);
+    const LOWEST: Priority = Priority(CONF.kernel.priorities - 2);
+    const IDLE: Priority = Priority(CONF.kernel.priorities - 1);
     pub(crate) const MAX: Priority = Priority(u8::MAX);
 
     pub const fn new(prio: u8) -> Self {

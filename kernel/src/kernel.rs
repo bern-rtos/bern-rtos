@@ -6,7 +6,6 @@ use bern_arch::arch::Arch;
 use bern_arch::{IMemoryProtection, IStartup};
 use bern_arch::memory_protection::{Access, Config, Permission, Type};
 use bern_conf::CONF;
-use bern_units::memory_size::ExtByte;
 use crate::alloc::bump::Bump;
 use crate::alloc::allocator::Allocator;
 use crate::exec::process::{ProcessInternal};
@@ -113,9 +112,9 @@ fn setup_memory_regions() {
     Arch::enable_memory_region(
         3,
         Config {
-            addr: CONF.memory.flash.start_address as *const _,
+            addr: CONF.memory_map.flash.start_address as *const _,
             memory: Type::Flash,
-            size: CONF.memory.flash.size,
+            size: CONF.memory_map.flash.size,
             access: Access { user: Permission::ReadOnly, system: Permission::ReadOnly },
             executable: true
         });
@@ -124,20 +123,20 @@ fn setup_memory_regions() {
     Arch::enable_memory_region(
         4,
         Config {
-            addr: CONF.memory.peripheral.start_address as *const _,
+            addr: CONF.memory_map.peripheral.start_address as *const _,
             memory: Type::Peripheral,
-            size: CONF.memory.peripheral.size,
+            size: CONF.memory_map.peripheral.size,
             access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
             executable: false
         });
 
-    // Allow .data & .bss read/write
+    // Allow shared read/write
     Arch::enable_memory_region(
         5,
         Config {
-            addr: CONF.memory.sram.start_address as *const _,
+            addr: CONF.memory_map.sram.start_address as *const _,
             memory: Type::SramInternal,
-            size: CONF.memory.shared.size,
+            size: CONF.shared.size,
             access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
             executable: false
         });

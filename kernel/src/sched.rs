@@ -37,7 +37,7 @@ static mut SCHEDULER: MaybeUninit<Scheduler> = MaybeUninit::uninit();
 struct Scheduler {
     core: ArchCore,
     task_running: Option<Box<Node<Runnable>>>,
-    tasks_ready: [LinkedList<Runnable>; CONF.task.priorities as usize],
+    tasks_ready: [LinkedList<Runnable>; CONF.kernel.priorities as usize],
     tasks_sleeping: LinkedList<Runnable>,
     tasks_terminated: LinkedList<Runnable>,
     interrupt_handlers: LinkedList<InterruptHandler>,
@@ -55,7 +55,7 @@ pub(crate) fn init() {
     // Init static pools, this is unsafe but stable for now. Temporary solution
     // until const fn works with MaybeUninit.
     unsafe {
-        let mut tasks_ready: [LinkedList<Runnable>; CONF.task.priorities as usize] =
+        let mut tasks_ready: [LinkedList<Runnable>; CONF.kernel.priorities as usize] =
             MaybeUninit::uninit().assume_init();
         for element in tasks_ready.iter_mut() {
             *element = LinkedList::new();
