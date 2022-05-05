@@ -27,16 +27,13 @@ impl IStartup for Arch {
             } as *const u32;
 
             asm!(
-                "movs r3, #0
-                  b 1f
-                0:
-                  ldr r4, [r2, r3]
-                  str r4, [r0, r3]
-                  adds r3, r3, #4
-                1:
-                  adds r4, r0, r3
-                  cmp r4, r1
-                  bcc 0b",
+                "0:
+                  cmp r1, r0
+                  beq 1f
+                  ldm r2!, {{r3}}
+                  stm r0!, {{r3}}
+                  b   0b
+                1:",
                 in("r0") start,
                 in("r1") end,
                 in("r2") data
