@@ -40,7 +40,7 @@ pub const CONF: Conf<0> = Conf {
         peripheral: Memory {
             link_name: "",
             start_address: 0x4000_0000,
-            size: Byte::from_kB(512),
+            size: Byte::from_MB(512),
         },
         additional: [],
     },
