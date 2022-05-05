@@ -4,7 +4,6 @@ use bern_arch::arch::Arch;
 use bern_arch::arch::memory_protection::MemoryRegion;
 use bern_arch::IMemoryProtection;
 use bern_arch::memory_protection::{Access, Config, Permission, Type};
-use bern_units::memory_size::ExtByte;
 use bern_conf::CONF;
 use crate::exec::process::ProcessInternal;
 use crate::sched::event::Event;
@@ -135,7 +134,7 @@ impl Runnable {
                 Config {
                     addr: stack.bottom_ptr() as *const _,
                     memory: Type::SramInternal,
-                    size: 32.B(),
+                    size: Arch::min_region_size(),
                     access: Access { user: Permission::NoAccess, system: Permission::NoAccess },
                     executable: false
                 }),
