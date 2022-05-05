@@ -9,12 +9,13 @@ use bern_conf::CONF;
 use crate::alloc::bump::Bump;
 use crate::alloc::allocator::Allocator;
 use crate::exec::process::{ProcessInternal};
-use crate::{log, sched, trace};
+use crate::{error, log, sched, trace};
 use crate::mem::boxed::Box;
 use crate::mem::linked_list::{LinkedList, Node};
 
 #[cfg(feature = "log-defmt")]
 use defmt::Formatter;
+use bern_conf_type::{MemoryLocation, MemoryType};
 
 #[link_section = ".kernel"]
 pub(crate) static KERNEL: Kernel = Kernel::new();
@@ -141,7 +142,33 @@ fn setup_memory_regions() {
             executable: false
         });
 
-    for i in 6..Arch::n_memory_regions() {
+    let mut region_index = 6;
+    for memory in CONF.memory_map.additional {
+        let (ty, access, exec) = match (memory.memory_type, memory.location) {
+            (MemoryType::Rom, _) => (Type::Flash, Access { user: Permission::ReadOnly, system: Permission::ReadOnly }, true),
+            (MemoryType::Eeprom, _) => (Type::Flash, Access { user: Permission::ReadWrite, system: Permission::ReadWrite }, true),
+            (MemoryType::Flash, _) => (Type::Flash, Access { user: Permission::ReadWrite, system: Permission::ReadWrite }, true),
+            (MemoryType::Ram, MemoryLocation::Internal) => (Type::SramInternal, Access { user: Permission::ReadWrite, system: Permission::ReadWrite }, false),
+            (MemoryType::Ram, MemoryLocation::External) => (Type::SramExternal, Access { user: Permission::ReadWrite, system: Permission::ReadWrite }, false),
+        };
+
+        Arch::enable_memory_region(
+            region_index,
+            Config {
+                    addr: memory.start_address as *const _,
+                    memory: ty,
+                    size: memory.size,
+                    access,
+                    executable: exec
+            });
+        region_index += 1;
+
+        if region_index >= Arch::n_memory_regions() {
+            error!("The memory map contains more entries than supported by the memory protection.");
+            break;
+        }
+    }
+    for i in region_index..Arch::n_memory_regions() {
         Arch::disable_memory_region(i);
     }
 }
