@@ -30,6 +30,10 @@ pub trait RtosTrace {
     fn marker_end(id: u32);
 }
 
-pub trait RtosTraceCallbacks {
+pub trait RtosTraceOSCallbacks {
     fn task_list();
+}
+
+pub trait RtosTraceApplicationCallbacks {
+    fn sysclock() -> u32;
 }

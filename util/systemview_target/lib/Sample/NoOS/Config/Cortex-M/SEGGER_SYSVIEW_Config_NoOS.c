@@ -1,62 +1,8 @@
-/*********************************************************************
-*                    SEGGER Microcontroller GmbH                     *
-*                        The Embedded Experts                        *
-**********************************************************************
-*                                                                    *
-*            (c) 1995 - 2021 SEGGER Microcontroller GmbH             *
-*                                                                    *
-*       www.segger.com     Support: support@segger.com               *
-*                                                                    *
-**********************************************************************
-*                                                                    *
-*       SEGGER SystemView * Real-time application analysis           *
-*                                                                    *
-**********************************************************************
-*                                                                    *
-* All rights reserved.                                               *
-*                                                                    *
-* SEGGER strongly recommends to not make any changes                 *
-* to or modify the source code of this software in order to stay     *
-* compatible with the SystemView and RTT protocol, and J-Link.       *
-*                                                                    *
-* Redistribution and use in source and binary forms, with or         *
-* without modification, are permitted provided that the following    *
-* condition is met:                                                  *
-*                                                                    *
-* o Redistributions of source code must retain the above copyright   *
-*   notice, this condition and the following disclaimer.             *
-*                                                                    *
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND             *
-* CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,        *
-* INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF           *
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE           *
-* DISCLAIMED. IN NO EVENT SHALL SEGGER Microcontroller BE LIABLE FOR *
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR           *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT  *
-* OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;    *
-* OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF      *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT          *
-* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE  *
-* USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH   *
-* DAMAGE.                                                            *
-*                                                                    *
-**********************************************************************
-*                                                                    *
-*       SystemView version: 3.32                                    *
-*                                                                    *
-**********************************************************************
--------------------------- END-OF-HEADER -----------------------------
-
-File    : SEGGER_SYSVIEW_Config_NoOS.c
-Purpose : Sample setup configuration of SystemView without an OS.
-Revision: $Rev: 9599 $
-*/
 #include "SEGGER_SYSVIEW.h"
 #include "SEGGER_SYSVIEW_Conf.h"
 
-// SystemcoreClock can be used in most CMSIS compatible projects.
-// In non-CMSIS projects define SYSVIEW_CPU_FREQ.
-extern unsigned int SystemCoreClock(void);
+extern void _rtos_trace_task_list(void);
+extern unsigned int _rtos_trace_sysclock(void);
 
 /*********************************************************************
 *
@@ -65,16 +11,10 @@ extern unsigned int SystemCoreClock(void);
 **********************************************************************
 */
 // The application name to be displayed in SystemViewer
-#define SYSVIEW_APP_NAME        "Demo Application"
+#define SYSVIEW_APP_NAME        "Rust Application"
 
 // The target device name
 #define SYSVIEW_DEVICE_NAME     "Cortex-M4"
-
-// Frequency of the timestamp. Must match SEGGER_SYSVIEW_Conf.h
-#define SYSVIEW_TIMESTAMP_FREQ  (SystemCoreClock())
-
-// System Frequency. SystemcoreClock is used in most CMSIS compatible projects.
-#define SYSVIEW_CPU_FREQ        (SystemCoreClock())
 
 // The lowest RAM address used for IDs (pointers)
 #define SYSVIEW_RAM_BASE        (0x00000000)
@@ -115,7 +55,7 @@ static void _cbSendSystemDesc(void) {
   SEGGER_SYSVIEW_SendTaskList();
 }
 
-extern void _rtos_trace_task_list(void);
+
 
 static SEGGER_SYSVIEW_OS_API callbacks = {
         .pfGetTime = 0,
@@ -148,8 +88,11 @@ void SEGGER_SYSVIEW_Conf(void) {
     }
   }
 #endif
-  SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ,
-                      &callbacks, _cbSendSystemDesc);
+  SEGGER_SYSVIEW_Init(
+          _rtos_trace_sysclock(),
+          _rtos_trace_sysclock(),
+          &callbacks,
+          _cbSendSystemDesc);
   SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
 }
 

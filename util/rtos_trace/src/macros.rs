@@ -1,6 +1,6 @@
 
 #[macro_export]
-macro_rules!global_trace {
+macro_rules! global_trace {
     ($ident:ident) => {
         #[no_mangle]
         fn _rtos_trace_task_new(id: u32) {
@@ -64,12 +64,24 @@ macro_rules!global_trace {
     }
 }
 
+
 #[macro_export]
-macro_rules!global_trace_callbacks {
+macro_rules! global_os_callbacks {
     ($ident:ident) => {
         #[no_mangle]
         fn _rtos_trace_task_list() {
-            <$ident as $crate::RtosTraceCallbacks>::task_list()
+            <$ident as $crate::RtosTraceOSCallbacks>::task_list()
+        }
+    }
+}
+
+
+#[macro_export]
+macro_rules! global_application_callbacks {
+    ($ident:ident) => {
+        #[no_mangle]
+        fn _rtos_trace_sysclock() -> u32 {
+            <$ident as $crate::RtosTraceApplicationCallbacks>::sysclock()
         }
     }
 }

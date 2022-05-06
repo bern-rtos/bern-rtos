@@ -5,7 +5,6 @@ use crate::TaskInfo;
 #[cfg(feature = "trace_impl")]
 extern "Rust" {
     fn _rtos_trace_task_new(id: u32);
-    fn _rtos_trace_task_send_info(id: u32, info: TaskInfo);
     fn _rtos_trace_task_terminate(id: u32);
     fn _rtos_trace_task_exec_begin(id: u32);
     fn _rtos_trace_task_exec_end();
@@ -21,17 +20,16 @@ extern "Rust" {
     fn _rtos_trace_marker(id: u32);
     fn _rtos_trace_marker_begin(id: u32);
     fn _rtos_trace_marker_end(id: u32);
+
+    fn _rtos_trace_task_send_info(id: u32, info: TaskInfo);
+
+    fn _rtos_trace_sysclock() -> u32;
 }
 
 #[inline]
 pub fn task_new(id: u32) {
     #[cfg(feature = "trace_impl")]
     unsafe { _rtos_trace_task_new(id) }
-}
-#[inline]
-pub fn task_send_info(id: u32, info: TaskInfo) {
-    #[cfg(feature = "trace_impl")]
-    unsafe { _rtos_trace_task_send_info(id, info) }
 }
 #[inline]
 pub fn task_terminate(id: u32) {
@@ -95,4 +93,18 @@ pub fn marker_begin(id: u32) {
 pub fn marker_end(id: u32) {
     #[cfg(feature = "trace_impl")]
     unsafe { _rtos_trace_marker_end(id) }
+}
+
+#[inline]
+pub fn task_send_info(id: u32, info: TaskInfo) {
+    #[cfg(feature = "trace_impl")]
+    unsafe { _rtos_trace_task_send_info(id, info) }
+}
+
+#[inline]
+pub fn sysclock() -> u32 {
+    #[cfg(feature = "trace_impl")]
+    unsafe { _rtos_trace_sysclock() }
+    #[cfg(not(feature = "trace_impl"))]
+    0
 }
