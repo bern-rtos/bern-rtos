@@ -3,8 +3,10 @@
 mod wrapper;
 pub mod log;
 
+use core::ptr::null;
 use wrapper::*;
 pub use rtos_trace::RtosTrace;
+use rtos_trace::TaskInfo;
 
 pub struct SystemView;
 
@@ -21,6 +23,24 @@ impl RtosTrace for SystemView {
     fn task_new(id: u32) {
         unsafe {
             SEGGER_SYSVIEW_OnTaskCreate(id);
+        }
+    }
+
+    fn task_send_info(id: u32, info: TaskInfo) {
+        let name = if info.name.is_empty() {
+            null()
+        } else {
+            info.name.as_ptr()
+        };
+        let info = SEGGER_SYSVIEW_TASKINFO {
+            TaskID: id,
+            sName: name,
+            Prio: info.priority,
+            StackBase: info.stack_base as u32,
+            StackSize: info.stack_size as u32,
+        };
+        unsafe {
+            SEGGER_SYSVIEW_SendTaskInfo(&info);
         }
     }
 

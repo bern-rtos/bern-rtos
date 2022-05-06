@@ -7,6 +7,10 @@ macro_rules!global_trace {
             <$ident as $crate::RtosTrace>::task_new(id)
         }
         #[no_mangle]
+        fn _rtos_trace_task_send_info(id: u32, info: $crate::TaskInfo) {
+            <$ident as $crate::RtosTrace>::task_send_info(id: u32, info: $crate::TaskInfo)
+        }
+        #[no_mangle]
         fn _rtos_trace_task_terminate(id: u32) {
             <$ident as $crate::RtosTrace>::task_terminate(id)
         }
@@ -56,6 +60,16 @@ macro_rules!global_trace {
         #[no_mangle]
         fn _rtos_trace_marker_end(id: u32) {
             <$ident as $crate::RtosTrace>::marker_end(id)
+        }
+    }
+}
+
+#[macro_export]
+macro_rules!global_trace_callbacks {
+    ($ident:ident) => {
+        #[no_mangle]
+        fn _rtos_trace_task_list() {
+            <$ident as $crate::RtosTraceCallbacks>::task_list()
         }
     }
 }

@@ -112,7 +112,15 @@ static void _cbSendSystemDesc(void) {
   SEGGER_SYSVIEW_SendSysDesc("N="SYSVIEW_APP_NAME",D="SYSVIEW_DEVICE_NAME);
   SEGGER_SYSVIEW_SendSysDesc("I#15=SysTick");
   SEGGER_SYSVIEW_SendSysDesc("I#11=SysCall");
+  SEGGER_SYSVIEW_SendTaskList();
 }
+
+extern void _rtos_trace_task_list(void);
+
+static SEGGER_SYSVIEW_OS_API callbacks = {
+        .pfGetTime = 0,
+        .pfSendTaskList = _rtos_trace_task_list,
+};
 
 /*********************************************************************
 *
@@ -140,8 +148,8 @@ void SEGGER_SYSVIEW_Conf(void) {
     }
   }
 #endif
-  SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ, 
-                      0, _cbSendSystemDesc);
+  SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ,
+                      &callbacks, _cbSendSystemDesc);
   SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
 }
 

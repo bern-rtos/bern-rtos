@@ -3,8 +3,16 @@
 mod macros;
 pub mod trace;
 
+pub struct  TaskInfo {
+    pub name: &'static str,
+    pub priority: u32,
+    pub stack_base: usize,
+    pub stack_size: usize,
+}
+
 pub trait RtosTrace {
     fn task_new(id: u32);
+    fn task_send_info(id: u32, info: TaskInfo);
     fn task_terminate(id: u32);
     fn task_exec_begin(id: u32);
     fn task_exec_end();
@@ -20,4 +28,8 @@ pub trait RtosTrace {
     fn marker(id: u32);
     fn marker_begin(id: u32);
     fn marker_end(id: u32);
+}
+
+pub trait RtosTraceCallbacks {
+    fn task_list();
 }

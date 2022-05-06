@@ -20,7 +20,7 @@ use crate::alloc::allocator::AllocError;
 use bern_arch::{ICore, IMemoryProtection, IScheduler};
 use bern_arch::arch::{Arch, ArchCore};
 use bern_conf::CONF;
-use rtos_trace::trace;
+use rtos_trace::{TaskInfo, trace};
 use crate::exec::interrupt::InterruptHandler;
 
 
@@ -139,6 +139,8 @@ pub(crate) fn add_task(mut task: Runnable) {
         }
 
         let prio: usize = task.priority().into();
+        trace_thread_info(&task);
+
         sched.tasks_ready[prio].emplace_back(
             task,
             KERNEL.allocator()
@@ -293,6 +295,49 @@ pub(crate) fn event_fire(id: usize) {
         Arch::trigger_context_switch();
     }
 }
+
+rtos_trace::global_trace_callbacks!{Scheduler}
+
+impl rtos_trace::RtosTraceCallbacks for Scheduler {
+    fn task_list() {
+        let sched = unsafe { SCHEDULER.assume_init_mut() };
+
+        // Note(unsafe): There must always be a task running.
+        sched.task_running.as_ref()
+            .map(|thread| trace_thread_info(thread));
+
+        for prio in sched.tasks_ready.iter() {
+            for thread in prio.iter() {
+                trace_thread_info(thread);
+            }
+        }
+
+        for thread in sched.tasks_sleeping.iter() {
+            trace_thread_info(thread);
+        }
+
+        for event in sched.events.iter() {
+            for thread in event.pending.iter() {
+                trace_thread_info(thread);
+            }
+        }
+
+        for thread in sched.tasks_terminated.iter() {
+            trace_thread_info(thread);
+        }
+    }
+}
+
+fn trace_thread_info(thread: &Runnable) {
+    let info = TaskInfo {
+        name: "",
+        priority: thread.id().into(),
+        stack_base: thread.stack().bottom_ptr() as usize,
+        stack_size: thread.stack().size() as usize,
+    };
+    trace::task_send_info(thread.id(), info);
+}
+
 
 #[no_mangle]
 fn kernel_interrupt_handler(irqn: u16) {

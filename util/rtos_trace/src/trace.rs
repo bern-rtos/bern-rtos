@@ -1,8 +1,11 @@
 #![allow(unused)]
 
+use crate::TaskInfo;
+
 #[cfg(feature = "trace_impl")]
 extern "Rust" {
     fn _rtos_trace_task_new(id: u32);
+    fn _rtos_trace_task_send_info(id: u32, info: TaskInfo);
     fn _rtos_trace_task_terminate(id: u32);
     fn _rtos_trace_task_exec_begin(id: u32);
     fn _rtos_trace_task_exec_end();
@@ -24,6 +27,11 @@ extern "Rust" {
 pub fn task_new(id: u32) {
     #[cfg(feature = "trace_impl")]
     unsafe { _rtos_trace_task_new(id) }
+}
+#[inline]
+pub fn task_send_info(id: u32, info: TaskInfo) {
+    #[cfg(feature = "trace_impl")]
+    unsafe { _rtos_trace_task_send_info(id, info) }
 }
 #[inline]
 pub fn task_terminate(id: u32) {
