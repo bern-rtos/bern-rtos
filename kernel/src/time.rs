@@ -2,7 +2,6 @@
 
 use core::sync::atomic::{AtomicU32, Ordering};
 use bern_units::frequency::Hertz;
-use rtos_trace::trace;
 use crate::sched;
 
 #[link_section = ".kernel"]
@@ -21,16 +20,12 @@ static TICK_LOW: AtomicU32 = AtomicU32::new(0);
 #[no_mangle]
 #[inline(always)]
 fn system_tick_update() {
-    trace::isr_enter();
-
     if TICK_LOW.load(Ordering::Acquire) == u32::MAX {
         TICK_HIGH.fetch_add(1, Ordering::Relaxed);
     }
     TICK_LOW.fetch_add(1, Ordering::Relaxed);
 
     sched::tick_update();
-
-    trace::isr_exit();
 }
 
 /// Get the current system time in ticks.

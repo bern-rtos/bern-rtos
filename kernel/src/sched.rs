@@ -184,6 +184,7 @@ pub(crate) fn task_terminate() {
 
 /// Tick occurred, update sleeping list
 pub(crate) fn tick_update() {
+    trace::isr_enter();
     let now = time::tick();
 
     // NOTE(unsafe): scheduler must be initialized first
@@ -225,7 +226,10 @@ pub(crate) fn tick_update() {
     });
 
     if trigger_switch {
+        trace::isr_exit_to_scheduler();
         Arch::trigger_context_switch();
+    } else {
+        trace::isr_exit();
     }
 }
 
