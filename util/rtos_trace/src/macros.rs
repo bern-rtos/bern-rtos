@@ -72,6 +72,10 @@ macro_rules! global_os_callbacks {
         fn _rtos_trace_task_list() {
             <$ident as $crate::RtosTraceOSCallbacks>::task_list()
         }
+        #[no_mangle]
+        fn _rtos_trace_time() -> u64 {
+            <$ident as $crate::RtosTraceOSCallbacks>::time()
+        }
     }
 }
 
@@ -79,6 +83,10 @@ macro_rules! global_os_callbacks {
 #[macro_export]
 macro_rules! global_application_callbacks {
     ($ident:ident) => {
+        #[no_mangle]
+        fn _rtos_trace_system_description() {
+            <$ident as $crate::RtosTraceApplicationCallbacks>::system_description()
+        }
         #[no_mangle]
         fn _rtos_trace_sysclock() -> u32 {
             <$ident as $crate::RtosTraceApplicationCallbacks>::sysclock()

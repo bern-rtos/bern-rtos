@@ -22,7 +22,9 @@ extern "Rust" {
     fn _rtos_trace_marker_end(id: u32);
 
     fn _rtos_trace_task_send_info(id: u32, info: TaskInfo);
+    fn _rtos_trace_time() -> u64;
 
+    fn _rtos_trace_system_description();
     fn _rtos_trace_sysclock() -> u32;
 }
 
@@ -100,7 +102,19 @@ pub fn task_send_info(id: u32, info: TaskInfo) {
     #[cfg(feature = "trace_impl")]
     unsafe { _rtos_trace_task_send_info(id, info) }
 }
+#[inline]
+pub fn time() -> u64 {
+    #[cfg(feature = "trace_impl")]
+    unsafe { _rtos_trace_time() }
+    #[cfg(not(feature = "trace_impl"))]
+    0
+}
 
+#[inline]
+pub fn system_description() {
+    #[cfg(feature = "trace_impl")]
+    unsafe { _rtos_trace_system_description() }
+}
 #[inline]
 pub fn sysclock() -> u32 {
     #[cfg(feature = "trace_impl")]

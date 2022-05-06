@@ -300,9 +300,9 @@ pub(crate) fn event_fire(id: usize) {
     }
 }
 
-rtos_trace::global_trace_callbacks!{Scheduler}
+rtos_trace::global_os_callbacks!{Scheduler}
 
-impl rtos_trace::RtosTraceCallbacks for Scheduler {
+impl rtos_trace::RtosTraceOSCallbacks for Scheduler {
     fn task_list() {
         let sched = unsafe { SCHEDULER.assume_init_mut() };
 
@@ -329,6 +329,10 @@ impl rtos_trace::RtosTraceCallbacks for Scheduler {
         for thread in sched.tasks_terminated.iter() {
             trace_thread_info(thread);
         }
+    }
+
+    fn time() -> u64 {
+        time::tick() * 1000
     }
 }
 

@@ -32,8 +32,11 @@ pub trait RtosTrace {
 
 pub trait RtosTraceOSCallbacks {
     fn task_list();
+    /// Get system time in microseconds.
+    fn time() -> u64;
 }
 
 pub trait RtosTraceApplicationCallbacks {
+    fn system_description();
     fn sysclock() -> u32;
 }

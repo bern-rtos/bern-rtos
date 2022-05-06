@@ -1,15 +1,12 @@
 #include "SEGGER_SYSVIEW.h"
 #include "SEGGER_SYSVIEW_Conf.h"
 
+extern void _rtos_trace_system_description(void);
 extern void _rtos_trace_task_list(void);
+extern long long unsigned int _rtos_trace_time(void);
 extern unsigned int _rtos_trace_sysclock(void);
 
-/*********************************************************************
-*
-*       Defines, configurable
-*
-**********************************************************************
-*/
+
 // The application name to be displayed in SystemViewer
 #define SYSVIEW_APP_NAME        "Rust Application"
 
@@ -29,36 +26,22 @@ extern unsigned int _rtos_trace_sysclock(void);
   #define ENABLE_DWT_CYCCNT       (USE_CYCCNT_TIMESTAMP & SEGGER_SYSVIEW_POST_MORTEM_MODE)
 #endif
 
-/*********************************************************************
-*
-*       Defines, fixed
-*
-**********************************************************************
-*/
+
 #define DEMCR                     (*(volatile unsigned long*) (0xE000EDFCuL))   // Debug Exception and Monitor Control Register
 #define TRACEENA_BIT              (1uL << 24)                                   // Trace enable bit
 #define DWT_CTRL                  (*(volatile unsigned long*) (0xE0001000uL))   // DWT Control Register
 #define NOCYCCNT_BIT              (1uL << 25)                                   // Cycle counter support bit
 #define CYCCNTENA_BIT             (1uL << 0)                                    // Cycle counter enable bit
 
-/********************************************************************* 
-*
-*       _cbSendSystemDesc()
-*
-*  Function description
-*    Sends SystemView description strings.
-*/
-static void _cbSendSystemDesc(void) {
-  SEGGER_SYSVIEW_SendSysDesc("N="SYSVIEW_APP_NAME",D="SYSVIEW_DEVICE_NAME);
-  SEGGER_SYSVIEW_SendSysDesc("I#15=SysTick");
-  SEGGER_SYSVIEW_SendSysDesc("I#11=SysCall");
-  SEGGER_SYSVIEW_SendTaskList();
+
+static void send_system_description(void) {
+    _rtos_trace_system_description();
+    SEGGER_SYSVIEW_SendTaskList();
 }
 
 
-
-static SEGGER_SYSVIEW_OS_API callbacks = {
-        .pfGetTime = 0,
+static SEGGER_SYSVIEW_OS_API os_callbacks = {
+        .pfGetTime = _rtos_trace_time,
         .pfSendTaskList = _rtos_trace_task_list,
 };
 
@@ -91,9 +74,7 @@ void SEGGER_SYSVIEW_Conf(void) {
   SEGGER_SYSVIEW_Init(
           _rtos_trace_sysclock(),
           _rtos_trace_sysclock(),
-          &callbacks,
-          _cbSendSystemDesc);
+          &os_callbacks,
+          send_system_description);
   SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
 }
-
-/*************************** End of file ****************************/

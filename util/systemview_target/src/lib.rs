@@ -2,6 +2,7 @@
 
 mod wrapper;
 pub mod log;
+mod macros;
 
 use core::ptr::null;
 use wrapper::*;
@@ -14,6 +15,12 @@ impl SystemView {
     pub fn init() {
         unsafe {
             SEGGER_SYSVIEW_Conf();
+        }
+    }
+
+    pub fn send_system_description(desc: &str) {
+        unsafe {
+            SEGGER_SYSVIEW_SendSysDesc(desc.as_ptr());
         }
     }
 }
