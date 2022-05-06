@@ -55,6 +55,7 @@ impl Thread {
             stack: None,
             // set default to lowest priority above idle
             priority: Default::default(),
+            name: None,
         }
     }
 }
@@ -67,6 +68,8 @@ pub struct ThreadBuilder {
     stack: Option<Stack>,
     /// Task priority
     priority: Priority,
+    /// Optional name.
+    name: Option<&'static str>,
 }
 
 impl ThreadBuilder {
@@ -85,6 +88,12 @@ impl ThreadBuilder {
     /// This task will replace the default idle task.
     pub fn idle_task(&mut self) -> &mut Self {
         self.priority = Priority::idle();
+        self
+    }
+
+    /// Give the thread a name.
+    pub fn name(&mut self, name: &'static str) -> &mut Self {
+        self.name = Some(name);
         self
     }
 
@@ -144,6 +153,7 @@ impl ThreadBuilder {
             runnable_ptr,
             stack,
             self.priority,
+            self.name,
         );
         sched::add_task(thread)
     }

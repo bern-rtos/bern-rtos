@@ -114,10 +114,11 @@ pub struct Runnable {
     priority: Priority,
     blocking_event: Option<NonNull<Event>>,
     memory_regions: [MemoryRegion; 3],
+    name: &'static str,
 }
 
 impl Runnable {
-    pub(crate) fn new(process: &'static ProcessInternal, runnable_ptr: *mut usize, stack: Stack, priority: Priority) -> Self {
+    pub(crate) fn new(process: &'static ProcessInternal, runnable_ptr: *mut usize, stack: Stack, priority: Priority, name: Option<&'static str>) -> Self {
         // prepare memory region configs
         let memory_regions = [
             Arch::prepare_memory_region(
@@ -151,6 +152,7 @@ impl Runnable {
             blocking_event: None,
             memory_regions,
             id: 0,
+            name: name.unwrap_or("\0"),
         }
     }
 
@@ -203,6 +205,10 @@ impl Runnable {
     }
     pub(crate) fn set_id(&mut self, id: u32) {
         self.id = id;
+    }
+
+    pub(crate) fn name(&self) -> &'static str {
+        self.name
     }
 }
 

@@ -306,12 +306,19 @@ impl rtos_trace::RtosTraceOSCallbacks for Scheduler {
     fn task_list() {
         let sched = unsafe { SCHEDULER.assume_init_mut() };
 
-        // Note(unsafe): There must always be a task running.
         sched.task_running.as_ref()
-            .map(|thread| trace_thread_info(thread));
+            .map(|thread| {
+                if thread.priority() != Priority::idle() {
+                    trace_thread_info(thread)
+                }
+            });
 
-        for prio in sched.tasks_ready.iter() {
-            for thread in prio.iter() {
+        for (prio, threads) in sched.tasks_ready.iter().enumerate() {
+            if prio == Priority::idle().into() {
+                break;
+            }
+
+            for thread in threads.iter() {
                 trace_thread_info(thread);
             }
         }
@@ -338,7 +345,7 @@ impl rtos_trace::RtosTraceOSCallbacks for Scheduler {
 
 fn trace_thread_info(thread: &Runnable) {
     let info = TaskInfo {
-        name: "",
+        name: thread.name(),
         priority: thread.id().into(),
         stack_base: thread.stack().bottom_ptr() as usize,
         stack_size: thread.stack().size() as usize,
