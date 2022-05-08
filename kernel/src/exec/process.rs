@@ -9,12 +9,12 @@ use bern_units::memory_size::Byte;
 use crate::kernel::KERNEL;
 use crate::mem::boxed::Box;
 use crate::mem::linked_list::Node;
-use crate::trace;
+use crate::log::trace;
 
 #[cfg(feature = "log-defmt")]
 use defmt::Formatter;
 
-#[cfg(feature = "log-rtt")]
+#[cfg(feature = "_log_fmt")]
 use core::fmt::Display;
 
 
@@ -159,7 +159,7 @@ impl defmt::Format for ProcessInternal {
     }
 }
 
-#[cfg(feature = "log-rtt")]
+#[cfg(feature = "_log_fmt")]
 impl Display for ProcessError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
@@ -170,7 +170,7 @@ impl Display for ProcessError {
     }
 }
 
-#[cfg(feature = "log-rtt")]
+#[cfg(feature = "_log_fmt")]
 impl Display for ProcessInternal {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "None    {:05}B/{:05}B ({}%)",

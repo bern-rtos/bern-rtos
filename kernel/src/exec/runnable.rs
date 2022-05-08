@@ -13,7 +13,7 @@ use crate::time;
 #[cfg(feature = "log-defmt")]
 use defmt::Formatter;
 
-#[cfg(feature = "log-rtt")]
+#[cfg(feature = "_log_fmt")]
 use core::fmt::Display;
 
 pub trait RunnableTrait: 'static + FnMut() -> RunnableResult {}
@@ -235,7 +235,7 @@ impl defmt::Format for Runnable {
     }
 }
 
-#[cfg(feature = "log-rtt")]
+#[cfg(feature = "_log_fmt")]
 impl Display for Runnable {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "None    {:02}          {:05}B/{:05}B ({:02}%)",

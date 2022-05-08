@@ -28,7 +28,7 @@ static BERN_DEFAULT_IDLE: Process = Process::new(
 static mut STACK: [u8; 256] = [0; 256];
 
 pub(crate) fn init() {
-    crate::trace!("Init idle thread");
+    crate::log::trace!("Init idle thread");
     BERN_DEFAULT_IDLE.init(|c| {
         Thread::new(c)
             .idle_task()

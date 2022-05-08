@@ -9,7 +9,8 @@ use bern_conf::CONF;
 use crate::alloc::bump::Bump;
 use crate::alloc::allocator::Allocator;
 use crate::exec::process::{ProcessInternal};
-use crate::{error, log, sched, trace};
+use crate::sched;
+use crate::log::{error, trace};
 use crate::mem::boxed::Box;
 use crate::mem::linked_list::{LinkedList, Node};
 
@@ -60,7 +61,7 @@ impl Kernel {
     }
 
     pub(crate) fn start(&self) -> ! {
-        crate::debug!("Staring kernel.");
+        crate::log::debug!("Staring kernel.");
         self.state.replace(State::Running);
 
         sched::start();

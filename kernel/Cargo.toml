@@ -14,8 +14,10 @@ homepage = "https://bern-rtos.org"
 [features]
 time-slicing = []
 log-defmt = ["defmt"]
-log-rtt = ["rtt-target", "rtt-target/cortex-m"]
+log-rtt = ["rtt-target", "rtt-target/cortex-m", "_log_fmt"]
+log-global = ["log", "_log_fmt"]
 trace = ["rtos-trace/trace_impl"]
+_log_fmt = []
 
 [dependencies]
 bern-arch = "0.2"
@@ -24,6 +26,7 @@ bern-conf = "0.1"
 bern-conf-type = "0.1"
 bern-units = "0.1.0"
 rtos-trace = { version = "*", default-features = false }
+log = { version = "0.4", optional = true }
 
 [target.'cfg(target_os = "none")'.dependencies]
 defmt = { version = "0.3", optional = true }
