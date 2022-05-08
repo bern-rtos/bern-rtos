@@ -3,12 +3,20 @@ name = "systemview-target"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+callbacks-os = []
+callbacks-app = []
+log = ["heapless", "dep:log"]
+
 [dependencies]
 cty = "0.2"
 rtos-trace = "*"
+heapless = { version = "0.7", optional = true }
+log = { version = "0.4", optional = true, features = ["max_level_debug", "release_max_level_warn"] }
 
 [build-dependencies]
-bindgen = "0.58"
+# default features must be disabled, because bindgen enables `std` in `log`
+bindgen = { version = "0.58", default-features = false }
 cc = "1.0"
 
 [dev-dependencies]
@@ -16,3 +24,7 @@ st-nucleo-f446 = { path = "../../platform/st_nucleo_f446" }
 cortex-m = "0.7"
 cortex-m-rt = "0.7"
 panic-halt = "0.2"
+
+[[example]]
+name = "no_os"
+required-features = ["callbacks-app"]

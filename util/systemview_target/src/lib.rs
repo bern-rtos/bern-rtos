@@ -1,18 +1,26 @@
 #![no_std]
 
 mod wrapper;
+#[cfg(feature = "log")]
 pub mod log;
 mod macros;
+mod stub;
 
 use core::ptr::null;
 use wrapper::*;
 pub use rtos_trace::RtosTrace;
 use rtos_trace::TaskInfo;
+#[cfg(feature = "log")]
+pub use heapless;
 
 pub struct SystemView;
 
 impl SystemView {
-    pub fn init() {
+    pub const fn new() -> SystemView {
+        SystemView
+    }
+
+    pub fn init(&self) {
         unsafe {
             SEGGER_SYSVIEW_Conf();
         }

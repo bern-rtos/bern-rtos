@@ -2,6 +2,7 @@
 #![no_main]
 #![no_std]
 
+#![feature(type_ascription)]
 #![feature(default_alloc_error_handler)]
 
 //use defmt_rtt as _;
@@ -21,6 +22,7 @@ use core::sync::atomic::Ordering;
 extern crate alloc;
 use alloc::sync::Arc;
 use alloc::boxed::Box;
+use log::LevelFilter;
 use stm32f4xx_hal::gpio::ExtiPin;
 use bern_kernel::alloc::const_pool::ConstPool;
 use bern_kernel::exec::interrupt::{InterruptHandler, InterruptStack};
@@ -35,6 +37,7 @@ use bern_kernel::units::frequency::ExtMilliHertz;
 
 use systemview_target::SystemView;
 rtos_trace::global_trace!{SystemView}
+static SYSTEMVIEW: SystemView = SystemView::new();
 
 #[link_section=".process.my_process"]
 static mut SOME_ARR: [u8; 8] = [1,2,3,4,5,6,7,8];
@@ -45,7 +48,9 @@ static PROC: &Process = bern_kernel::new_process!(my_process, 8192);
 fn main() -> ! {
     let mut board = StNucleoF446::new();
 
-    SystemView::init();
+    SYSTEMVIEW.init();
+    log::set_logger(&SYSTEMVIEW).ok();
+    log::set_max_level(LevelFilter::Info);
     //rtt_init_print!();
 
     bern_kernel::init();
@@ -76,7 +81,7 @@ fn main() -> ! {
 
         Thread::new(c)
             .priority(Priority::new(1))
-            .stack(Stack::try_new_in(c, 1024).unwrap())
+            .stack(Stack::try_new_in(c, 2048).unwrap())
             .spawn(move || {
                 let bla = Arc::new(Mutex::new(96));
 
@@ -90,6 +95,7 @@ fn main() -> ! {
 
                     if let Ok(mut b) = bla.try_lock() {
                         *b += 1;
+                        //systemview_target::info!("hello\0");
                         //info!("b = {}", *b);
                     };
 
@@ -203,8 +209,20 @@ fn EXTI15_10() {
 
 }*/
 
-#[allow(non_snake_case)]
-#[no_mangle]
-pub unsafe extern "C" fn SystemCoreClock() -> u32 {
-    48_000_000
+rtos_trace::global_application_callbacks!{Application}
+struct Application;
+
+impl rtos_trace::RtosTraceApplicationCallbacks for Application {
+    fn system_description() {
+        systemview_target::send_system_desc_app_name!("Development Application");
+        systemview_target::send_system_desc_device!("STM32F411RE");
+        systemview_target::send_system_desc_core!("Cortex-M4F");
+        systemview_target::send_system_desc_os!("Bern RTOS");
+        systemview_target::send_system_desc_interrupt!(15, "SysTick");
+        systemview_target::send_system_desc_interrupt!(11, "SysCall");
+    }
+
+    fn sysclock() -> u32 {
+        48_000_000
+    }
 }
