@@ -6,13 +6,6 @@ extern void _rtos_trace_task_list(void);
 extern long long unsigned int _rtos_trace_time(void);
 extern unsigned int _rtos_trace_sysclock(void);
 
-
-// The application name to be displayed in SystemViewer
-#define SYSVIEW_APP_NAME        "Rust Application"
-
-// The target device name
-#define SYSVIEW_DEVICE_NAME     "Cortex-M4"
-
 // The lowest RAM address used for IDs (pointers)
 #define SYSVIEW_RAM_BASE        (0x00000000)
 
@@ -45,12 +38,6 @@ static SEGGER_SYSVIEW_OS_API os_callbacks = {
         .pfSendTaskList = _rtos_trace_task_list,
 };
 
-/*********************************************************************
-*
-*       Global functions
-*
-**********************************************************************
-*/
 void SEGGER_SYSVIEW_Conf(void) {
 #if USE_CYCCNT_TIMESTAMP
 #if ENABLE_DWT_CYCCNT

@@ -79,6 +79,10 @@ Additional information:
 **********************************************************************
 */
 
+#ifdef CALLBACKS_OS_TIME
+extern unsigned int systemview_get_timestamp();
+#define SEGGER_SYSVIEW_GET_TIMESTAMP() (systemview_get_timestamp())
+#endif
 
 #endif  // SEGGER_SYSVIEW_CONF_H
 
