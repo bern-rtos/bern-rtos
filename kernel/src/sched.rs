@@ -185,7 +185,7 @@ pub(crate) fn task_terminate() {
 /// Tick occurred, update sleeping list
 pub(crate) fn tick_update() {
     trace::isr_enter();
-    let now = time::tick();
+    let now = time::tick_count();
 
     // NOTE(unsafe): scheduler must be initialized first
     // todo: replace with `assume_init_mut()` as soon as stable
@@ -339,7 +339,7 @@ impl rtos_trace::RtosTraceOSCallbacks for Scheduler {
     }
 
     fn time() -> u64 {
-        time::tick() * 1000
+        time::tick_count() * 1000
     }
 }
 

@@ -22,7 +22,7 @@
 use core::alloc::Layout;
 use core::mem;
 
-use crate::{kernel, sched};
+use crate::{kernel, sched, time};
 use crate::sched::event;
 use crate::exec::runnable::RunnableResult;
 use crate::exec::thread::ThreadBuilder;
@@ -48,6 +48,7 @@ enum Service {
     Alloc,
     Dealloc,
     KernelStats,
+    TickCount,
 }
 
 impl Service {
@@ -170,6 +171,17 @@ pub fn print_kernel_stats() {
     );
 }
 
+pub fn tick_count() -> u64 {
+    let mut count = 0;
+    mode_aware_syscall(
+        Service::TickCount,
+        &mut count as *mut _ as usize,
+        0,
+        0,
+    );
+    count
+}
+
 // userland barrier ////////////////////////////////////////////////////////////
 
 /// System Call handler.
@@ -248,6 +260,13 @@ fn syscall_handler(service: Service, arg0: usize, arg1: usize, arg2: usize) -> u
         Service::KernelStats => {
             kernel::print_stats();
             sched::print_thread_stats();
+            0
+        }
+        Service::TickCount => {
+            let count = arg0 as *mut u64;
+            unsafe {
+                count.write(time::tick_count())
+            }
             0
         }
     };
