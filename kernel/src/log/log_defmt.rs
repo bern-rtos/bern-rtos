@@ -2,8 +2,8 @@
 macro_rules!trace {
     ($ ($args: tt)*) => {
         {
-            defmt::trace!($($args)*);
-        }
+            $crate::log::defmt::trace!($($args)*)
+        };
     }
 }
 
@@ -11,8 +11,8 @@ macro_rules!trace {
 macro_rules!debug {
     ($ ($args: tt)*) => {
         {
-            defmt::debug!($($args)*);
-        }
+            $crate::log::defmt::debug!($($args)*)
+        };
     }
 }
 
@@ -20,8 +20,8 @@ macro_rules!debug {
 macro_rules!info {
     ($ ($args: tt)*) => {
         {
-            defmt::info!($($args)*);
-        }
+            $crate::log::defmt::info!($($args)*)
+        };
     }
 }
 
@@ -29,8 +29,8 @@ macro_rules!info {
 macro_rules!warn {
     ($ ($args: tt)*) => {
         {
-            defmt::warn!($($args)*);
-        }
+            $crate::log::defmt::warn!($($args)*)
+        };
     }
 }
 
@@ -38,7 +38,7 @@ macro_rules!warn {
 macro_rules!error {
     ($ ($args: tt)*) => {
         {
-            defmt::error!($($args)*);
-        }
+            $crate::log::defmt::error!($($args)*)
+        };
     }
 }
