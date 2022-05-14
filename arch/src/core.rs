@@ -18,5 +18,7 @@ pub trait ICore {
 
     fn execution_mode() -> ExecMode;
 
+    fn is_in_interrupt() -> bool;
+
     fn debug_time() -> u32;
 }

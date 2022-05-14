@@ -4,6 +4,7 @@ use crate::core::{ExecMode, ICore};
 use cortex_m::{Peripherals, asm};
 use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m::peripheral::scb;
+use cortex_m::peripheral::scb::VectActive;
 
 pub struct ArchCore {
     peripherals: Peripherals,
@@ -49,6 +50,10 @@ impl ICore for ArchCore {
         } else {
             ExecMode::Thread
         }
+    }
+
+    fn is_in_interrupt() -> bool {
+        cortex_m::peripheral::SCB::vect_active() != VectActive::ThreadMode
     }
 
     #[inline]
