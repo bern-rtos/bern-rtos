@@ -11,6 +11,9 @@ pub mod channel;
 pub mod spsc;
 pub mod mpsc;
 
+pub mod ipc_channel;
+pub mod ipc_spsc;
+
 pub use mutex::{Mutex, MutexGuard};
 pub use semaphore::{Semaphore, SemaphorePermit};
 

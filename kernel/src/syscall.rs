@@ -21,8 +21,9 @@
 
 use core::alloc::Layout;
 use core::mem;
+use core::ptr::NonNull;
 
-use crate::{kernel, sched, time};
+use crate::{kernel, KERNEL, sched, time};
 use crate::sched::event;
 use crate::exec::runnable::RunnableResult;
 use crate::exec::thread::ThreadBuilder;
@@ -31,13 +32,15 @@ use bern_arch::{ICore, ISyscall};
 use bern_arch::arch::{Arch, ArchCore};
 use bern_arch::core::ExecMode;
 use crate::alloc::wrapper::Wrapper;
-use rtos_trace::trace;
+use crate::alloc::allocator::AllocError;
+use crate::mem::queue::{PushRaw, RawItem};
+use crate::sync::channel::ChannelError;
 
 
 // todo: create with proc macro
 
 #[repr(u8)]
-enum Service {
+pub enum Service {
     TaskSpawn,
     TaskSleep,
     TaskYield,
@@ -48,7 +51,10 @@ enum Service {
     Alloc,
     Dealloc,
     KernelStats,
+    CoreDebugTime,
     TickCount,
+    IpcRegister,
+    IpcSend,
 }
 
 impl Service {
@@ -61,7 +67,7 @@ impl Service {
 fn mode_aware_syscall(service: Service, arg0: usize, arg1: usize, arg2: usize) -> usize {
     match ArchCore::execution_mode() {
         ExecMode::Kernel =>
-            syscall_handler(service, arg0, arg1, arg2),
+            syscall_handler_impl(service, arg0, arg1, arg2),
         ExecMode::Thread =>
             Arch::syscall(service.service_id(), arg0, arg1, arg2),
     }
@@ -171,6 +177,17 @@ pub fn print_kernel_stats() {
     );
 }
 
+pub fn core_debug_time() -> u32 {
+    let mut time = 0;
+    mode_aware_syscall(
+        Service::CoreDebugTime,
+        &mut time as *mut _ as usize,
+        0,
+        0,
+    );
+    time
+}
+
 pub fn tick_count() -> u64 {
     let mut count = 0;
     mode_aware_syscall(
@@ -182,6 +199,29 @@ pub fn tick_count() -> u64 {
     count
 }
 
+pub(crate) fn ipc_register(recv_channel: &dyn PushRaw) -> Result<usize, AllocError> {
+    let mut res = Err(AllocError::Other);
+    mode_aware_syscall(
+        Service::IpcRegister,
+        &recv_channel as *const _ as usize,
+        &mut res as *mut _ as usize,
+        0
+    );
+    res
+}
+
+pub(crate) fn ipc_send_raw(id: usize, item: RawItem) -> Result<(), ChannelError> {
+    let mut res = Err(ChannelError::ChannelClosed);
+
+    mode_aware_syscall(
+        Service::IpcSend,
+        id,
+        &item as *const _ as usize,
+        &mut res as *mut _ as usize,
+    );
+    res
+}
+
 // userland barrier ////////////////////////////////////////////////////////////
 
 /// System Call handler.
@@ -190,10 +230,7 @@ pub fn tick_count() -> u64 {
 /// handler which **must** call this function.
 // todo: return result
 #[allow(unused_variables)]
-#[no_mangle]
-fn syscall_handler(service: Service, arg0: usize, arg1: usize, arg2: usize) -> usize {
-    trace::isr_enter();
-
+fn syscall_handler_impl(service: Service, arg0: usize, arg1: usize, arg2: usize) -> usize {
     let r = match service {
         Service::TaskSpawn => {
             let builder: &mut ThreadBuilder = unsafe { mem::transmute(arg0 as *mut ThreadBuilder) };
@@ -262,6 +299,13 @@ fn syscall_handler(service: Service, arg0: usize, arg1: usize, arg2: usize) -> u
             sched::print_thread_stats();
             0
         }
+        Service::CoreDebugTime => {
+            let time = arg0 as *mut u32;
+            unsafe {
+                time.write( ArchCore::debug_time())
+            }
+            0
+        }
         Service::TickCount => {
             let count = arg0 as *mut u64;
             unsafe {
@@ -269,8 +313,32 @@ fn syscall_handler(service: Service, arg0: usize, arg1: usize, arg2: usize) -> u
             }
             0
         }
-    };
+        Service::IpcRegister => {
+            let recv_queue: &&dyn PushRaw = unsafe { mem::transmute(arg0) };
+            let res: &mut Result<usize, AllocError> = unsafe { mem::transmute(arg1) };
+            *res = KERNEL.register_channel(NonNull::from(*recv_queue));
+            0
+        }
+        Service::IpcSend => {
+            let id = arg0;
+            let item: &RawItem = unsafe { mem::transmute(arg1) };
+            let res: &mut Result<(), ChannelError> = unsafe { mem::transmute(arg2) };
 
-    trace::isr_exit();
+            *res = KERNEL.with_channel(id, |ch| {
+                ch.push_back(&item)
+                    .map_err(ChannelError::Queue)
+            });
+            0
+        }
+    };
+    r
+}
+
+#[allow(unused_variables)]
+#[no_mangle]
+pub extern "Rust" fn syscall_handler(service: Service, arg0: usize, arg1: usize, arg2: usize) -> usize {
+    //trace::isr_enter();
+    let r = syscall_handler_impl(service, arg0, arg1, arg2);
+    //trace::isr_exit();
     r
 }

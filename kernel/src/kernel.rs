@@ -1,22 +1,26 @@
 use core::cell::{Cell, UnsafeCell};
 use core::mem::MaybeUninit;
 use core::ptr::{NonNull, null_mut};
-use core::sync::atomic::{AtomicPtr, Ordering};
+use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 use bern_arch::arch::Arch;
 use bern_arch::{IMemoryProtection, IStartup};
 use bern_arch::memory_protection::{Access, Config, Permission, Type};
 use bern_conf::CONF;
 use crate::alloc::bump::Bump;
-use crate::alloc::allocator::Allocator;
+use crate::alloc::allocator::{Allocator, AllocError};
 use crate::exec::process::{ProcessInternal};
 use crate::sched;
-use crate::log::{error, trace};
+use crate::log::{error, info, debug, trace};
 use crate::mem::boxed::Box;
 use crate::mem::linked_list::{LinkedList, Node};
 
 #[cfg(feature = "log-defmt")]
 use defmt::Formatter;
 use bern_conf_type::{MemoryLocation, MemoryType};
+use crate::mem::queue::PushRaw;
+use crate::sync::channel::ChannelError;
+use crate::sync::critical_section;
+use crate::sync::ipc_channel::{ChannelID, IpcChannelInternal};
 
 #[link_section = ".kernel"]
 pub(crate) static KERNEL: Kernel = Kernel::new();
@@ -36,6 +40,10 @@ pub struct Kernel {
     allocator: UnsafeCell<MaybeUninit<Bump>>,
     /// List of processes.
     processes: LinkedList<ProcessInternal>,
+    /// List of inter-process channels.
+    ipc_channels: LinkedList<IpcChannelInternal>,
+    /// Channel ID counter, used to assign IDs.
+    ipc_channel_counter: AtomicUsize,
 }
 
 impl Kernel {
@@ -45,6 +53,8 @@ impl Kernel {
             init_process: AtomicPtr::new(null_mut()),
             allocator: UnsafeCell::new(MaybeUninit::uninit()),
             processes: LinkedList::new(),
+            ipc_channels: LinkedList::new(),
+            ipc_channel_counter: AtomicUsize::new(1),
         }
     }
 
@@ -61,7 +71,7 @@ impl Kernel {
     }
 
     pub(crate) fn start(&self) -> ! {
-        crate::log::debug!("Staring kernel.");
+        debug!("Staring kernel.");
         self.state.replace(State::Running);
 
         sched::start();
@@ -88,7 +98,9 @@ impl Kernel {
     }
 
     pub(crate) fn register_process(&self, process_node: Box<Node<ProcessInternal>>) {
-        self.processes.push_back(process_node);
+        critical_section::exec(|| {
+            self.processes.push_back(process_node);
+        })
     }
 
     pub(crate) fn is_process_registered(&self, process: &ProcessInternal) -> bool {
@@ -98,6 +110,29 @@ impl Kernel {
             }
         }
         false
+    }
+
+    pub(crate) fn register_channel(&'static self, recv_queue: NonNull<dyn PushRaw>) -> Result<ChannelID, AllocError> {
+        let id = self.ipc_channel_counter.load(Ordering::Relaxed);
+        self.ipc_channel_counter.fetch_add(1, Ordering::Release);
+
+        critical_section::exec(|| {
+            self.ipc_channels.emplace_back(
+                IpcChannelInternal::new(id, recv_queue),
+                self.allocator()
+            ).map(|_| id)
+        })
+    }
+
+    pub(crate) fn with_channel<F, R>(&self, channel_id: ChannelID, mut f: F) -> Result<R, ChannelError>
+        where
+            F: FnMut(&mut IpcChannelInternal) -> Result<R, ChannelError>,
+    {
+        self.ipc_channels
+            .iter_mut()
+            .find(|ch| ch.id() == channel_id)
+            .ok_or(ChannelError::ChannelClosed)
+            .and_then(|ch| f(ch))
     }
 }
 
@@ -149,6 +184,7 @@ fn setup_memory_regions() {
             (MemoryType::Rom, _) => (Type::Flash, Access { user: Permission::ReadOnly, system: Permission::ReadOnly }, true),
             (MemoryType::Eeprom, _) => (Type::Flash, Access { user: Permission::ReadWrite, system: Permission::ReadWrite }, true),
             (MemoryType::Flash, _) => (Type::Flash, Access { user: Permission::ReadWrite, system: Permission::ReadWrite }, true),
+            (MemoryType::Peripheral, _) => (Type::Peripheral, Access { user: Permission::ReadWrite, system: Permission::ReadWrite }, false),
             (MemoryType::Ram, MemoryLocation::Internal) => (Type::SramInternal, Access { user: Permission::ReadWrite, system: Permission::ReadWrite }, false),
             (MemoryType::Ram, MemoryLocation::External) => (Type::SramExternal, Access { user: Permission::ReadWrite, system: Permission::ReadWrite }, false),
         };
@@ -199,19 +235,19 @@ impl defmt::Format for State {
 }
 
 pub(crate) fn print_stats() {
-    log::info!("Kernel stats");
-    log::info!("============");
-    log::info!("Allocator: {}B/{}B ({}%)",
+    info!("Kernel stats");
+    info!("============");
+    info!("Allocator: {}B/{}B ({}%)",
         KERNEL.allocator().usage().0,
         KERNEL.allocator().capacity().0,
         (KERNEL.allocator().usage().0 as f32 / KERNEL.allocator().capacity().0 as f32 * 100f32) as u8
     );
 
-    log::info!("Process stats");
-    log::info!("=============");
-    log::info!("Name    Allocator");
-    log::info!("----    ---------");
+    info!("Process stats");
+    info!("=============");
+    info!("Name    Allocator");
+    info!("----    ---------");
     for proc in KERNEL.processes.iter() {
-        log::info!("{}", proc);
+        info!("{}", proc);
     }
 }

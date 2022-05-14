@@ -6,9 +6,10 @@
 /// Similar to `std::mpmc::channel` and <https://docs.rs/heapless/latest/heapless/spsc/index.html>
 
 use core::cell::UnsafeCell;
-use core::mem::MaybeUninit;
+use core::mem;
+use core::mem::{MaybeUninit, size_of};
 use core::sync::atomic::{AtomicU16, Ordering};
-use crate::mem::queue::{FiFoQueue, QueueError};
+use crate::mem::queue::{FiFoQueue, PushRaw, QueueError, RawItem};
 
 pub struct ConstQueue<T, const N: usize> {
     data: [UnsafeCell<MaybeUninit<T>>; N],
@@ -35,7 +36,7 @@ impl<T, const N: usize> ConstQueue<T, { N }> {
             capacity - (writer - reader)
         } else {
             // Writer has wrapped around end of data.
-            capacity - reader - writer
+            reader - writer - 1
         }
     }
 
@@ -92,6 +93,16 @@ impl<T, const N: usize> FiFoQueue<T, { N }> for ConstQueue<T, { N }> {
 
     fn capacity(&self) -> usize {
         N - 1
+    }
+}
+
+impl<T, const N: usize> PushRaw for ConstQueue<T, { N }>
+    where T: Copy
+{
+    unsafe fn try_push_back_raw(&self, item: RawItem) -> Result<(), QueueError> {
+        assert_eq!(item.size, size_of::<T>());
+        let item: &mut T = mem::transmute(item.ptr);
+        self.try_push_back(*item)
     }
 }
 
