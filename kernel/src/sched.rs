@@ -250,11 +250,10 @@ pub(crate) fn event_register() -> Result<usize, AllocError> {
     critical_section::exec(|| {
         let id = sched.event_counter + 1;
         sched.event_counter = id;
-        let result = sched.events.emplace_back(
+        sched.events.emplace_back(
             Event::new(id),
             KERNEL.allocator()
-        );
-        result.map(|_| id)
+        ).map(|_| id)
     })
 }
 
@@ -526,7 +525,7 @@ fn memory_protection_exception() {
     log::warn!("Memory exception, terminating thread.");
     task_terminate();
 
-    trace::isr_exit();
+    trace::isr_exit_to_scheduler();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
