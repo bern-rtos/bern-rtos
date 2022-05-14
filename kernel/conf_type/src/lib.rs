@@ -30,6 +30,8 @@ pub enum MemoryType {
     Flash,
     /// RAM for non-volatile data storage.
     Ram,
+    /// Memory mapped peripheral.
+    Peripheral,
 }
 
 /// Kernel related config
