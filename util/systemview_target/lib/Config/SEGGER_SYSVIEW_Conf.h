@@ -74,10 +74,7 @@ Additional information:
 **********************************************************************
 */
 
-/*********************************************************************
-* TODO: Add your defines here.                                       *
-**********************************************************************
-*/
+#define SEGGER_SYSVIEW_RTT_BUFFER_SIZE  2048
 
 #ifdef CALLBACKS_OS_TIME
 extern unsigned int systemview_get_timestamp();
