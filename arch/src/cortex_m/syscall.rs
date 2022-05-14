@@ -48,16 +48,11 @@ impl ISyscall for Arch {
 #[naked]
 unsafe extern "C" fn SVCall() {
     asm!(
-//global_asm!(
-//    ".text",
-//    ".global SVCall",
-//    "SVCall:",
     "push {{lr}}",
     "bl syscall_handler",
     "mov r4, r0", // let's use r4 as return value, because r0 is popped from stack
     "pop {{lr}}",
     "bx lr",
-//);
     options(noreturn)
     );
 }
