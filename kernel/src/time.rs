@@ -91,4 +91,4 @@ impl embedded_time::Clock for SysClock<u32> {
 }
 
 #[cfg(feature = "log-defmt")]
-defmt::timestamp!("{=u64}", tick_count_user());
+defmt::timestamp!("{=u64}", crate::syscall::tick_count());

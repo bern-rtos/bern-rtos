@@ -171,7 +171,7 @@ impl Runnable {
         self.next_wut
     }
     pub(crate) fn sleep(&mut self, ms: u32) {
-        self.next_wut = time::tick() + u64::from(ms);
+        self.next_wut = time::tick_count() + u64::from(ms);
     }
 
     pub(crate) fn transition(&self) -> &Transition {
