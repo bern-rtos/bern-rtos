@@ -17,4 +17,6 @@ pub trait ICore {
     fn bkpt();
 
     fn execution_mode() -> ExecMode;
+
+    fn debug_time() -> u32;
 }

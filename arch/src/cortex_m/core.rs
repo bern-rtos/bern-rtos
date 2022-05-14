@@ -50,4 +50,9 @@ impl ICore for ArchCore {
             ExecMode::Thread
         }
     }
+
+    #[inline]
+    fn debug_time() -> u32 {
+        cortex_m::peripheral::DWT::cycle_count()
+    }
 }

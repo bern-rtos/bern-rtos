@@ -66,6 +66,7 @@ mockall::mock!{
         fn start(&mut self);
         fn bkpt();
         fn execution_mode() -> ExecMode;
+        fn debug_time() -> u32;
     }
 }
 
