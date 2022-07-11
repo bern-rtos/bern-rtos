@@ -35,9 +35,15 @@ name = "arm_cm4-timing-isr-bypass"
 path = "tests/timing_isr_bypass.rs"
 harness = false
 
+[[test]]
+name = "arm_cm4-timing-semaphore"
+path = "tests/timing_semaphore.rs"
+harness = false
+
 [dependencies]
-#bern-kernel = { versoin = "*", features = ["log-defmt"] }
-bern-kernel = "*"
+#bern-kernel = { path = "../../../kernel", features = ["log-defmt"] }
+bern-kernel = { path = "../../../kernel" }
+#bern-kernel = "*"
 bern-test = { version = "0.1.1" }
 st-nucleo-f446 = { version = "*", path = "../../../platform/st_nucleo_f446"}
 

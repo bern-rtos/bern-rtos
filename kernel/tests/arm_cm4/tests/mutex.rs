@@ -3,6 +3,7 @@
 #![feature(default_alloc_error_handler)]
 
 extern crate alloc;
+use alloc::sync::Arc;
 
 mod common;
 
@@ -17,22 +18,21 @@ static PROC: &Process = bern_kernel::new_process!(test, 8192);
 
 #[bern_test::tests]
 mod tests {
-    use alloc::sync::Arc;
     use bern_kernel::exec::runnable::Priority;
     use bern_kernel::exec::thread::Thread;
     use super::*;
     use crate::common::*;
     use bern_kernel::{sleep, time};
     use bern_kernel::units::frequency::*;
-    use bern_kernel::kernel;
     use bern_kernel::stack::Stack;
+    use bern_kernel::*;
 
     #[test_set_up]
     fn init_scheduler() {
-        kernel::init();
+        init();
         time::set_tick_frequency(
             1.kHz(),
-            48.MHz()
+            72.MHz()
         );
     }
 
@@ -91,7 +91,7 @@ mod tests {
                 });
         }).ok();
 
-        kernel::start();
+        start();
     }
 
     // Priority inversion: increase priority of blocking task if a higher
@@ -156,6 +156,6 @@ mod tests {
                 });
         }).unwrap();
 
-        kernel::start();
+        start();
     }
 }

@@ -12,8 +12,8 @@ use hal::interrupt;
 
 mod common_timing;
 
-pub fn spawn_timing_thread(_c: &Context, _board: Board) {
-
+pub fn spawn_timing_thread(_c: &Context, mut board: Board) {
+    board.enable_interrupts();
 }
 
 #[allow(non_snake_case)]

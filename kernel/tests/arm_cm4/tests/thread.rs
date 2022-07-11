@@ -18,15 +18,15 @@ mod tests {
     use bern_kernel::time;
     use bern_kernel::stack::Stack;
     use bern_kernel::units::frequency::*;
-    use bern_kernel::kernel;
+    use bern_kernel::*;
 
 
     #[test_set_up]
     fn init_scheduler() {
-        kernel::init();
+        init();
         time::set_tick_frequency(
             1.kHz(),
-            48.MHz()
+            72.MHz()
         );
     }
 
@@ -50,7 +50,7 @@ mod tests {
                 .spawn(move || {
                     loop {
                         led.toggle();
-                        kernel::sleep(100);
+                        sleep(100);
                     }
                 });
 
@@ -59,7 +59,7 @@ mod tests {
                 .priority(Priority::new(0))
                 .stack(Stack::try_new_in(c, 1024).unwrap())
                 .spawn(move || {
-                    kernel::sleep(1000);
+                    sleep(1000);
 
                     // if the test does not fail within x time it succeeded
                     bern_test::test_succeeded();
@@ -67,6 +67,6 @@ mod tests {
                 });
         }).unwrap();
 
-        bern_kernel::kernel::start();
+        start();
     }
 }

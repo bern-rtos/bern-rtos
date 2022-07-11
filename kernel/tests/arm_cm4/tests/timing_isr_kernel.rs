@@ -11,7 +11,8 @@ mod common_timing;
 
 // For the direct latency test the interrupt is handled in kernel mode,
 // bypassing context switches. This one still uses the kernel interrupt handler.
-pub fn spawn_timing_thread(c: &Context, board: Board) {
+pub fn spawn_timing_thread(c: &Context, mut board: Board) {
+    board.enable_interrupts();
     let mut input = board.shield.button_0;
     let mut output = board.shield.led_7;
 

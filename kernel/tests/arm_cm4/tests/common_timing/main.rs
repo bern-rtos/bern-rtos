@@ -2,21 +2,19 @@ use core::sync::atomic;
 use core::sync::atomic::Ordering;
 use super::Board;
 use bern_kernel::exec::process::Process;
-use bern_kernel::exec::thread::Thread;
-use bern_kernel::sched;
-use bern_kernel::stack::Stack;
 use bern_kernel::bern_arch::cortex_m::cortex_m_rt;
+use bern_kernel::units::frequency::ExtMilliHertz;
 
 static PROC: &Process = bern_kernel::new_process!(test, 4096);
 
 #[cortex_m_rt::entry]
 fn main() -> ! {
-    let board = Board::new();
+    let board = Board::new(100);
 
-    sched::init();
-    sched::set_tick_frequency(
-        1_000,
-        72_000_000
+    bern_kernel::init();
+    bern_kernel::time::set_tick_frequency(
+        1.kHz(),
+        100.MHz(),
     );
 
     PROC.init(move |c| {
@@ -24,7 +22,7 @@ fn main() -> ! {
     }).ok();
 
     defmt::info!("Starting interrupt timing test application.");
-    bern_kernel::kernel::start();
+    bern_kernel::start();
 }
 
 #[panic_handler]
