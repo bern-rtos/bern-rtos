@@ -46,11 +46,11 @@ class DigitalDiscovery:
 
     """ Prepare the device for a latency measurement triggered by an digital output.
     I/Os:
-        * interrupt trigger output: DIO24 (pulse 10ms low, 90ms high, idle: high)
-        * trigger input: DIN1 (connect to DIO24)
+        * trigger output: DIO24 (pulse 10ms low, 90ms high, idle: high)
+        * trigger input: DIN1 (connect to DIO24) if trigger_on_output else DIN0
         * latency capture input: DIN0
     """
-    def prepare_triggered_latency(self, fs, t):
+    def prepare_triggered_latency(self, fs, t, trigger_on_output):
         self.fs = fs
         self.t = t
 
@@ -70,10 +70,13 @@ class DigitalDiscovery:
         self.n_samples = int(t * fs)
         self.dwf.FDwfDigitalInBufferSizeSet(self.hdwf, c_int(self.n_samples))
 
-        # Set Trigger to falling edge of DIN1
+        # Set Trigger to falling edge of DIN1 or DIN0
         self.dwf.FDwfDigitalInTriggerSourceSet(self.hdwf, c_ubyte(3))  # trigsrcDetectorDigitalIn
-        self.dwf.FDwfDigitalInTriggerPositionSet(self.hdwf, c_int(int(self.n_samples - 1)))
-        self.dwf.FDwfDigitalInTriggerSet(self.hdwf, c_int(0), c_int(0), c_int(0), c_int(2))  # DIN1 falling edge
+        self.dwf.FDwfDigitalInTriggerPositionSet(self.hdwf, c_int(int(self.n_samples)))
+        if trigger_on_output:
+            self.dwf.FDwfDigitalInTriggerSet(self.hdwf, c_int(0), c_int(0), c_int(0), c_int(2))  # DI1 falling edge
+        else:
+            self.dwf.FDwfDigitalInTriggerSet(self.hdwf, c_int(0), c_int(0), c_int(0), c_int(1))  # DIO falling edge
 
     def measure(self):
         sts = c_byte()

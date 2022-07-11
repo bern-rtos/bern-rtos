@@ -18,6 +18,10 @@ def main():
     print("Read raw data")
     latencies = pd.read_csv("result/raw.csv", index_col=0)
 
+    #stats = latencies.describe()
+    #stats.to_csv("result/stats.csv")
+
+
     # Simplify column names
     columns = latencies.columns
     new_columns = []
