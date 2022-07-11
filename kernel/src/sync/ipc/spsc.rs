@@ -1,4 +1,4 @@
-use crate::sync::ipc_channel::IpcChannel;
+use crate::sync::ipc::channel::IpcChannel;
 
 pub fn channel() -> IpcChannel {
     IpcChannel::new()

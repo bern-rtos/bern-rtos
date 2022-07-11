@@ -23,7 +23,7 @@ use core::alloc::Layout;
 use core::mem;
 use core::ptr::NonNull;
 
-use crate::{kernel, KERNEL, sched, time};
+use crate::{kernel, KERNEL, sched, sync, time};
 use crate::sched::event;
 use crate::exec::runnable::RunnableResult;
 use crate::exec::thread::ThreadBuilder;
@@ -35,9 +35,15 @@ use crate::alloc::wrapper::Wrapper;
 use crate::alloc::allocator::AllocError;
 use crate::mem::queue::{PushRaw, RawItem};
 use crate::sync::channel::ChannelError;
+use crate::sync::ipc::semaphore::SemaphoreID;
 
 
 // todo: create with proc macro
+// todo: change syscall structure:
+//      - arg0: ptr to input
+//      - arg1: ptr to result
+//      - no arg2 and no return value in r0
+// todo: check parameters, how?
 
 #[repr(u8)]
 pub enum Service {
@@ -53,8 +59,10 @@ pub enum Service {
     KernelStats,
     CoreDebugTime,
     TickCount,
-    IpcRegister,
-    IpcSend,
+    IpcChannelRegister,
+    IpcChannelSend,
+    IpcSemaphoreRegister,
+    IpcSemaphoreTryAcquire,
 }
 
 impl Service {
@@ -202,7 +210,7 @@ pub fn tick_count() -> u64 {
 pub(crate) fn ipc_register(recv_channel: &dyn PushRaw) -> Result<usize, AllocError> {
     let mut res = Err(AllocError::Other);
     mode_aware_syscall(
-        Service::IpcRegister,
+        Service::IpcChannelRegister,
         &recv_channel as *const _ as usize,
         &mut res as *mut _ as usize,
         0
@@ -214,10 +222,33 @@ pub(crate) fn ipc_send_raw(id: usize, item: RawItem) -> Result<(), ChannelError>
     let mut res = Err(ChannelError::ChannelClosed);
 
     mode_aware_syscall(
-        Service::IpcSend,
+        Service::IpcChannelSend,
         id,
         &item as *const _ as usize,
         &mut res as *mut _ as usize,
+    );
+    res
+}
+
+pub(crate) fn ipc_semaphore_register() ->  Result<(SemaphoreID, usize), AllocError> {
+    let mut res = Err(AllocError::Other);
+    mode_aware_syscall(
+        Service::IpcSemaphoreRegister,
+        0,
+        &mut res as *mut _ as usize,
+        0
+    );
+    res
+}
+
+pub(crate) fn ipc_semaphore_try_aquire(id: SemaphoreID) -> Result<bool, sync::Error> {
+    let mut res = Err(sync::Error::Poisoned);
+
+    mode_aware_syscall(
+        Service::IpcSemaphoreTryAcquire,
+        &id as *const _ as usize,
+        &mut res as *mut _ as usize,
+        0
     );
     res
 }
@@ -228,9 +259,9 @@ pub(crate) fn ipc_send_raw(id: usize, item: RawItem) -> Result<(), ChannelError>
 ///
 /// **Note:** The syscall above will trigger hardware specific system call
 /// handler which **must** call this function.
-// todo: return result
 #[allow(unused_variables)]
 fn syscall_handler_impl(service: Service, arg0: usize, arg1: usize, arg2: usize) -> usize {
+    #[allow(unreachable_patterns)]
     let r = match service {
         Service::TaskSpawn => {
             let builder: &mut ThreadBuilder = unsafe { mem::transmute(arg0 as *mut ThreadBuilder) };
@@ -313,13 +344,13 @@ fn syscall_handler_impl(service: Service, arg0: usize, arg1: usize, arg2: usize)
             }
             0
         }
-        Service::IpcRegister => {
+        Service::IpcChannelRegister => {
             let recv_queue: &&dyn PushRaw = unsafe { mem::transmute(arg0) };
             let res: &mut Result<usize, AllocError> = unsafe { mem::transmute(arg1) };
             *res = KERNEL.register_channel(NonNull::from(*recv_queue));
             0
         }
-        Service::IpcSend => {
+        Service::IpcChannelSend => {
             let id = arg0;
             let item: &RawItem = unsafe { mem::transmute(arg1) };
             let res: &mut Result<(), ChannelError> = unsafe { mem::transmute(arg2) };
@@ -330,6 +361,21 @@ fn syscall_handler_impl(service: Service, arg0: usize, arg1: usize, arg2: usize)
             });
             0
         }
+        Service::IpcSemaphoreRegister => {
+            let res: &mut Result<(SemaphoreID, usize), AllocError> = unsafe { mem::transmute(arg1) };
+            *res = KERNEL.register_semaphore();
+            0
+        }
+        Service::IpcSemaphoreTryAcquire => {
+            let id = &arg0 as &SemaphoreID;
+            let res: &mut Result<bool, sync::Error> = unsafe { mem::transmute(arg1) };
+
+            *res = KERNEL.with_semaphore(*id, |s| {
+                Ok(false)
+            }).or(Err(sync::Error::Poisoned));
+            0
+        }
+        _ => 0,
     };
     r
 }

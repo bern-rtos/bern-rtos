@@ -40,7 +40,7 @@ use crate::sched::event;
 /// }
 /// ```
 pub struct Semaphore {
-    id: UnsafeCell<usize>,
+    event_id: UnsafeCell<usize>,
     permits: AtomicUsize,
     permits_issued: AtomicUsize,
 }
@@ -48,7 +48,7 @@ pub struct Semaphore {
 impl Semaphore {
     pub fn new(permits: usize) -> Self {
         let semaphore = Semaphore {
-            id: UnsafeCell::new(0),
+            event_id: UnsafeCell::new(0),
             permits:  AtomicUsize::new(permits),
             permits_issued: AtomicUsize::new(0),
         };
@@ -66,7 +66,7 @@ impl Semaphore {
             Err(Error::OutOfMemory)
         } else {
             // NOTE(unsafe): only called before the semaphore is in use
-            unsafe { self.id.get().write(id); }
+            unsafe { self.event_id.get().write(id); }
             Ok(())
         }
     }
@@ -91,7 +91,7 @@ impl Semaphore {
         if self.raw_try_acquire() {
             return Ok(SemaphorePermit::new(&self));
         } else {
-            let id = unsafe { *self.id.get() };
+            let id = unsafe { *self.event_id.get() };
             match syscall::event_await(id, timeout) {
                 Ok(_) => {
                     self.raw_try_acquire();
@@ -112,7 +112,7 @@ impl Semaphore {
     pub fn add_permits(&self, n: usize) {
         self.permits.fetch_add(n, Ordering::Release);
         // NOTE(unsafe): `id` is not changed after startup
-        syscall::event_fire(unsafe { *self.id.get() });
+        syscall::event_fire(unsafe { *self.event_id.get() });
     }
 
     fn raw_try_acquire(&self) -> bool {
@@ -137,7 +137,7 @@ impl Semaphore {
     fn raw_release(&self) {
         self.permits_issued.fetch_sub(1, Ordering::Release);
         // NOTE(unsafe): `id` is not changed after startup
-        syscall::event_fire(unsafe { *self.id.get() });
+        syscall::event_fire(unsafe { *self.event_id.get() });
     }
 }
 

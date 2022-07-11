@@ -20,7 +20,8 @@ use bern_conf_type::{MemoryLocation, MemoryType};
 use crate::mem::queue::PushRaw;
 use crate::sync::channel::ChannelError;
 use crate::sync::critical_section;
-use crate::sync::ipc_channel::{ChannelID, IpcChannelInternal};
+use crate::sync::ipc::channel::{ChannelID, IpcChannelInternal};
+use crate::sync::ipc::semaphore::{IpcSemaphoreInternal, SemaphoreID};
 
 #[link_section = ".kernel"]
 pub(crate) static KERNEL: Kernel = Kernel::new();
@@ -40,10 +41,16 @@ pub struct Kernel {
     allocator: UnsafeCell<MaybeUninit<Bump>>,
     /// List of processes.
     processes: LinkedList<ProcessInternal>,
+
     /// List of inter-process channels.
     ipc_channels: LinkedList<IpcChannelInternal>,
     /// Channel ID counter, used to assign IDs.
     ipc_channel_counter: AtomicUsize,
+
+    /// List of inter-process semaphores.
+    ipc_semaphores: LinkedList<IpcSemaphoreInternal>,
+    /// Semaphore ID counter.
+    ipc_semaphore_counter: AtomicUsize,
 }
 
 impl Kernel {
@@ -53,8 +60,12 @@ impl Kernel {
             init_process: AtomicPtr::new(null_mut()),
             allocator: UnsafeCell::new(MaybeUninit::uninit()),
             processes: LinkedList::new(),
+
             ipc_channels: LinkedList::new(),
             ipc_channel_counter: AtomicUsize::new(1),
+
+            ipc_semaphores: LinkedList::new(),
+            ipc_semaphore_counter: AtomicUsize::new(1),
         }
     }
 
@@ -102,7 +113,6 @@ impl Kernel {
             self.processes.push_back(process_node);
         })
     }
-
     pub(crate) fn is_process_registered(&self, process: &ProcessInternal) -> bool {
         for proc in self.processes.iter() {
             if proc.start_addr() == process.start_addr() {
@@ -123,16 +133,38 @@ impl Kernel {
             ).map(|_| id)
         })
     }
-
     pub(crate) fn with_channel<F, R>(&self, channel_id: ChannelID, mut f: F) -> Result<R, ChannelError>
-        where
-            F: FnMut(&mut IpcChannelInternal) -> Result<R, ChannelError>,
+        where F: FnMut(&mut IpcChannelInternal) -> Result<R, ChannelError>,
     {
         self.ipc_channels
             .iter_mut()
             .find(|ch| ch.id() == channel_id)
             .ok_or(ChannelError::ChannelClosed)
             .and_then(|ch| f(ch))
+    }
+
+    pub(crate) fn register_semaphore(&'static self) -> Result<(SemaphoreID, usize), AllocError> {
+        let semaphore_id = self.ipc_semaphore_counter.load(Ordering::Relaxed);
+        self.ipc_semaphore_counter.fetch_add(1, Ordering::Release);
+
+        sched::event_register()
+            .and_then(|event_id| {
+                critical_section::exec(|| {
+                    self.ipc_semaphores.emplace_back(
+                        IpcSemaphoreInternal::new(semaphore_id, event_id),
+                        self.allocator()
+                    ).map(|_| (semaphore_id, event_id))
+                })
+            })
+    }
+    pub(crate) fn with_semaphore<F, R>(&self, semaphore_id: SemaphoreID, mut f: F) -> Result<R, ()>
+        where F: FnMut(&mut IpcSemaphoreInternal) -> Result<R, ()>,
+    {
+        self.ipc_semaphores
+            .iter_mut()
+            .find(|s| s.id() == semaphore_id)
+            .ok_or(())
+            .and_then(|s| f(s))
     }
 }
 
