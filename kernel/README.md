@@ -1,12 +1,9 @@
 # `bern-kernel`
 
-Bern RTOS preemptive real-time kernel for microcontrollers written in Rust.
+[![crates.io](https://img.shields.io/crates/v/bern-kernel)](https://crates.io/crates/bern-kernel)
+[![docs.rs](https://docs.rs/bern-kernel/badge.svg)](https://docs.rs/bern-kernel)
+[![book](https://img.shields.io/badge/web-kernel.bern--rtos.org-red.svg?style=flat&label=book&colorB=d33847)](https://kernel.bern-rtos.org/)
 
-## Documentation
+<!-- cargo-rdme start -->
 
-- [Bern RTOS Kernel Book](https://kernel.bern-rtos.org/)
-- [API Documentation](https://docs.rs/bern-kernel/)
-
-## License
-
-- [MIT License](LICENSE.md)
+<!-- cargo-rdme end -->
