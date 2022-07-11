@@ -33,7 +33,7 @@ fn system_tick_update() {
 }
 
 /// Get the current system time in ticks.
-pub fn tick_count() -> u64 {
+pub(crate) fn tick_count() -> u64 {
     let tick;
     loop {
         let high = TICK_HIGH.load(Ordering::Acquire);

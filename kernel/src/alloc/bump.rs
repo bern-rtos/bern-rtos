@@ -91,7 +91,7 @@ unsafe impl Sync for Bump { }
 
 #[cfg(all(test, not(target_os = "none")))]
 mod tests {
-    use core::mem::{align_of, size_of, transmute};
+    use core::mem::{align_of, size_of};
     use super::*;
 
     struct MyStruct {
@@ -143,7 +143,7 @@ mod tests {
         assert_eq!(bump.capacity().0, 128);
 
         let layout = Layout::from_size_align(16, 1).unwrap();
-        for i in 0..8 {
+        for _ in 0..8 {
             let _dump = bump.alloc(layout).unwrap();
         }
 

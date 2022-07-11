@@ -1,7 +1,11 @@
-//! Bern RTOS kernel for microcontroller.
+//! Bern RTOS preemptive real-time kernel for microcontrollers written in Rust.
+//!
+//! # Features
+//! -
 //!
 //! # Documentation
-//! Refer to the kernel book [kernel.bern-rtos.org](https://kerneel.bern-rtos.org).
+//! - [Bern RTOS Kernel Book](https://kernel.bern-rtos.org/)
+//! - [API Documentation](https://docs.rs/bern-kernel/)
 //!
 //! # Semantic Versioning
 //! This project follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
@@ -12,9 +16,14 @@
 //! # Cargo features
 //! - `time-slicing`: A task runs at max for one system tick period if there are
 //!   other tasks of equal priority
+//!
+//! # License
+//! - [MIT License](LICENSE.md)
+//!
+//! # Quickstart Guide
+//!
 
 #![cfg_attr(target_os = "none", no_std)]
-#![cfg_attr(not(target_os = "none"), feature(const_ptr_offset))]
 
 pub mod sched;
 pub mod syscall;

@@ -11,7 +11,7 @@ stm32f4xx-hal = { version = "0.13.1", features = ["rt", "stm32f411"] }
 
 [dev-dependencies]
 #bern-kernel = { version = "*", features = ["trace", "log-global"] }
-#systemview-target = { version = "*", features = ["log", "callbacks-app", "callbacks-os"] }
+#systemview-target = { version = "0.1", features = ["log", "callbacks-app", "callbacks-os"] }
 #rtos-trace = "*"
 #log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"]}
 

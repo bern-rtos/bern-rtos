@@ -532,8 +532,6 @@ fn memory_protection_exception() {
 
 #[cfg(all(test, not(target_os = "none")))]
 mod tests {
-    use super::*;
-
     #[test]
     fn empty() {
         // Arch::disable_interrupts_context().expect().return_once(|priority| {
