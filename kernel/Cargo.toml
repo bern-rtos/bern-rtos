@@ -34,9 +34,7 @@ defmt = { version = "0.3", optional = true }
 rtt-target = { version = "0.3", optional = true }
 
 [build-dependencies]
-toml = "0.5.8"
-serde = "1.0.125"
-serde_derive = "1.0.125"
+serde = { version = "1.0", default-features = false, features = ["serde_derive"] }
 bern-conf = "*"
 const_format = "0.2"
 
