@@ -1,6 +1,0 @@
-#ifndef SYSTEMVIEW_WRAPPER_H
-#define SYSTEMVIEW_WRAPPER_H
-
-#include "../lib/SEGGER/SEGGER_SYSVIEW.h"
-
-#endif //SYSTEMVIEW_WRAPPER_H
