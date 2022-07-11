@@ -1,5 +1,7 @@
 #![no_std]
 
+pub mod trace;
+
 pub use stm32f4xx_hal as hal;
 use hal::prelude::*;
 use hal::pac::{
@@ -12,7 +14,9 @@ use hal::serial::{
     Tx,
     Rx,
 };
-use stm32f4xx_hal::pac::TIM2;
+use stm32f4xx_hal::pac::{EXTI, TIM2};
+use stm32f4xx_hal::syscfg::SysCfg;
+use stm32f4xx_hal::time::Hertz;
 use stm32f4xx_hal::timer::Delay;
 
 pub struct Vcp {
@@ -46,10 +50,12 @@ pub struct StNucleoF446 {
     pub vcp: Option<Vcp>, // allow taking vcp and passing the board on, not optimal
     pub shield: ShieldBfh,
     pub delay: Delay<TIM2, 1_000_000>,
+    syscfg: SysCfg,
+    exti: EXTI,
 }
 
 impl StNucleoF446 {
-    pub fn new() -> Self {
+    pub fn new(sysclock_mhz: u32) -> Self {
         let mut stm32_peripherals = Peripherals::take()
             .expect("cannot take stm32 peripherals");
 
@@ -58,7 +64,7 @@ impl StNucleoF446 {
 
         /* system clock */
         let rcc = stm32_peripherals.RCC.constrain();
-        let clocks = rcc.cfgr.sysclk(72.MHz()).freeze();
+        let clocks = rcc.cfgr.sysclk(Hertz::MHz(sysclock_mhz)).freeze();
 
         /* gpio's */
         let gpioa = stm32_peripherals.GPIOA.split();
@@ -78,7 +84,7 @@ impl StNucleoF446 {
 
         /* board IOs */
         let led = gpioa.pa5.into_push_pull_output().erase();
-        let mut button = gpioc.pc13.into_floating_input().erase();
+        let button = gpioc.pc13.into_floating_input().erase();
 
         /* BFH BTE5056 shield */
         //let shield_led_0 = gpiob.pb11.into_push_pull_output().downgrade();
@@ -90,42 +96,18 @@ impl StNucleoF446 {
         let shield_led_6 = gpioc.pc6.into_push_pull_output().erase();
         let shield_led_7 = gpioc.pc7.into_push_pull_output().erase();
 
-        let mut shield_button_0 = gpiob.pb6.into_pull_up_input().erase();
-        let mut shield_button_1 = gpiob.pb0.into_pull_up_input().erase();
+        let shield_button_0 = gpiob.pb6.into_pull_up_input().erase();
+        let shield_button_1 = gpiob.pb0.into_pull_up_input().erase();
         let shield_button_2 = gpiob.pb2.into_pull_up_input().erase();
         let shield_button_3 = gpiob.pb3.into_pull_up_input().erase();
         let shield_button_4 = gpiob.pb4.into_pull_up_input().erase();
         let shield_button_5 = gpiob.pb5.into_pull_up_input().erase();
         let shield_button_6 = gpiob.pb1.into_pull_up_input().erase();
-        let mut shield_button_7 = gpiob.pb7.into_pull_up_input().erase();
-
-        /* enable button interrupts */
-        let mut syscfg = stm32_peripherals.SYSCFG.constrain();
-        button.make_interrupt_source(&mut syscfg);
-        button.enable_interrupt(&mut stm32_peripherals.EXTI);
-        button.trigger_on_edge(&mut stm32_peripherals.EXTI, Edge::Falling);
-
-        shield_button_0.make_interrupt_source(&mut syscfg);
-        shield_button_0.enable_interrupt(&mut stm32_peripherals.EXTI);
-        shield_button_0.trigger_on_edge(&mut stm32_peripherals.EXTI, Edge::Falling);
-
-        shield_button_1.make_interrupt_source(&mut syscfg);
-        shield_button_1.enable_interrupt(&mut stm32_peripherals.EXTI);
-        shield_button_1.trigger_on_edge(&mut stm32_peripherals.EXTI, Edge::Falling);
-
-        shield_button_7.make_interrupt_source(&mut syscfg);
-        shield_button_7.enable_interrupt(&mut stm32_peripherals.EXTI);
-        shield_button_7.trigger_on_edge(&mut stm32_peripherals.EXTI, Edge::Falling);
-
-
-        unsafe {
-            hal::pac::NVIC::unmask(hal::pac::interrupt::EXTI0);
-            hal::pac::NVIC::unmask(hal::pac::interrupt::EXTI9_5);
-            hal::pac::NVIC::unmask(hal::pac::interrupt::EXTI15_10);
-        }
+        let shield_button_7 = gpiob.pb7.into_pull_up_input().erase();
 
         let delay = stm32_peripherals.TIM2.delay(&clocks);
-
+        let syscfg = stm32_peripherals.SYSCFG.constrain();
+        let exti = stm32_peripherals.EXTI;
         /* assemble... */
         StNucleoF446 {
             led: Some(led),
@@ -154,6 +136,35 @@ impl StNucleoF446 {
                 button_7: shield_button_7,
             },
             delay,
+            syscfg,
+            exti,
+        }
+    }
+
+    #[allow(unused)]
+    pub fn enable_interrupts(&mut self) {
+        /* enable button interrupts */
+
+        self.button.make_interrupt_source(&mut self.syscfg);
+        self.button.enable_interrupt(&mut self.exti);
+        self.button.trigger_on_edge(&mut self.exti, Edge::Falling);
+
+        self.shield.button_0.make_interrupt_source(&mut self.syscfg);
+        self.shield.button_0.enable_interrupt(&mut self.exti);
+        self.shield.button_0.trigger_on_edge(&mut self.exti, Edge::Falling);
+
+        self.shield.button_1.make_interrupt_source(&mut self.syscfg);
+        self.shield.button_1.enable_interrupt(&mut self.exti);
+        self.shield.button_1.trigger_on_edge(&mut self.exti, Edge::Falling);
+
+        self.shield.button_7.make_interrupt_source(&mut self.syscfg);
+        self.shield.button_7.enable_interrupt(&mut self.exti);
+        self.shield.button_7.trigger_on_edge(&mut self.exti, Edge::Falling);
+
+        unsafe {
+            hal::pac::NVIC::unmask(hal::pac::interrupt::EXTI0);
+            hal::pac::NVIC::unmask(hal::pac::interrupt::EXTI9_5);
+            hal::pac::NVIC::unmask(hal::pac::interrupt::EXTI15_10);
         }
     }
 }

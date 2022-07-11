@@ -10,10 +10,10 @@ embedded-hal = "0.2.4"
 stm32f4xx-hal = { version = "0.13.1", features = ["rt", "stm32f411"] }
 
 [dev-dependencies]
-bern-kernel = { version = "*", features = ["trace", "log-global"] }
-systemview-target = { version = "*", features = ["log", "callbacks-app", "callbacks-os"] }
-rtos-trace = "*"
-log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"]}
+#bern-kernel = { version = "*", features = ["trace", "log-global"] }
+#systemview-target = { version = "*", features = ["log", "callbacks-app", "callbacks-os"] }
+#rtos-trace = "*"
+#log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"]}
 
 #bern-kernel = { version = "*", features = ["log-rtt"] }
 
@@ -21,7 +21,7 @@ log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"
 #defmt = "0.3.1"
 #defmt-rtt = "0.3.0"
 
+bern-kernel = { version = "*", features = ["log-global"] }
+rtt-target = { version = "0.3", features = ["cortex-m"] }
+log = { version = "0.4", default-features = false }
 
-# Optimize all dependencies
-#[profile.dev.package."*"]
-#opt-level = "s"
