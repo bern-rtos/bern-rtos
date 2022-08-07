@@ -1,6 +1,6 @@
 [package]
 name = "bern-kernel-macros"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
 edition = "2021"
 license = "MIT"
