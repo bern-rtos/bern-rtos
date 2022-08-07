@@ -1,6 +1,6 @@
 [package]
 name = "bern-conf"
-version = "0.1"
+version = "0.2.0"
 authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
 edition = "2021"
 license = "MIT"
