@@ -2,7 +2,7 @@
 
 use stm32f4xx_hal as hal;
 use hal::prelude::*;
-use hal::stm32::{
+use hal::pac::{
     Peripherals,
 };
 

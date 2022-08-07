@@ -1,6 +1,6 @@
 [package]
 name = "bern-arch"
-version = "0.2.3"
+version = "0.3.0"
 authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
 edition = "2021"
 license = "MIT"
@@ -12,7 +12,7 @@ repository = "https://gitlab.com/bern-rtos/kernel/bern-arch"
 homepage = "https://bern-rtos.org"
 
 [dependencies]
-bern-units = "*"
+bern-units = "0.1"
 
 [target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies]
 cortex-m-rt = "0.7"

@@ -1,23 +1,5 @@
 //! System calls.
 //!
-//! # Example
-//!
-//! Launch a task that wait for 100 iterations and the terminates.
-//! ```ignore
-//! fn main() -> ! {
-//!     /*...*/
-//!     sched::init();
-//!
-//!     Task::new()
-//!         .static_stack(kernel::alloc_static_stack!(512))
-//!         .spawn(move || {
-//!             for a in 0..100 {
-//!                 bern_kernel::sleep(100);
-//!             }
-//!             bern_kernel::task_exit();
-//!         });
-//! }
-//! ```
 
 use core::alloc::Layout;
 use core::mem;
@@ -81,7 +63,7 @@ fn mode_aware_syscall(service: Service, arg0: usize, arg1: usize, arg2: usize) -
     }
 }
 
-/// Add a task to the scheduler based on its `TaskBuilder` and entry point.
+/// Add a task to the scheduler based on its `ThreadBuilder` and entry point.
 pub(crate) fn thread_spawn(builder: &mut ThreadBuilder, entry: &&mut (dyn FnMut() -> RunnableResult)) {
     mode_aware_syscall(
         Service::TaskSpawn,

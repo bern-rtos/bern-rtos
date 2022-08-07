@@ -16,10 +16,6 @@ rustflags = [
   "-C", "link-arg=--demangle",
 ]
 
-[target.'cfg(all(target_arch = "arm", target_os = "none", feature = "log-defmt"))']
-rustflags = [
-  "-C", "link-arg=-Tdefmt.x",
-]
 
 [build]
 # Pick ONE of these compilation targets

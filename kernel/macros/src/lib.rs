@@ -1,4 +1,4 @@
-//! Procedural macros the bern_kernel.
+//! Procedural macros for the `bern_kernel`.
 //!
 //! This crate provides macros that:
 //! - simplify the kernel usage
@@ -52,6 +52,29 @@ pub fn enum_map(input: TokenStream) -> TokenStream {
     TokenStream::from(output)
 }
 
+/// Creates a new process and the required linker sections.
+///
+/// # Example
+/// ```ignore
+/// // Create a process named `my_proc` with 32kB memory.
+/// static MY_PROC: &Process = bern_kernel::new_process!(my_proc, 32768);
+///
+/// // Place static variable in process memory.
+/// #[link_section = ".process.my_proc"]
+/// static DATA: u32 = 0xDEADBEEF;
+///
+/// #[entry]
+/// fn main() -> ! {
+///     let board = Board::new();
+///     bern_kernel::init();
+///     /*..*/
+///     MY_PROC.init(move |c| {
+///         // Spawn threads.
+///     }).unwrap();
+///     /*..*/
+///     bern_kernel::start();
+/// }
+/// ```
 #[proc_macro]
 pub fn new_process(input: TokenStream) -> TokenStream {
     let map = syn::parse_macro_input!(input as process::ProcessInfo);

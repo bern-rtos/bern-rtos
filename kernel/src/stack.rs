@@ -1,11 +1,4 @@
-//! Task stack management.
-//!
-//! # Example
-//! You typically want to use a macro allocate a static stack ([`alloc_static_stack`]) and create the
-//! management object accordingly:
-//! ```ignore
-//! let stack: bern_kernel::stack::Stack = alloc_static_stack!(512);
-//! ```
+//! Thread stack management.
 
 use core::ops::{DerefMut, Deref};
 
@@ -136,35 +129,4 @@ impl<A, T> DerefMut for Aligned<A, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.value
     }
-}
-
-/// Allocate a static stack with given size in bytes.
-///
-/// The macro checks whether the size meets the size and alignment requirements
-/// of the memory protection hardware in use. e.g.
-/// ```ignore
-/// let stack: bern_kernel::stack::Stack = alloc_static_stack!(512);
-/// // ok
-///
-/// let stack: bern_kernel::stack::Stack = alloc_static_stack!(431);
-/// // compiler error on cortex-m as size is not feasible for memory protection
-/// ```
-///
-/// The arrays for static stacks are put in the `.task_stack` linker section.
-///
-/// # Safety
-/// This macro must no be called multiple times as new stack objects to the same
-/// static stack will be returned.
-#[macro_export]
-macro_rules! alloc_static_stack {
-    ($size:tt) => {
-        {
-            #[link_section = ".task_stack"]
-            static mut STACK: $crate::stack::Aligned<$crate::bern_arch::alignment_from_size!($size), [u8; $size]> =
-                $crate::stack::Aligned([0; $size]);
-
-            // this is unsound, because the same stack can 'allocated' multiple times
-            unsafe { $crate::stack::Stack::new(&mut *STACK, $crate::bern_arch::size_from_raw!($size)) }
-        }
-    };
 }

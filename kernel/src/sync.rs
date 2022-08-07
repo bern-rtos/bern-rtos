@@ -4,8 +4,8 @@
 
 pub(crate) mod critical_mutex;
 pub(crate) mod critical_section;
-mod mutex;
-mod semaphore;
+pub mod mutex;
+pub mod semaphore;
 
 pub mod channel;
 pub mod spsc;

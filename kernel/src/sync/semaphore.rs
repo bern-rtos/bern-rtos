@@ -13,32 +13,6 @@ use crate::sched::event;
 /// - synchronize on one or more event (e.g. interrupt)
 /// - synchronize multiple tasks
 ///
-/// # Example
-/// ```ignore
-/// // put the mutex in a section where all tasks have access
-/// #[link_section = ".shared"]
-/// // create a counting semaphore that can be taken 4 times
-/// static SEMAPHORE: Semaphore = Semaphore::new(4);
-///
-/// fn main() -> ! {
-///     /*...*/
-///     sched::init();
-///     // allocate an event slot in the kernel, so that tasks can wait for a permit
-///     SEMAPHORE.register().ok();
-///
-///     Task::new()
-///         .static_stack(kernel::alloc_static_stack!(512))
-///         .spawn(move || {
-///             loop {
-///                 /*...*/
-///                 // attempt to acquire a permit with timeout
-///                 match SEMAPHORE.acquire(1000) {
-///                     do_something();
-///                 }; // permit released automatically
-///            }
-///         });
-/// }
-/// ```
 pub struct Semaphore {
     event_id: UnsafeCell<usize>,
     permits: AtomicUsize,

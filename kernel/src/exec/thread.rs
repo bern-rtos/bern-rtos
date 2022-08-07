@@ -2,20 +2,8 @@
 //!
 //! # Example
 //! Create a task using the builder pattern:
-//! ```ignore
-//! let mut heartbeat = board.shield.led_1;
-//! Task::new()
-//!     .priority(Priority(0))
-//!     .static_stack(kernel::alloc_static_stack!(512))
-//!     .spawn(move || {
-//!         loop {
-//!             kernel::sleep(200);
-//!             heartbeat.toggle().ok();
-//!         }
-//!     });
-//! ```
-//! The task builder ([`TaskBuilder`]) is used to configure a task. On
-//! [`TaskBuilder::spawn()`] the information is passed to the scheduler and the
+//! The task builder ([`ThreadBuilder`]) is used to configure a task. On
+//! [`ThreadBuilder::spawn()`] the information is passed to the scheduler and the
 //! task is put into ready state.
 //!
 //! Tasks can be spawened from `main()` or within other tasks.
@@ -48,7 +36,7 @@ use crate::mem::boxed::Box;
 pub struct Thread {}
 
 impl Thread {
-    /// Create a new task using the [`TaskBuilder`]
+    /// Create a new task using the [`ThreadBuilder`]
     pub fn new(context: &process::Context) -> ThreadBuilder {
         ThreadBuilder {
             process: context.process(),

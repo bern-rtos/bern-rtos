@@ -1,3 +1,5 @@
+//! Allocator collection.
+
 pub mod allocator;
 pub mod bump;
 pub mod heap;

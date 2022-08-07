@@ -9,11 +9,25 @@ use bern_kernel::exec::process::Context;
 use crate::common_timing::Board;
 use st_nucleo_f446::hal;
 use hal::interrupt;
+use core::sync::atomic::{compiler_fence, Ordering};
+use bern_kernel::exec::runnable::Priority;
+use bern_kernel::exec::thread::Thread;
+use bern_kernel::stack::Stack;
 
 mod common_timing;
 
-pub fn spawn_timing_thread(_c: &Context, mut board: Board) {
+pub fn spawn_timing_thread(c: &Context, mut board: Board) {
     board.enable_interrupts();
+
+    Thread::new(c)
+        .priority(Priority::new(0))
+        .stack(Stack::try_new_in(c, 1024).unwrap())
+        .spawn(move || {
+            loop {
+                compiler_fence(Ordering::SeqCst);
+            }
+        });
+
 }
 
 #[allow(non_snake_case)]

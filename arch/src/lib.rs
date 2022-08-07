@@ -4,12 +4,12 @@
 //! any real-time operating system.
 //!
 //! # Documentation
-//! Refer to the kernel book [kernel.bern-rtos.org](https://kerneel.bern-rtos.org).
 //!
-//! # Supported Architectures
-//! | Core Name | Architecture | Rust Target |
-//! |-----------|--------------|-------------|
-//! | ARM Cortex-M4 w/MPU | ARMv7E-M | `thumbv7em-none-eabi` |
+//! - [Bern RTOS Kernel Book](https://kernel.bern-rtos.org/)
+//! - [API Documentation](https://docs.rs/bern-arch/)
+//!
+//! # License
+//! - [MIT License](https://gitlab.com/bern-rtos/bern-rtos/-/blob/main/arch/LICENSE.md)
 
 #![cfg_attr(target_os = "none", no_std)]
 #![feature(naked_functions)]

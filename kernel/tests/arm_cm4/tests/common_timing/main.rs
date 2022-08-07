@@ -9,12 +9,12 @@ static PROC: &Process = bern_kernel::new_process!(test, 4096);
 
 #[cortex_m_rt::entry]
 fn main() -> ! {
-    let board = Board::new(100);
+    let board = Board::new(168);
 
     bern_kernel::init();
     bern_kernel::time::set_tick_frequency(
         1.kHz(),
-        100.MHz(),
+        168.MHz(),
     );
 
     PROC.init(move |c| {

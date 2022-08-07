@@ -14,8 +14,6 @@ extern "C" {
     static mut __ehkernel: usize;
 }
 
-// todo: r0 is deprecated, replace with assembly
-
 impl IStartup for Arch {
     fn init_static_region(mut region: Region) {
         unsafe {

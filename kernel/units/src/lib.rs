@@ -1,3 +1,5 @@
+//! Units used in Bern RTOS.
+
 #![no_std]
 
 pub mod memory_size;

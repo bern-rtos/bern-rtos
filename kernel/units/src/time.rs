@@ -1,3 +1,5 @@
+//! Units representing time.
+
 use derive_more::{Add, Sub, Mul, Div};
 
 //#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]

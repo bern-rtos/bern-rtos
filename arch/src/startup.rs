@@ -15,7 +15,8 @@ pub struct Region {
 pub trait IStartup {
     /// Init static region.
     fn init_static_region(region: Region);
-
+    /// Kernel data region.
     fn kernel_data() -> Region;
+    /// Kernel heap region.
     fn kernel_heap() -> Region;
 }

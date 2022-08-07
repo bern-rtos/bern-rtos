@@ -15,8 +15,8 @@ homepage = "https://bern-rtos.org"
 path = "conf.rs"
 
 [dependencies]
-bern-conf-type = "0.1"
-bern-units = "*"
+bern-conf-type = "0.2"
+bern-units = "0.1"
 
 [package.metadata.docs.rs]
 targets = [

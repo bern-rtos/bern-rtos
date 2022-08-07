@@ -21,7 +21,7 @@ impl<Q> Channel<Q> {
         }
     }
 
-    pub fn split<T, const N: usize>(&self) -> (Sender<Q>, Receiver<Q>)
+    pub fn split<T, const N: usize>(&'static self) -> (Sender<Q>, Receiver<Q>)
         where
             Q: FiFoQueue<T, { N }>,
             T: Copy,

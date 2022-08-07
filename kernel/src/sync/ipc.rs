@@ -1,5 +1,7 @@
 pub mod channel;
 pub mod spsc;
 
-pub mod mutex;
-pub mod semaphore;
+// under development
+pub(crate) mod mutex;
+#[allow(unused)]
+pub(crate) mod semaphore;

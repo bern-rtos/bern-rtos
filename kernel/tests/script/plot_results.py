@@ -16,10 +16,10 @@ def main():
     matplotlib.rcParams['axes.titleweight'] = "bold"
 
     print("Read raw data")
-    latencies = pd.read_csv("result/raw.csv", index_col=0)
+    latencies = pd.read_csv("result/arm_cm4-combined.csv", index_col=0)
 
-    #stats = latencies.describe()
-    #stats.to_csv("result/stats.csv")
+    stats = latencies.describe()
+    stats.to_csv("result/stats.csv")
 
 
     # Simplify column names
@@ -36,6 +36,7 @@ def main():
     for column in latencies.columns:
         plt.clf()
         sns.histplot(latencies, x=column, stat="probability")
+        #sns.swarmplot(data=latencies, x=column)
         plt.title(column)
         plt.xlabel("Latency / s")
         plt.savefig("result/{}-hist.svg".format(column), bbox_inches='tight')

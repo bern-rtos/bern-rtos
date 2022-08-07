@@ -6,6 +6,10 @@
 use bern_kernel::exec::interrupt::{InterruptHandler, InterruptStack};
 use bern_kernel::exec::process::Context;
 use crate::common_timing::{_stm32f4xx_hal_gpio_ExtiPin, Board};
+use core::sync::atomic::{compiler_fence, Ordering};
+use bern_kernel::exec::runnable::Priority;
+use bern_kernel::exec::thread::Thread;
+use bern_kernel::stack::Stack;
 
 mod common_timing;
 
@@ -23,5 +27,14 @@ pub fn spawn_timing_thread(c: &Context, mut board: Board) {
             output.set_high();
             output.set_low();
             input.clear_interrupt_pending_bit();
+        });
+
+    Thread::new(c)
+        .priority(Priority::new(0))
+        .stack(Stack::try_new_in(c, 1024).unwrap())
+        .spawn(move || {
+            loop {
+                compiler_fence(Ordering::SeqCst);
+            }
         });
 }

@@ -70,7 +70,7 @@ impl Priority {
     }
 
     pub fn is_idle(&self) -> bool {
-        self.0 == Priority::IDLE.0
+        self.raw() == Priority::IDLE.raw()
     }
 
     pub const fn idle() -> Self {
@@ -78,7 +78,11 @@ impl Priority {
     }
 
     pub fn is_interrupt_handler(self) -> bool {
-        self.0 == 0
+        self.raw() == 0
+    }
+
+    pub fn raw(&self) -> u8 {
+        self.0
     }
 }
 
@@ -88,15 +92,15 @@ impl Default for Priority {
     }
 }
 
-impl Into<usize> for Priority {
-    fn into(self) -> usize {
-        self.0 as usize
+impl From<Priority> for usize {
+    fn from(p: Priority) -> Self {
+        p.raw() as usize
     }
 }
 
-impl Into<u8> for Priority {
-    fn into(self) -> u8 {
-        self.0
+impl From<Priority> for u8 {
+    fn from(p: Priority) -> Self {
+        p.raw()
     }
 }
 

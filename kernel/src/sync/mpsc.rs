@@ -15,8 +15,8 @@ mod tests {
 
     #[test]
     fn single_producer() {
-        let channel  = channel::<u32, 16>();
-        let (tx, rx) = channel.split();
+        static CHANNEL: Channel<ConstQueue<u32, 16>>  = channel::<u32, 16>();
+        let (tx, rx) = CHANNEL.split();
 
         assert_eq!(rx.free(), 15);
         tx.send(42).unwrap();
@@ -37,8 +37,8 @@ mod tests {
 
     #[test]
     fn queue_overflow() {
-        let channel = channel::<u32, 16>();
-        let (tx, _rx) = channel.split();
+        static CHANNEL: Channel<ConstQueue<u32, 16>>  = channel::<u32, 16>();
+        let (tx, _rx) = CHANNEL.split();
 
         for i in 0..15 {
             tx.send(i).unwrap();
@@ -51,8 +51,8 @@ mod tests {
 
     #[test]
     fn multi_producer() {
-        let channel = channel::<u32, 16>();
-        let (tx, rx) = channel.split();
+        static CHANNEL: Channel<ConstQueue<u32, 16>>  = channel::<u32, 16>();
+        let (tx, rx) = CHANNEL.split();
 
         let tx_a = tx.clone();
         let prod_a = thread::spawn(move || {
@@ -87,7 +87,7 @@ mod tests {
 
     #[test]
     fn static_channel() {
-        static CHANNEL: Channel<ConstQueue<u32, 16>> = channel::<u32, 16>();
+        static CHANNEL: Channel<ConstQueue<u32, 16>>  = channel::<u32, 16>();
         let (tx, rx) = CHANNEL.split();
 
         tx.send(42).unwrap();
@@ -97,8 +97,8 @@ mod tests {
 
     #[test]
     fn by_ref() {
-        let channel = channel::<RefMessage<u32>, 16>();
-        let (tx, rx) = channel.split();
+        static CHANNEL: Channel<ConstQueue<RefMessage<u32>, 16>>  = channel::<RefMessage<u32>, 16>();
+        let (tx, rx) = CHANNEL.split();
 
         let a = Box::new(42);
         tx.send(RefMessage::from(a)).unwrap();

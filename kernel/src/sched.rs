@@ -218,7 +218,7 @@ pub(crate) fn tick_update() {
         }
 
         #[cfg(feature = "time-slicing")]
-        if sched.tasks_ready[preempt_prio.into()].len() > 0 &&
+        if sched.tasks_ready[usize::from(preempt_prio)].len() > 0 &&
             !preempt_prio.is_interrupt_handler()
         {
             trigger_switch = true;

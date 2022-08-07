@@ -1,6 +1,6 @@
 [package]
 name = "bern-conf-type"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
 edition = "2021"
 license = "MIT"
@@ -12,8 +12,8 @@ repository = "https://gitlab.com/bern-rtos/kernel/bern-kernel"
 homepage = "https://bern-rtos.org"
 
 [dependencies]
-bern-arch = "0.2"
-bern-units = "*"
+bern-arch = "0.3"
+bern-units = "0.1"
 
 [package.metadata.docs.rs]
 targets = [

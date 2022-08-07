@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 default_fs = 100e6
-default_repetitions = 10
+default_repetitions = 100
 default_chip = "STM32F411RE"
 
 cargo_command = "flash"

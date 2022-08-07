@@ -34,7 +34,7 @@ checksum = "f8fe8f5a8a398345e52358e18ff07cc17a568fbca5c6f73873d3a62056309603"
 
 [[package]]
 name = "bern-arch"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "bern-units",
  "cortex-m",
@@ -52,7 +52,7 @@ dependencies = [
 
 [[package]]
 name = "bern-conf-type"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "bern-arch",
  "bern-units",
@@ -60,7 +60,7 @@ dependencies = [
 
 [[package]]
 name = "bern-kernel"
-version = "0.2.5"
+version = "0.3.0"
 dependencies = [
  "bern-arch",
  "bern-conf",

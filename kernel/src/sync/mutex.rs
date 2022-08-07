@@ -16,41 +16,7 @@ use super::Error;
 /// - to protect data races on shared data or peripherals
 ///
 /// # Example
-/// ```ignore
-/// // put the mutex in a section where all tasks have access
-/// #[link_section = ".shared"]
-/// // create mutex containing an integer with an initial values of 42
-/// static MUTEX: Mutex<u32> = Mutex::new(42);
 ///
-/// fn main() -> ! {
-///     /*...*/
-///     sched::init();
-///     // allocate an event slot in the kernel, so that tasks can wait for a lock
-///     MUTEX.register().ok();
-///
-///     Task::new()
-///         .static_stack(kernel::alloc_static_stack!(512))
-///         .spawn(move || {
-///             loop {
-///                 /*...*/
-///                 // attempt to lock a mutex with timeout
-///                 match MUTEX.lock(1000) {
-///                     // access the inner value mutably
-///                     Ok(mut value) => *value = 134,
-///                     Err(_) => {}
-///                 }; // mutex unlocks automatically
-///            }
-///         });
-/// }
-/// ```
-///
-/// # Security
-///
-/// For multiple tasks to access a mutex it must be placed in shared memory
-/// section. If the data is placed in a shared section any part of the software
-/// can access the data. So the lock can be placed in the shared section instead
-/// of hiding it in the kernel behind a syscall. Using a shared mutex thus has
-/// limitted security but direct access to the lock decreases overhead.
 pub struct Mutex<T> {
     id: UnsafeCell<usize>,
     inner: UnsafeCell<T>,
