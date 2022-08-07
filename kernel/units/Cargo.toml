@@ -8,7 +8,7 @@ categories = ["embedded", "no-std"]
 keywords = ["embedded", "no_std", "cortex-m", "iot", "rtos"]
 description = "Base types for bern-kernel."
 documentation = "https://docs.rs/bern-units"
-repository = "https://gitlab.com/bern-rtos/kernel/bern-kernel"
+repository = "https://gitlab.com/bern-rtos/bern-rtos"
 homepage = "https://bern-rtos.org"
 
 [dependencies]

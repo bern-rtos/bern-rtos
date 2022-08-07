@@ -1,6 +1,6 @@
 [package]
 name = "bern-arch"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
 edition = "2021"
 license = "MIT"
@@ -8,7 +8,7 @@ categories = ["embedded", "no-std"]
 keywords = ["embedded", "no_std", "cortex-m", "iot", "rtos"]
 description = "Bern RTOS hardware specific implementation."
 documentation = "https://docs.rs/bern-arch"
-repository = "https://gitlab.com/bern-rtos/kernel/bern-arch"
+repository = "https://gitlab.com/bern-rtos/bern-rtos"
 homepage = "https://bern-rtos.org"
 
 [dependencies]
