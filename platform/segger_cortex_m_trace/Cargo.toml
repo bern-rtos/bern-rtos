@@ -1,0 +1,20 @@
+[package]
+name = "segger-cortex-m-trace"
+version = "0.1.0"
+authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
+edition = "2021"
+
+[dependencies]
+cortex-m-rt = "0.7.1"
+embedded-hal = "0.2.4"
+stm32f4xx-hal = { version = "0.11", features = ["rt", "stm32f407"] }
+
+[dev-dependencies]
+bern-kernel = "*"
+panic-halt = "0.2.0"
+
+# Optimize all dependencies
+#[profile.dev.package."*"]
+#opt-level = "s"
+
+

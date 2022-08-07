@@ -1,0 +1,47 @@
+[package]
+name = "bern-kernel"
+version = "0.3.0"
+authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
+edition = "2021"
+license = "MIT"
+categories = ["embedded", "no-std"]
+keywords = ["embedded", "no_std", "cortex-m", "iot", "rtos"]
+description = "Preemptive real-time kernel for microcontrollers."
+documentation = "https://docs.rs/bern-kernel"
+repository = "https://gitlab.com/bern-rtos/bern-rtos"
+homepage = "https://bern-rtos.org"
+
+[features]
+default = ["time-slicing"]
+time-slicing = []
+log-defmt = ["defmt"]
+log-rtt = ["rtt-target", "rtt-target/cortex-m", "_log_fmt"]
+log-global = ["log", "_log_fmt"]
+trace = ["rtos-trace/trace_impl"]
+_log_fmt = []
+
+[dependencies]
+bern-arch = "0.3"
+bern-kernel-macros = "0.2"
+bern-conf = "0.1"
+bern-conf-type = "0.2"
+bern-units = "0.1"
+rtos-trace = { version = "0.1", default-features = false }
+log = { version = "0.4", optional = true }
+embedded-time = "0.12"
+
+[target.'cfg(target_os = "none")'.dependencies]
+defmt = { version = "0.3", optional = true }
+rtt-target = { version = "0.3", optional = true }
+
+[build-dependencies]
+serde = { version = "1.0", default-features = false, features = ["serde_derive"] }
+bern-conf = "0.1"
+const_format = "0.2"
+
+[package.metadata.docs.rs]
+targets = [
+    "thumbv7em-none-eabi",
+    "thumbv7em-none-eabihf",
+    "thumbv7m-none-eabi",
+]

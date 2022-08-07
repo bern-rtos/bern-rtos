@@ -1,0 +1,35 @@
+[package]
+name = "bern-kernel-macros"
+version = "0.2.0"
+authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
+edition = "2021"
+license = "MIT"
+categories = ["embedded", "no-std"]
+keywords = ["embedded", "no_std", "cortex-m", "iot", "rtos"]
+description = "Procedural macros for bern-kernel."
+documentation = "https://docs.rs/bern-kernel-macros"
+repository = "https://gitlab.com/bern-rtos/kernel/bern-kernel"
+homepage = "https://bern-rtos.org"
+
+[lib]
+proc-macro = true
+
+[[test]]
+name = "enum"
+path = "tests/enum_map.rs"
+
+[dependencies]
+bern-conf = "0.1"
+
+proc-macro2 = "1.0.20"
+quote = "1.0.7"
+syn = { version = "1.0.40", features = ["extra-traits", "full"] }
+
+serde = { version = "1.0", default-features = false, features = ["serde_derive"] }
+
+[package.metadata.docs.rs]
+targets = [
+    "thumbv7em-none-eabi",
+    "thumbv7em-none-eabihf",
+    "thumbv7m-none-eabi",
+]

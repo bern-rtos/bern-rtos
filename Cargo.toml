@@ -1,0 +1,32 @@
+[workspace]
+
+members = [
+    "kernel",
+    "kernel/macros",
+    "kernel/conf_type",
+    "kernel/conf",
+    "kernel/units",
+    "kernel/tests/arm_cm4",
+    "arch",
+    "platform/st_nucleo_f446",
+    "platform/segger_cortex_m_trace",
+]
+
+exclude = ["xtask"]
+
+[patch.crates-io]
+bern-kernel = { path = "kernel" }
+bern-kernel-macros = { path = "kernel/macros" }
+bern-conf-type = { path = "kernel/conf_type" }
+bern-conf = { path = "kernel/conf" }
+bern-units = { path = "kernel/units" }
+bern-arch = { path = "arch" }
+bern-test = { path = "../bern-test" }
+bern-test-macros = { path = "../bern-test/macros" }
+
+
+[profile.release]
+codegen-units = 1 # better optimizations
+debug = 1 # symbols are nice and they don't increase the size on Flash
+lto = true # better optimizations
+opt-level = "s"
