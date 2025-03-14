@@ -1,7 +1,7 @@
 //! ARM Cortex-M implementation of [`IScheduler`] and context switch.
 
 use core::mem;
-use core::arch::asm;
+use core::arch::{asm, naked_asm};
 use cortex_m::peripheral::SCB;
 
 use crate::scheduler::IScheduler;
@@ -19,7 +19,7 @@ pub unsafe extern "C" fn PendSV() {
     // Based on "Definitive Guide to Cortex-M3/4", p. 349
     #[cfg(has_fpu)]
     unsafe {
-        asm!(
+        naked_asm!(
         "mrs      r1, psp",
         "mov      r2, lr",
         "tst      r2, #0x10",        // was FPU used?
@@ -50,7 +50,6 @@ pub unsafe extern "C" fn PendSV() {
         "vldmiaeq r0!, {{s16-s31}}", // pop FPU registers
         "msr      psp, r0",
         "bx       lr",
-        options(noreturn),
         )
     }
 
