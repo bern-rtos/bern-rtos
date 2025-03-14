@@ -23,7 +23,7 @@ _log_fmt = []
 [dependencies]
 bern-arch = "0.3"
 bern-kernel-macros = "0.2"
-bern-conf = "0.1"
+bern-conf = "0.2"
 bern-conf-type = "0.2"
 bern-units = "0.1"
 rtos-trace = { version = "0.1", default-features = false }
@@ -36,7 +36,7 @@ rtt-target = { version = "0.3", optional = true }
 
 [build-dependencies]
 serde = { version = "1.0", default-features = false, features = ["serde_derive"] }
-bern-conf = "0.1"
+bern-conf = "0.2"
 const_format = "0.2"
 
 [package.metadata.docs.rs]
