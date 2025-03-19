@@ -1,5 +1,5 @@
 [target.'cfg(all(target_arch = "arm", target_os = "none"))']
-runner = "probe-run --chip STM32f411RETx"
+runner = "probe-rs run --chip STM32f446RETx"
 
 rustflags = [
   # This is needed if your flash or ram addresses are not aligned to 0x10000 in memory.x
