@@ -22,7 +22,7 @@ _log_fmt = []
 
 [dependencies]
 bern-arch = "0.3"
-bern-kernel-macros = "0.2"
+bern-kernel-macros = "0.3"
 bern-conf = "0.2"
 bern-conf-type = "0.2"
 bern-units = "0.1"
