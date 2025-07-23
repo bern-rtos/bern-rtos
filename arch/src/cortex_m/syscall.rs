@@ -45,7 +45,7 @@ impl ISyscall for Arch {
 /// | 0xFFFFFFED      | Thread Mode (FPU)  | PSP   |
 
 #[no_mangle]
-#[naked]
+#[unsafe(naked)]
 unsafe extern "C" fn SVCall() {
     naked_asm!(
     "push {{lr}}",

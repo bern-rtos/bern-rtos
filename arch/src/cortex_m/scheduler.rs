@@ -14,7 +14,7 @@ use crate::arch::register::{StackFrame, StackFrameExtension, StackSettings};
 ///
 /// Exception is triggered by `cortex_m::peripheral::SCB::PendSV()`.
 #[no_mangle]
-#[naked]
+#[unsafe(naked)]
 pub unsafe extern "C" fn PendSV() {
     // Based on "Definitive Guide to Cortex-M3/4", p. 349
     #[cfg(has_fpu)]
