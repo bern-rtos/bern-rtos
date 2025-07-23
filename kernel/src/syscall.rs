@@ -64,7 +64,7 @@ fn mode_aware_syscall(service: Service, arg0: usize, arg1: usize, arg2: usize) -
 }
 
 /// Add a task to the scheduler based on its `ThreadBuilder` and entry point.
-pub(crate) fn thread_spawn(builder: &mut ThreadBuilder, entry: &&mut (dyn FnMut() -> RunnableResult)) {
+pub(crate) fn thread_spawn(builder: &mut ThreadBuilder, entry: &&mut dyn FnMut() -> RunnableResult) {
     mode_aware_syscall(
         Service::TaskSpawn,
         builder as *mut _ as usize,
@@ -247,8 +247,8 @@ fn syscall_handler_impl(service: Service, arg0: usize, arg1: usize, arg2: usize)
     let r = match service {
         Service::TaskSpawn => {
             let builder: &mut ThreadBuilder = unsafe { mem::transmute(arg0 as *mut ThreadBuilder) };
-            let runnable: &&mut (dyn FnMut() -> RunnableResult) = unsafe {
-                mem::transmute(arg1 as *mut &mut (dyn FnMut() -> RunnableResult))
+            let runnable: &&mut dyn FnMut() -> RunnableResult = unsafe {
+                mem::transmute(arg1 as *mut &mut dyn FnMut() -> RunnableResult)
             };
             ThreadBuilder::build(
                 builder,
