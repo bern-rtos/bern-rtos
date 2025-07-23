@@ -66,7 +66,7 @@ impl Heap {
                 // Is this the adjecent node?
                 if (cursor.node() as usize) == (ptr as usize + size) {
                     // Join right
-                    (*ptr).size += (*cursor.node()).size;
+                    (&mut (*ptr)).size += (&(*cursor.node())).size;
                     Box::leak(cursor.take().unwrap_unchecked());
                 }
 
