@@ -12,7 +12,6 @@ repository = "https://gitlab.com/bern-rtos/bern-rtos"
 homepage = "https://bern-rtos.org"
 
 [dependencies]
-bern-arch = "0.3"
 bern-units = "0.1"
 
 [package.metadata.docs.rs]

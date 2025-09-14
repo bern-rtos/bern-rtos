@@ -34,7 +34,7 @@ checksum = "f8fe8f5a8a398345e52358e18ff07cc17a568fbca5c6f73873d3a62056309603"
 
 [[package]]
 name = "bern-arch"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "bern-units",
  "cortex-m",
@@ -54,13 +54,12 @@ dependencies = [
 name = "bern-conf-type"
 version = "0.2.0"
 dependencies = [
- "bern-arch",
  "bern-units",
 ]
 
 [[package]]
 name = "bern-kernel"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "bern-arch",
  "bern-conf",
@@ -627,9 +626,9 @@ checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
 name = "rtos-trace"
-version = "0.1.3"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cdb6bcec3374f2049b3979112fa2e6c49b2a37f08de9b9759c6aa76531fb8097"
+checksum = "99cc14adb36141b2237d4f81354366beb7b6bd5153d5772f1dfc14846d6d499f"
 
 [[package]]
 name = "rtt-target"

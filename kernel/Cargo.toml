@@ -1,6 +1,6 @@
 [package]
 name = "bern-kernel"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Stefan Lüthi <stefan.luethi@outlook.com>"]
 edition = "2021"
 license = "MIT"
@@ -21,12 +21,12 @@ trace = ["rtos-trace/trace_impl"]
 _log_fmt = []
 
 [dependencies]
-bern-arch = "0.3"
+bern-arch = "0.4"
 bern-kernel-macros = "0.3"
 bern-conf = "0.2"
 bern-conf-type = "0.2"
 bern-units = "0.1"
-rtos-trace = { version = "0.1", default-features = false }
+rtos-trace = { version = "0.2", default-features = false }
 log = { version = "0.4", optional = true }
 embedded-time = "0.12"
 
