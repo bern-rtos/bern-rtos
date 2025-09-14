@@ -44,7 +44,7 @@ harness = false
 #bern-kernel = { path = "../../../kernel", features = ["log-defmt"] }
 bern-kernel = { path = "../../../kernel" }
 #bern-kernel = "*"
-bern-test = { version = "0.1.1" }
+bern-test = { version = "0.1.0" }
 st-nucleo-f446 = { version = "*", path = "../../../platform/st_nucleo_f446"}
 
 cortex-m-rt = "0.7.1"

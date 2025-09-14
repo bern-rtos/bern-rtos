@@ -23,8 +23,8 @@ bern-conf-type = { path = "kernel/conf_type" }
 bern-conf = { path = "kernel/conf" }
 bern-units = { path = "kernel/units" }
 bern-arch = { path = "arch" }
-bern-test = { path = "../bern-test" }
-bern-test-macros = { path = "../bern-test/macros" }
+#bern-test = { path = "../bern-test" }
+#bern-test-macros = { path = "../bern-test/macros" }
 
 
 [profile.release]

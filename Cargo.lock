@@ -89,17 +89,19 @@ dependencies = [
 
 [[package]]
 name = "bern-test"
-version = "0.1.1"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f558553c39c9feaed6431cc845d626b796ec8c4dd4e9d33d22d9a542af14ca18"
 dependencies = [
  "bern-test-macros",
- "defmt 0.3.100",
- "defmt-rtt",
  "nb 1.1.0",
 ]
 
 [[package]]
 name = "bern-test-macros"
-version = "0.1.1"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d0c839827ac923d6003bf77f0c1efdace6e63d153cd3e0a7d8f98a4801b391ab"
 dependencies = [
  "proc-macro2",
  "quote",
