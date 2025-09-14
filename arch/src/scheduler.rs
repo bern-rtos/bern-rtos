@@ -14,7 +14,7 @@
 /// On a ARM Cortex-M4 for example (simplified):
 /// ```ignore
 /// #[no_mangle]
-/// #[naked]
+/// #[unsafe(naked)]
 /// extern "C" fn PendSV() {
 ///     unsafe {
 ///         asm!(

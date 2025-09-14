@@ -1,7 +1,7 @@
 use cortex_m_rt::exception;
 
 // `kernel_interruot_handler` must be implemented by the kernel.
-extern {
+extern "C" {
     fn kernel_interrupt_handler(irqn: u16);
 }
 

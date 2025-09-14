@@ -12,7 +12,6 @@
 //! - [MIT License](https://gitlab.com/bern-rtos/bern-rtos/-/blob/main/arch/LICENSE.md)
 
 #![cfg_attr(target_os = "none", no_std)]
-#![feature(naked_functions)]
 #![cfg_attr(not(target_os = "none"), feature(never_type))]
 
 #![allow(unused)]

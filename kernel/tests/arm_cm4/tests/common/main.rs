@@ -4,7 +4,7 @@ use st_nucleo_f446::StNucleoF446 as Board;
 
 #[cortex_m_rt::entry]
 fn main() -> ! {
-    let mut board = Board::new();
+    let mut board = Board::new(168);
 
     super::super::tests::runner(&mut board);
 

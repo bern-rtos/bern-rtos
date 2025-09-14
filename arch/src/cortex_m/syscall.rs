@@ -1,6 +1,6 @@
 //! ARM Cortex-M implementation of [`ISyscall`].
 
-use core::arch::{asm, global_asm};
+use core::arch::{asm, global_asm, naked_asm};
 use crate::arch::Arch;
 use crate::syscall::ISyscall;
 
@@ -45,14 +45,13 @@ impl ISyscall for Arch {
 /// | 0xFFFFFFED      | Thread Mode (FPU)  | PSP   |
 
 #[no_mangle]
-#[naked]
+#[unsafe(naked)]
 unsafe extern "C" fn SVCall() {
-    asm!(
+    naked_asm!(
     "push {{lr}}",
     "bl syscall_handler",
     "mov r4, r0", // let's use r4 as return value, because r0 is popped from stack
     "pop {{lr}}",
     "bx lr",
-    options(noreturn)
     );
 }

@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 cortex-m-rt = "0.7.1"
 embedded-hal = "0.2.4"
-stm32f4xx-hal = { version = "0.11", features = ["rt", "stm32f407"] }
+stm32f4xx-hal = { version = "0.13", features = ["rt", "stm32f446"] }
 
 [dev-dependencies]
 bern-kernel = "*"

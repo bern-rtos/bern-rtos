@@ -223,7 +223,7 @@ impl Runnable {
 ///
 /// **Note:** Don't be fooled by the `&mut &mut` the first one is a reference
 /// and second one is part of the trait object type
-pub(crate) fn entry(entry_fn: &mut &mut (dyn FnMut() -> RunnableResult)) {
+pub(crate) fn entry(entry_fn: &mut &mut dyn FnMut() -> RunnableResult) {
     (entry_fn)();
 }
 
