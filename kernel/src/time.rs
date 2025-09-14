@@ -22,7 +22,6 @@ static TICK_LOW: AtomicU32 = AtomicU32::new(0);
 ///
 /// **Note:** This function must be called from the architecture implementation.
 #[no_mangle]
-#[inline(always)]
 fn system_tick_update() {
     if TICK_LOW.load(Ordering::Acquire) == u32::MAX {
         TICK_HIGH.fetch_add(1, Ordering::Relaxed);

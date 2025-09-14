@@ -29,7 +29,7 @@ pub struct WorkItem<T> {
 
 impl<T> WorkItem<T> {
 
-    fn trait_node(&'static mut self) -> &Node<&dyn Workable> {
+    fn trait_node(&'static mut self) -> &'static Node<&'static dyn Workable> {
         // todo: remove this lifetime hack
         let self_ref = unsafe { &mut *(self as *mut _) };
         self.trait_node = Node::new(self_ref);
@@ -71,7 +71,7 @@ pub struct Workqueue {
 }
 
 impl Workqueue {
-    pub fn new(context: &process::Context) -> WorkqueueBuilder {
+    pub fn new(context: &'_ process::Context) -> WorkqueueBuilder<'_> {
         WorkqueueBuilder {
             context,
             stack: None,

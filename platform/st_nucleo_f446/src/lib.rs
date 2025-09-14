@@ -56,7 +56,7 @@ pub struct StNucleoF446 {
 
 impl StNucleoF446 {
     pub fn new(sysclock_mhz: u32) -> Self {
-        let mut stm32_peripherals = Peripherals::take()
+        let stm32_peripherals = Peripherals::take()
             .expect("cannot take stm32 peripherals");
 
         /* Enable SYSCFGEN for interrutps to work */
