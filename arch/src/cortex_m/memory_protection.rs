@@ -1,29 +1,29 @@
 //! ARM Cortex-M implementation of [`IMemoryProtection`].
 
-use crate::memory_protection::{IMemoryProtection, Config, Type};
+use crate::arch::mpu::{self, Attributes, CachePolicy, Mpu, Permission, RegionNumber, Subregions};
+pub use crate::arch::mpu::{MemoryRegion, Size};
 use crate::arch::Arch;
-use crate::arch::mpu::{self, Mpu, RegionNumber, Permission, Subregions, Attributes, CachePolicy};
-pub use crate::arch::mpu::{Size, MemoryRegion};
+use crate::memory_protection::{Config, IMemoryProtection, Type};
 
+use bern_units::memory_size::{Byte, ExtByte};
 use cortex_m::asm;
 use cortex_m_rt::exception;
-use bern_units::memory_size::{Byte, ExtByte};
 
 impl IMemoryProtection for Arch {
     type MemoryRegion = MemoryRegion;
 
     fn enable_memory_protection() {
-        let mut mpu =  unsafe{ Mpu::take() };
+        let mut mpu = unsafe { Mpu::take() };
         mpu.enable();
     }
 
     fn disable_memory_protection() {
-        let mut mpu =  unsafe{ Mpu::take() };
+        let mut mpu = unsafe { Mpu::take() };
         mpu.disable();
     }
 
     fn enable_memory_region(region: u8, config: Config) {
-        let mut mpu =  unsafe{ Mpu::take() };
+        let mut mpu = unsafe { Mpu::take() };
 
         let memory_region = Self::prepare_memory_region(region, config);
         mpu.set_region(&memory_region);
@@ -35,32 +35,37 @@ impl IMemoryProtection for Arch {
     }
 
     fn prepare_memory_region(region: u8, config: Config) -> Self::MemoryRegion {
-        let region_base_address = Mpu::prepare_region_base_address(
-            config.addr as u32,
-            RegionNumber::Use(region)
-        );
+        let region_base_address =
+            Mpu::prepare_region_base_address(config.addr as u32, RegionNumber::Use(region));
 
         let attributes = match config.memory {
             Type::SramInternal => Attributes::Normal {
                 shareable: false,
-                cache_policy: (CachePolicy::WriteBack { wa: true }, CachePolicy::WriteBack { wa: true }),
+                cache_policy: (
+                    CachePolicy::WriteBack { wa: true },
+                    CachePolicy::WriteBack { wa: true },
+                ),
             },
             Type::SramExternal => Attributes::Normal {
                 shareable: false,
-                cache_policy: (CachePolicy::WriteBack { wa: true }, CachePolicy::WriteBack { wa: true }),
+                cache_policy: (
+                    CachePolicy::WriteBack { wa: true },
+                    CachePolicy::WriteBack { wa: true },
+                ),
             },
             Type::Flash => Attributes::Normal {
                 shareable: false,
                 cache_policy: (CachePolicy::WriteThrough, CachePolicy::WriteThrough),
             },
-            Type::Peripheral => Attributes::Device {
-                shareable: true
-            }
+            Type::Peripheral => Attributes::Device { shareable: true },
         };
 
         let region_attributes = Mpu::prepare_region_attributes(
             config.executable,
-            (Permission::from(config.access.system), Permission::from(config.access.user)),
+            (
+                Permission::from(config.access.system),
+                Permission::from(config.access.user),
+            ),
             attributes,
             Subregions::ALL,
             config.size.into(),
@@ -94,7 +99,6 @@ impl IMemoryProtection for Arch {
         8
     }
 }
-
 
 extern "Rust" {
     /// Exception called on a memory protection violation.
@@ -191,73 +195,185 @@ pub struct A512M;
 /// Return a valid memory protection alignment object from size in bytes.
 #[macro_export]
 macro_rules! alignment_from_size {
-    (32) => { $crate::arch::memory_protection::A32 };
-    (64) => { $crate::arch::memory_protection::A64 };
-    (128) => { $crate::arch::memory_protection::A128 };
-    (256) => { $crate::arch::memory_protection::A256 };
-    (512) => { $crate::arch::memory_protection::A512 };
-    (1_024) => { $crate::arch::memory_protection::A1K };
-    (1024) => { $crate::arch::memory_protection::A1K };
-    (2_048) => { $crate::arch::memory_protection::A2K };
-    (2048) => { $crate::arch::memory_protection::A2K };
-    (4_096) => { $crate::arch::memory_protection::A4K };
-    (4096) => { $crate::arch::memory_protection::A4K };
-    (8_192) => { $crate::arch::memory_protection::A8K };
-    (8192) => { $crate::arch::memory_protection::A8K };
-    (16_384) => { $crate::arch::memory_protection::A16K };
-    (16384) => { $crate::arch::memory_protection::A16K };
-    (32_768) => { $crate::arch::memory_protection::A32K };
-    (32768) => { $crate::arch::memory_protection::A32K };
-    (65_536) => { $crate::arch::memory_protection::A64K };
-    (65536) => { $crate::arch::memory_protection::A64K };
-    (131_072) => { $crate::arch::memory_protection::A128K };
-    (131072) => { $crate::arch::memory_protection::A128K };
-    (262_144) => { $crate::arch::memory_protection::A256K };
-    (262144) => { $crate::arch::memory_protection::A256K };
-    (524_288) => { $crate::arch::memory_protection::A512K };
-    (524288) => { $crate::arch::memory_protection::A512K };
-    (1_048_576) => { $crate::arch::memory_protection::A1M };
-    (1048576) => { $crate::arch::memory_protection::A1M };
+    (32) => {
+        $crate::arch::memory_protection::A32
+    };
+    (64) => {
+        $crate::arch::memory_protection::A64
+    };
+    (128) => {
+        $crate::arch::memory_protection::A128
+    };
+    (256) => {
+        $crate::arch::memory_protection::A256
+    };
+    (512) => {
+        $crate::arch::memory_protection::A512
+    };
+    (1_024) => {
+        $crate::arch::memory_protection::A1K
+    };
+    (1024) => {
+        $crate::arch::memory_protection::A1K
+    };
+    (2_048) => {
+        $crate::arch::memory_protection::A2K
+    };
+    (2048) => {
+        $crate::arch::memory_protection::A2K
+    };
+    (4_096) => {
+        $crate::arch::memory_protection::A4K
+    };
+    (4096) => {
+        $crate::arch::memory_protection::A4K
+    };
+    (8_192) => {
+        $crate::arch::memory_protection::A8K
+    };
+    (8192) => {
+        $crate::arch::memory_protection::A8K
+    };
+    (16_384) => {
+        $crate::arch::memory_protection::A16K
+    };
+    (16384) => {
+        $crate::arch::memory_protection::A16K
+    };
+    (32_768) => {
+        $crate::arch::memory_protection::A32K
+    };
+    (32768) => {
+        $crate::arch::memory_protection::A32K
+    };
+    (65_536) => {
+        $crate::arch::memory_protection::A64K
+    };
+    (65536) => {
+        $crate::arch::memory_protection::A64K
+    };
+    (131_072) => {
+        $crate::arch::memory_protection::A128K
+    };
+    (131072) => {
+        $crate::arch::memory_protection::A128K
+    };
+    (262_144) => {
+        $crate::arch::memory_protection::A256K
+    };
+    (262144) => {
+        $crate::arch::memory_protection::A256K
+    };
+    (524_288) => {
+        $crate::arch::memory_protection::A512K
+    };
+    (524288) => {
+        $crate::arch::memory_protection::A512K
+    };
+    (1_048_576) => {
+        $crate::arch::memory_protection::A1M
+    };
+    (1048576) => {
+        $crate::arch::memory_protection::A1M
+    };
     ($x:expr) => {
-        compile_error!("Size does not meet alignment requirements from the MPU. \
+        compile_error!(
+            "Size does not meet alignment requirements from the MPU. \
         Compatible sizes are: 32B, 64B, 128B, 256B, 512B, 1KB, 2KB, 4KB, 16KB, \
-        32KB, 64KB, 128KB, 256KB, 512KB, 1M");
+        32KB, 64KB, 128KB, 256KB, 512KB, 1M"
+        );
     };
 }
 
 /// Return a valid memory protection size object from size in bytes.
 #[macro_export]
 macro_rules! size_from_raw {
-    (32) => { $crate::arch::memory_protection::Size::S32 };
-    (64) => { $crate::arch::memory_protection::Size::S64 };
-    (128) => { $crate::arch::memory_protection::Size::S128 };
-    (256) => { $crate::arch::memory_protection::Size::S256 };
-    (512) => { $crate::arch::memory_protection::Size::S512 };
-    (1_024) => { $crate::arch::memory_protection::Size::S1K };
-    (1024) => { $crate::arch::memory_protection::Size::S1K };
-    (2_048) => { $crate::arch::memory_protection::Size::S2K };
-    (2048) => { $crate::arch::memory_protection::Size::S2K };
-    (4_096) => { $crate::arch::memory_protection::Size::S4K };
-    (4096) => { $crate::arch::memory_protection::Size::S4K };
-    (8_192) => { $crate::arch::memory_protection::Size::S8K };
-    (8192) => { $crate::arch::memory_protection::Size::S8K };
-    (16_384) => { $crate::arch::memory_protection::Size::S16K };
-    (16384) => { $crate::arch::memory_protection::Size::S16K };
-    (32_768) => { $crate::arch::memory_protection::Size::S32K };
-    (32768) => { $crate::arch::memory_protection::Size::S32K };
-    (65_536) => { $crate::arch::memory_protection::Size::S64K };
-    (65536) => { $crate::arch::memory_protection::Size::S64K };
-    (131_072) => { $crate::arch::memory_protection::Size::S128K };
-    (131072) => { $crate::arch::memory_protection::Size::S128K };
-    (262_144) => { $crate::arch::memory_protection::Size::S256K };
-    (262144) => { $crate::arch::memory_protection::Size::S256K };
-    (524_288) => { $crate::arch::memory_protection::Size::S512K };
-    (524288) => { $crate::arch::memory_protection::Size::S512K };
-    (1_048_576) => { $crate::arch::memory_protection::Size::S1M };
-    (1048576) => { $crate::arch::memory_protection::Size::S1M };
+    (32) => {
+        $crate::arch::memory_protection::Size::S32
+    };
+    (64) => {
+        $crate::arch::memory_protection::Size::S64
+    };
+    (128) => {
+        $crate::arch::memory_protection::Size::S128
+    };
+    (256) => {
+        $crate::arch::memory_protection::Size::S256
+    };
+    (512) => {
+        $crate::arch::memory_protection::Size::S512
+    };
+    (1_024) => {
+        $crate::arch::memory_protection::Size::S1K
+    };
+    (1024) => {
+        $crate::arch::memory_protection::Size::S1K
+    };
+    (2_048) => {
+        $crate::arch::memory_protection::Size::S2K
+    };
+    (2048) => {
+        $crate::arch::memory_protection::Size::S2K
+    };
+    (4_096) => {
+        $crate::arch::memory_protection::Size::S4K
+    };
+    (4096) => {
+        $crate::arch::memory_protection::Size::S4K
+    };
+    (8_192) => {
+        $crate::arch::memory_protection::Size::S8K
+    };
+    (8192) => {
+        $crate::arch::memory_protection::Size::S8K
+    };
+    (16_384) => {
+        $crate::arch::memory_protection::Size::S16K
+    };
+    (16384) => {
+        $crate::arch::memory_protection::Size::S16K
+    };
+    (32_768) => {
+        $crate::arch::memory_protection::Size::S32K
+    };
+    (32768) => {
+        $crate::arch::memory_protection::Size::S32K
+    };
+    (65_536) => {
+        $crate::arch::memory_protection::Size::S64K
+    };
+    (65536) => {
+        $crate::arch::memory_protection::Size::S64K
+    };
+    (131_072) => {
+        $crate::arch::memory_protection::Size::S128K
+    };
+    (131072) => {
+        $crate::arch::memory_protection::Size::S128K
+    };
+    (262_144) => {
+        $crate::arch::memory_protection::Size::S256K
+    };
+    (262144) => {
+        $crate::arch::memory_protection::Size::S256K
+    };
+    (524_288) => {
+        $crate::arch::memory_protection::Size::S512K
+    };
+    (524288) => {
+        $crate::arch::memory_protection::Size::S512K
+    };
+    (1_048_576) => {
+        $crate::arch::memory_protection::Size::S1M
+    };
+    (1048576) => {
+        $crate::arch::memory_protection::Size::S1M
+    };
     ($x:expr) => {
-        compile_error!("Size cannot be protected by MPU. \
+        compile_error!(
+            "Size cannot be protected by MPU. \
         Compatible sizes are: 32B, 64B, 128B, 256B, 512B, 1KB, 2KB, 4KB, 16KB, \
-        32KB, 64KB, 128KB, 256KB, 512KB, 1M");
+        32KB, 64KB, 128KB, 256KB, 512KB, 1M"
+        );
     };
 }

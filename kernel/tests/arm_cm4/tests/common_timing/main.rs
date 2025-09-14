@@ -1,9 +1,9 @@
+use super::Board;
+use bern_kernel::bern_arch::cortex_m::cortex_m_rt;
+use bern_kernel::exec::process::Process;
+use bern_kernel::units::frequency::ExtMilliHertz;
 use core::sync::atomic;
 use core::sync::atomic::Ordering;
-use super::Board;
-use bern_kernel::exec::process::Process;
-use bern_kernel::bern_arch::cortex_m::cortex_m_rt;
-use bern_kernel::units::frequency::ExtMilliHertz;
 
 static PROC: &Process = bern_kernel::new_process!(test, 4096);
 
@@ -12,14 +12,12 @@ fn main() -> ! {
     let board = Board::new(168);
 
     bern_kernel::init();
-    bern_kernel::time::set_tick_frequency(
-        1.kHz(),
-        168.MHz(),
-    );
+    bern_kernel::time::set_tick_frequency(1.kHz(), 168.MHz());
 
     PROC.init(move |c| {
         crate::spawn_timing_thread(c, board);
-    }).ok();
+    })
+    .ok();
 
     defmt::info!("Starting interrupt timing test application.");
     bern_kernel::start();

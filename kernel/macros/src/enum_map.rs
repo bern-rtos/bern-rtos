@@ -1,16 +1,16 @@
-use syn::parse::{Parse, ParseStream};
-use syn::{Result, Type};
-use syn::LitInt;
-use proc_macro2::{TokenStream, Span};
 use proc_macro2::Ident;
-use syn::Token;
-use quote::{ToTokens, quote};
+use proc_macro2::{Span, TokenStream};
+use quote::{quote, ToTokens};
+use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
+use syn::LitInt;
+use syn::Token;
+use syn::{Result, Type};
 
-pub struct EnumMap{
+pub struct EnumMap {
     ident: Ident,
     repr: Type,
-    entries: Vec<Entry>
+    entries: Vec<Entry>,
 }
 
 pub struct Entry {
@@ -31,7 +31,7 @@ impl Parse for Entry {
         Ok(Entry {
             ident: ident,
             bits: bits,
-            value: value
+            value: value,
         })
     }
 }
@@ -54,7 +54,7 @@ impl Parse for EnumMap {
         Ok(EnumMap {
             ident: enum_ident,
             repr: ty,
-            entries: enum_map
+            entries: enum_map,
         })
     }
 }
@@ -64,21 +64,24 @@ impl ToTokens for EnumMap {
         let enum_ident = self.ident.clone();
         let repr = self.repr.clone();
 
-        let idents = self.entries
+        let idents = self
+            .entries
             .iter()
             .map(|e| e.ident.clone())
             .collect::<Vec<_>>();
-        let bits = self.entries
+        let bits = self
+            .entries
             .iter()
             .map(|e| e.bits.clone())
             .collect::<Vec<_>>();
-        let values = self.entries
+        let values = self
+            .entries
             .iter()
             .map(|e| e.value.clone())
             .collect::<Vec<_>>();
 
         /* format enum */
-        let formatted = TokenStream::from(quote!{
+        let formatted = TokenStream::from(quote! {
             #[derive(Copy, Clone, Debug, Eq, PartialEq)]
             #[repr(#repr)]
             pub enum #enum_ident {
@@ -97,7 +100,7 @@ impl ToTokens for EnumMap {
         macro_ident.push_str("_from");
         let values_str = values.iter().map(|v| v.to_string());
         let macro_ident = Ident::new(macro_ident.as_str(), Span::call_site());
-        let formatted = TokenStream::from(quote!{
+        let formatted = TokenStream::from(quote! {
             #[macro_export]
             macro_rules! #macro_ident {
                 #( (#values) => { #enum_ident::#idents }; )*

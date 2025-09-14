@@ -18,22 +18,19 @@ static PROC: &Process = bern_kernel::new_process!(test, 8192);
 
 #[bern_test::tests]
 mod tests {
-    use bern_kernel::exec::runnable::Priority;
-    use bern_kernel::exec::thread::Thread;
     use super::*;
     use crate::common::*;
-    use bern_kernel::{sleep, time};
-    use bern_kernel::units::frequency::*;
+    use bern_kernel::exec::runnable::Priority;
+    use bern_kernel::exec::thread::Thread;
     use bern_kernel::stack::Stack;
+    use bern_kernel::units::frequency::*;
     use bern_kernel::*;
+    use bern_kernel::{sleep, time};
 
     #[test_set_up]
     fn init_scheduler() {
         init();
-        time::set_tick_frequency(
-            1.kHz(),
-            72.MHz()
-        );
+        time::set_tick_frequency(1.kHz(), 72.MHz());
     }
 
     #[test_tear_down]
@@ -48,7 +45,7 @@ mod tests {
 
     #[test]
     fn wait_for_lock(_board: &mut Board) {
-        let mutex = Arc::new(Mutex::new(MyStruct{ a: 42 }));
+        let mutex = Arc::new(Mutex::new(MyStruct { a: 42 }));
 
         PROC.init(move |c| {
             let mutex_1 = mutex.clone();
@@ -56,26 +53,22 @@ mod tests {
             Thread::new(c)
                 .priority(Priority::new(1))
                 .stack(Stack::try_new_in(c, 1024).unwrap())
-                .spawn(move || {
-                    match mutex_1.try_lock() {
-                        Ok(mut value) => {
-                            value.a = 54;
-                            sleep(10);
-                        },
-                        Err(_) => panic!("Could not acquire mutex"),
+                .spawn(move || match mutex_1.try_lock() {
+                    Ok(mut value) => {
+                        value.a = 54;
+                        sleep(10);
                     }
+                    Err(_) => panic!("Could not acquire mutex"),
                 });
             // Wait for permit
             Thread::new(c)
                 .priority(Priority::new(1))
                 .stack(Stack::try_new_in(c, 1024).unwrap())
-                .spawn(move || {
-                    match mutex.lock(1000) {
-                        Ok(value) => {
-                            assert_eq!(value.a, 54);
-                        },
-                        Err(_) => panic!("Did not wait for mutex"),
+                .spawn(move || match mutex.lock(1000) {
+                    Ok(value) => {
+                        assert_eq!(value.a, 54);
                     }
+                    Err(_) => panic!("Did not wait for mutex"),
                 });
 
             // watchdog
@@ -89,7 +82,8 @@ mod tests {
                     bern_test::test_succeeded();
                     __tear_down();
                 });
-        }).ok();
+        })
+        .ok();
 
         start();
     }
@@ -103,7 +97,7 @@ mod tests {
     //  3  |_T1__________________|                     |_T1_____
     #[test]
     fn priority_inversion() {
-        let mutex = Arc::new(Mutex::new(MyStruct{ a: 42 }));
+        let mutex = Arc::new(Mutex::new(MyStruct { a: 42 }));
 
         PROC.init(move |c| {
             let mutex_1 = mutex.clone();
@@ -111,13 +105,11 @@ mod tests {
             Thread::new(c)
                 .priority(Priority::new(3))
                 .stack(Stack::try_new_in(c, 1024).unwrap())
-                .spawn(move || {
-                    match mutex_1.try_lock() {
-                        Ok(_) => {
-                            sleep(20);
-                        },
-                        Err(_) => panic!("Could not acquire mutex"),
+                .spawn(move || match mutex_1.try_lock() {
+                    Ok(_) => {
+                        sleep(20);
                     }
+                    Err(_) => panic!("Could not acquire mutex"),
                 });
 
             let mutex_2 = mutex.clone();
@@ -139,7 +131,7 @@ mod tests {
                 .stack(Stack::try_new_in(c, 1024).unwrap())
                 .spawn(move || {
                     sleep(10); // let T1 start
-                    // preempt T1
+                               // preempt T1
                     panic!("T3 could preempt T1 within time frame");
                 });
 
@@ -154,7 +146,8 @@ mod tests {
                     bern_test::test_succeeded();
                     __tear_down();
                 });
-        }).unwrap();
+        })
+        .unwrap();
 
         start();
     }

@@ -1,8 +1,7 @@
-
 mod tests {
     use bern_kernel_macros::enum_map;
 
-    enum_map!{
+    enum_map! {
         Size, u8;
         S128 = 5, 128;
         S256 = 6, 256;

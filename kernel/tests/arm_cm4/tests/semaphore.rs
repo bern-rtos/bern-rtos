@@ -2,8 +2,8 @@
 #![no_std]
 
 mod common;
-use common::main as _;
 use bern_kernel::sync::Semaphore;
+use common::main as _;
 
 #[link_section = ".shared"]
 static SEMAPHORE: Semaphore = Semaphore::new(1);
@@ -13,8 +13,8 @@ mod tests {
     use super::*;
     use crate::common::*;
     use bern_kernel as kernel;
+    use bern_kernel::exec::thread::{Priority, Runnable, Thread};
     use kernel::sched;
-    use bern_kernel::exec::thread::{Runnable, Priority, Thread};
 
     #[test_set_up]
     fn init_scheduler() {
@@ -46,11 +46,9 @@ mod tests {
     fn not_registered() {
         Thread::new()
             .static_stack(kernel::alloc_static_stack!(1024))
-            .spawn(move || {
-                match SEMAPHORE.acquire(1000) {
-                    Ok(_) => panic!("Semaphore wasn't registered, should have failed"),
-                    Err(_) => (),
-                }
+            .spawn(move || match SEMAPHORE.acquire(1000) {
+                Ok(_) => panic!("Semaphore wasn't registered, should have failed"),
+                Err(_) => (),
             });
 
         sched::start();
@@ -63,26 +61,22 @@ mod tests {
         Thread::new()
             .priority(Priority(1))
             .static_stack(kernel::alloc_static_stack!(1024))
-            .spawn(move || {
-                match SEMAPHORE.try_acquire() {
-                    Ok(_) => {
-                        assert_eq!(SEMAPHORE.available_permits(), 0);
-                        kernel::sleep(10);
-                    },
-                    Err(_) => panic!("Could not acquire semaphore"),
+            .spawn(move || match SEMAPHORE.try_acquire() {
+                Ok(_) => {
+                    assert_eq!(SEMAPHORE.available_permits(), 0);
+                    kernel::sleep(10);
                 }
+                Err(_) => panic!("Could not acquire semaphore"),
             });
         /* Wait for permit */
         Thread::new()
             .priority(Priority(1))
             .static_stack(kernel::alloc_static_stack!(1024))
-            .spawn(move || {
-                match SEMAPHORE.acquire(1000) {
-                    Ok(_) => {
-                        assert_eq!(SEMAPHORE.available_permits(), 0);
-                    },
-                    Err(_) => panic!("Did not wait for semaphore"),
+            .spawn(move || match SEMAPHORE.acquire(1000) {
+                Ok(_) => {
+                    assert_eq!(SEMAPHORE.available_permits(), 0);
                 }
+                Err(_) => panic!("Did not wait for semaphore"),
             });
 
         sched::start();

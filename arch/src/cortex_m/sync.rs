@@ -1,7 +1,7 @@
 //! ARM Cortex-M implementation of [`ISync`].
 
-use crate::sync::ISync;
 use crate::cortex_m::Arch;
+use crate::sync::ISync;
 
 impl ISync for Arch {
     #[allow(unused_variables)]
@@ -11,6 +11,8 @@ impl ISync for Arch {
     }
 
     fn enable_interrupts() {
-        unsafe { cortex_m::interrupt::enable(); }
+        unsafe {
+            cortex_m::interrupt::enable();
+        }
     }
 }

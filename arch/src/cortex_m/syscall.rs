@@ -1,8 +1,8 @@
 //! ARM Cortex-M implementation of [`ISyscall`].
 
-use core::arch::{asm, global_asm, naked_asm};
 use crate::arch::Arch;
 use crate::syscall::ISyscall;
+use core::arch::{asm, global_asm, naked_asm};
 
 impl ISyscall for Arch {
     #[inline(always)]
@@ -10,17 +10,19 @@ impl ISyscall for Arch {
         // we need to move the arguments to the correct registers, because the
         // function is inlined
         let ret;
-        unsafe { asm!(
-            "push {{r4}}",
-            "svc 0",
-            "mov r0, r4",
-            "pop {{r4}}",
-            in("r0") service,
-            in("r1") arg0,
-            in("r2") arg1,
-            in("r3") arg2,
-            lateout("r0") ret,
-        )}
+        unsafe {
+            asm!(
+                "push {{r4}}",
+                "svc 0",
+                "mov r0, r4",
+                "pop {{r4}}",
+                in("r0") service,
+                in("r1") arg0,
+                in("r2") arg1,
+                in("r3") arg2,
+                lateout("r0") ret,
+            )
+        }
         ret
     }
 }
@@ -48,10 +50,10 @@ impl ISyscall for Arch {
 #[unsafe(naked)]
 unsafe extern "C" fn SVCall() {
     naked_asm!(
-    "push {{lr}}",
-    "bl syscall_handler",
-    "mov r4, r0", // let's use r4 as return value, because r0 is popped from stack
-    "pop {{lr}}",
-    "bx lr",
+        "push {{lr}}",
+        "bl syscall_handler",
+        "mov r4, r0", // let's use r4 as return value, because r0 is popped from stack
+        "pop {{lr}}",
+        "bx lr",
     );
 }

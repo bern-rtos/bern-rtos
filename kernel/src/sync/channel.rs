@@ -3,11 +3,10 @@ extern crate alloc;
 use alloc::boxed::Box;
 use core::ptr::NonNull;
 
-
 #[derive(Debug, PartialEq)]
 pub enum ChannelError {
     ChannelClosed,
-    Queue(QueueError)
+    Queue(QueueError),
 }
 
 pub struct Channel<Q> {
@@ -16,23 +15,22 @@ pub struct Channel<Q> {
 
 impl<Q> Channel<Q> {
     pub const fn new(queue: Q) -> Self {
-        Channel {
-            queue,
-        }
+        Channel { queue }
     }
 
     pub fn split<T, const N: usize>(&'static self) -> (Sender<Q>, Receiver<Q>)
-        where
-            Q: FiFoQueue<T, { N }>,
-            T: Copy,
+    where
+        Q: FiFoQueue<T, { N }>,
+        T: Copy,
     {
-        unsafe {(
-            Sender::new(NonNull::new_unchecked(self as *const _ as *mut _)),
-            Receiver::new(NonNull::new_unchecked(self as *const _ as *mut _))
-        )}
+        unsafe {
+            (
+                Sender::new(NonNull::new_unchecked(self as *const _ as *mut _)),
+                Receiver::new(NonNull::new_unchecked(self as *const _ as *mut _)),
+            )
+        }
     }
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -42,47 +40,50 @@ pub struct Sender<Q> {
 
 impl<Q> Sender<Q> {
     fn new(channel: NonNull<Channel<Q>>) -> Self {
-        Sender {
-            channel,
-        }
+        Sender { channel }
     }
 
     pub fn send<T, const N: usize>(&self, item: T) -> Result<(), ChannelError>
-        where
-            Q: FiFoQueue<T, { N }>,
-            T: Copy,
+    where
+        Q: FiFoQueue<T, { N }>,
+        T: Copy,
     {
         unsafe {
-            self.channel.as_ref().queue.try_push_back(item)
+            self.channel
+                .as_ref()
+                .queue
+                .try_push_back(item)
                 .map_err(|e| ChannelError::Queue(e))
         }
     }
 
     pub fn free<T, const N: usize>(&self) -> usize
-        where Q: FiFoQueue<T, { N }>
+    where
+        Q: FiFoQueue<T, { N }>,
     {
         unsafe { self.channel.as_ref().queue.free() }
     }
 
     pub fn capacity<T, const N: usize>(&self) -> usize
-        where Q: FiFoQueue<T, { N }>
+    where
+        Q: FiFoQueue<T, { N }>,
     {
         unsafe { self.channel.as_ref().queue.capacity() }
     }
 }
 
 impl<Q> Clone for Sender<Q>
-    where Q: SyncProducer
+where
+    Q: SyncProducer,
 {
     fn clone(&self) -> Self {
         Sender {
-            channel: self.channel
+            channel: self.channel,
         }
     }
 }
 
-unsafe impl<Q> Send for Sender<Q> { }
-
+unsafe impl<Q> Send for Sender<Q> {}
 
 pub struct Receiver<Q> {
     channel: NonNull<Channel<Q>>,
@@ -90,46 +91,50 @@ pub struct Receiver<Q> {
 
 impl<Q> Receiver<Q> {
     fn new(channel: NonNull<Channel<Q>>) -> Self {
-        Receiver {
-            channel
-        }
+        Receiver { channel }
     }
 
     pub fn recv<T, const N: usize>(&self) -> Result<T, ChannelError>
-        where
-            Q: FiFoQueue<T, { N }>,
-            T: Copy,
+    where
+        Q: FiFoQueue<T, { N }>,
+        T: Copy,
     {
         unsafe {
-            self.channel.as_ref().queue.try_pop_front()
-                    .map_err(|e| ChannelError::Queue(e))
+            self.channel
+                .as_ref()
+                .queue
+                .try_pop_front()
+                .map_err(|e| ChannelError::Queue(e))
         }
     }
 
     pub fn free<T, const N: usize>(&self) -> usize
-        where Q: FiFoQueue<T, { N }>
+    where
+        Q: FiFoQueue<T, { N }>,
     {
         unsafe { self.channel.as_ref().queue.free() }
     }
 
     pub fn capacity<T, const N: usize>(&self) -> usize
-        where Q: FiFoQueue<T, { N }>
+    where
+        Q: FiFoQueue<T, { N }>,
     {
         unsafe { self.channel.as_ref().queue.capacity() }
     }
 }
 
 impl<Q> Clone for Receiver<Q>
-    where Q: SyncConsumer
+where
+    Q: SyncConsumer,
 {
     fn clone(&self) -> Self {
         Receiver {
-            channel: self.channel
+            channel: self.channel,
         }
     }
 }
 
-unsafe impl<Q> Send for Receiver<Q> { }
+unsafe impl<Q> Send for Receiver<Q> {}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -140,9 +145,7 @@ pub struct RefMessage<T> {
 
 impl<T> RefMessage<T> {
     pub fn into_box(self) -> Box<T> {
-        unsafe {
-            Box::from_raw(self.raw)
-        }
+        unsafe { Box::from_raw(self.raw) }
     }
 
     pub fn into_mut_ptr(self) -> *mut T {
@@ -153,15 +156,13 @@ impl<T> RefMessage<T> {
 impl<T> From<Box<T>> for RefMessage<T> {
     fn from(message: Box<T>) -> Self {
         RefMessage {
-            raw: Box::leak(message)
+            raw: Box::leak(message),
         }
     }
 }
 
 impl<T> From<*mut T> for RefMessage<T> {
     fn from(message: *mut T) -> Self {
-        RefMessage {
-            raw: message
-        }
+        RefMessage { raw: message }
     }
 }

@@ -1,14 +1,14 @@
-use core::fmt::Debug;
-use core::ptr::NonNull;
-use bern_arch::arch::Arch;
-use bern_arch::arch::memory_protection::MemoryRegion;
-use bern_arch::IMemoryProtection;
-use bern_arch::memory_protection::{Access, Config, Permission, Type};
-use bern_conf::CONF;
 use crate::exec::process::ProcessInternal;
 use crate::sched::event::Event;
 use crate::stack::Stack;
 use crate::time;
+use bern_arch::arch::memory_protection::MemoryRegion;
+use bern_arch::arch::Arch;
+use bern_arch::memory_protection::{Access, Config, Permission, Type};
+use bern_arch::IMemoryProtection;
+use bern_conf::CONF;
+use core::fmt::Debug;
+use core::ptr::NonNull;
 
 #[cfg(feature = "log-defmt")]
 use defmt::Formatter;
@@ -18,7 +18,6 @@ use core::fmt::Display;
 
 pub trait RunnableTrait: 'static + FnMut() -> RunnableResult {}
 pub type RunnableResult = (); // todo: replace with '!' when possible
-
 
 /// Transition for next context switch
 #[derive(Copy, Clone, PartialEq)]
@@ -36,7 +35,6 @@ pub enum Transition {
     Terminating,
 }
 
-
 /// # Issue with closures and static tasks
 ///
 /// Every closure has its own anonymous type. A closure can only be stored in a
@@ -49,7 +47,6 @@ pub enum Transition {
 /// **copy** it into a static stack. Access to the closure is provided via a
 /// closure trait object, which now references a static object which cannot go
 /// out of scope.
-
 
 /// Task priority.
 ///
@@ -104,8 +101,6 @@ impl From<Priority> for u8 {
     }
 }
 
-
-
 // todo: manage lifetime of stack & runnable
 /// Task control block
 pub struct Runnable {
@@ -122,7 +117,13 @@ pub struct Runnable {
 }
 
 impl Runnable {
-    pub(crate) fn new(process: &'static ProcessInternal, runnable_ptr: *mut usize, stack: Stack, priority: Priority, name: Option<&'static str>) -> Self {
+    pub(crate) fn new(
+        process: &'static ProcessInternal,
+        runnable_ptr: *mut usize,
+        stack: Stack,
+        priority: Priority,
+        name: Option<&'static str>,
+    ) -> Self {
         // prepare memory region configs
         let memory_regions = [
             Arch::prepare_memory_region(
@@ -131,19 +132,27 @@ impl Runnable {
                     addr: process.start_addr() as *const _,
                     memory: Type::SramInternal,
                     size: process.size(),
-                    access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
-                    executable: false
-                }),
+                    access: Access {
+                        user: Permission::ReadWrite,
+                        system: Permission::ReadWrite,
+                    },
+                    executable: false,
+                },
+            ),
             Arch::prepare_memory_region(
                 1,
                 Config {
                     addr: stack.bottom_ptr() as *const _,
                     memory: Type::SramInternal,
                     size: Arch::min_region_size(),
-                    access: Access { user: Permission::NoAccess, system: Permission::NoAccess },
-                    executable: false
-                }),
-            Arch::prepare_unused_region(2)
+                    access: Access {
+                        user: Permission::NoAccess,
+                        system: Permission::NoAccess,
+                    },
+                    executable: false,
+                },
+            ),
+            Arch::prepare_unused_region(2),
         ];
 
         Runnable {
@@ -230,7 +239,9 @@ pub(crate) fn entry(entry_fn: &mut &mut dyn FnMut() -> RunnableResult) {
 #[cfg(feature = "log-defmt")]
 impl defmt::Format for Runnable {
     fn format(&self, fmt: Formatter) {
-        defmt::write!(fmt, "None    {:02}          {:05}B/{:05}B ({:02}%)",
+        defmt::write!(
+            fmt,
+            "None    {:02}          {:05}B/{:05}B ({:02}%)",
             self.priority.0,
             self.stack.usage().0,
             self.stack.capacity().0,
@@ -242,11 +253,13 @@ impl defmt::Format for Runnable {
 #[cfg(feature = "_log_fmt")]
 impl Display for Runnable {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "None    {:02}          {:05}B/{:05}B ({:02}%)",
-              self.priority.0,
-              self.stack.usage().0,
-              self.stack.capacity().0,
-              (self.stack.usage().0 as f32 / self.stack.capacity().0 as f32 * 100f32) as u8,
+        write!(
+            f,
+            "None    {:02}          {:05}B/{:05}B ({:02}%)",
+            self.priority.0,
+            self.stack.usage().0,
+            self.stack.capacity().0,
+            (self.stack.usage().0 as f32 / self.stack.capacity().0 as f32 * 100f32) as u8,
         )
     }
 }

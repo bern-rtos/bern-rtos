@@ -15,50 +15,45 @@ impl IpcSemaphore {
         let (s, e) = syscall::ipc_semaphore_register()?;
         Ok(IpcSemaphore {
             semaphore_id: s,
-            event_id: e
+            event_id: e,
         })
     }
 
     pub fn try_acquire(&self) -> Result<SemaphorePermit<'_>, Error> {
-        syscall::ipc_semaphore_try_aquire(self.semaphore_id)
-            .and_then(|v| {
-                if v {
-                    Ok(SemaphorePermit::new(self))
-                } else {
-                    Err(Error::WouldBlock)
-                }
-            })
+        syscall::ipc_semaphore_try_aquire(self.semaphore_id).and_then(|v| {
+            if v {
+                Ok(SemaphorePermit::new(self))
+            } else {
+                Err(Error::WouldBlock)
+            }
+        })
     }
 
-    pub fn acquire(&self, timeout: u32) ->  Result<SemaphorePermit<'_>, Error> {
-        syscall::ipc_semaphore_try_aquire(self.semaphore_id)
-            .and_then(|v| {
-                if v {
-                    Ok(SemaphorePermit::new(self))
-                } else {
-                    match syscall::event_await(self.event_id, timeout) {
-                        Ok(_) => {
-                            syscall::ipc_semaphore_try_aquire(self.semaphore_id).ok();
-                            Ok(SemaphorePermit::new(self))
-                        },
-                        Err(event::Error::TimeOut) => Err(Error::TimeOut),
-                        Err(_) => Err(Error::Poisoned),
+    pub fn acquire(&self, timeout: u32) -> Result<SemaphorePermit<'_>, Error> {
+        syscall::ipc_semaphore_try_aquire(self.semaphore_id).and_then(|v| {
+            if v {
+                Ok(SemaphorePermit::new(self))
+            } else {
+                match syscall::event_await(self.event_id, timeout) {
+                    Ok(_) => {
+                        syscall::ipc_semaphore_try_aquire(self.semaphore_id).ok();
+                        Ok(SemaphorePermit::new(self))
                     }
+                    Err(event::Error::TimeOut) => Err(Error::TimeOut),
+                    Err(_) => Err(Error::Poisoned),
                 }
-            })
+            }
+        })
     }
 
     pub fn available_permits(&self) -> usize {
         0
     }
 
-    pub fn add_permits(&self, _n: usize) {
-
-    }
+    pub fn add_permits(&self, _n: usize) {}
 }
 
 unsafe impl Sync for IpcSemaphore {}
-
 
 // todo: add traits for semaphore and make permit generic
 /// Scoped semaphore permit
@@ -76,19 +71,12 @@ impl<'a> SemaphorePermit<'a> {
     }
 
     /// Forget permit. Will not be returned to the available permits.
-    pub fn forget(self) {
-
-    }
+    pub fn forget(self) {}
 }
 
 impl<'a> Drop for SemaphorePermit<'a> {
-    fn drop(&mut self) {
-
-    }
+    fn drop(&mut self) {}
 }
-
-
-
 
 pub(crate) struct IpcSemaphoreInternal {
     semaphore_id: SemaphoreID,
@@ -99,7 +87,7 @@ impl IpcSemaphoreInternal {
     pub(crate) fn new(semaphore_id: SemaphoreID, event_id: usize) -> IpcSemaphoreInternal {
         IpcSemaphoreInternal {
             semaphore_id,
-            _event_id: event_id
+            _event_id: event_id,
         }
     }
 

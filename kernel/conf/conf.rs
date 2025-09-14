@@ -13,8 +13,8 @@
 
 #![no_std]
 
-use bern_units::memory_size::Byte;
 use bern_conf_type::*;
+use bern_units::memory_size::Byte;
 
 pub const CONF: Conf<0> = Conf {
     kernel: Kernel {
@@ -44,10 +44,10 @@ pub const CONF: Conf<0> = Conf {
         },
         additional: [],
     },
-    
+
     data_placement: DataPlacement {
         kernel: "RAM",
         processes: "RAM",
-        shared: "RAM"
-    }
+        shared: "RAM",
+    },
 };

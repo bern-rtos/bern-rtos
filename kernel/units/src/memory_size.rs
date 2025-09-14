@@ -1,6 +1,6 @@
 //! Units representing memory sizes.
 
-use derive_more::{Add, Sub, Mul, Div};
+use derive_more::{Add, Div, Mul, Sub};
 
 #[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Add, Sub, Mul, Div)]
 pub struct Byte(pub u32);
@@ -78,20 +78,17 @@ impl Into<usize> for Byte {
     }
 }
 
-
 impl From<u32> for Byte {
     fn from(b: u32) -> Self {
         b.B()
     }
 }
 
-
 impl From<KiloByte> for Byte {
     fn from(kb: KiloByte) -> Self {
         Self(kb.0 * 1_024)
     }
 }
-
 
 impl From<MegaByte> for Byte {
     fn from(mb: MegaByte) -> Self {
@@ -104,7 +101,6 @@ impl From<MegaByte> for KiloByte {
         Self(mb.0 * 1_024)
     }
 }
-
 
 impl From<GigaByte> for Byte {
     fn from(gb: GigaByte) -> Self {

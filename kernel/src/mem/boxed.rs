@@ -20,11 +20,11 @@
 //! let boxed: Box<MyStruct> = POOL.insert(Node::new(MyStruct { id: 42 })).unwrap();
 //! ```
 
+use crate::alloc::allocator::{AllocError, Allocator};
 use core::alloc::Layout;
 use core::mem;
-use core::ptr::NonNull;
 use core::ops::{Deref, DerefMut};
-use crate::alloc::allocator::{Allocator, AllocError};
+use core::ptr::NonNull;
 
 /// A pointer type for dynamically allocated memory.
 ///
@@ -48,17 +48,12 @@ impl<T> Box<T> {
             memory.as_ptr().write(value);
         }
 
-        Ok(Box {
-            boxed: memory,
-        })
+        Ok(Box { boxed: memory })
     }
-
 
     /// Create a box from a `NonNull` pointer
     pub unsafe fn from_raw(pointer: NonNull<T>) -> Self {
-        Box {
-            boxed: pointer,
-        }
+        Box { boxed: pointer }
     }
 
     /// Returns the pointer to the box structure on memory.
@@ -83,7 +78,7 @@ impl<T> DerefMut for Box<T> {
     }
 }
 
-impl<'a,T> Drop for Box<T> {
+impl<'a, T> Drop for Box<T> {
     fn drop(&mut self) {
         panic!("Box drop not implemented yet!");
     }

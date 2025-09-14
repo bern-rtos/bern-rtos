@@ -1,12 +1,12 @@
 //! System time.
 
+use crate::sched;
+use bern_units::frequency::Hertz;
 use core::marker::PhantomData;
 use core::sync::atomic::{AtomicU32, Ordering};
 use embedded_time::clock::Error;
 use embedded_time::duration::Fraction;
 use embedded_time::Instant;
-use bern_units::frequency::Hertz;
-use crate::sched;
 
 #[link_section = ".kernel"]
 static TICK_PER_MS: AtomicU32 = AtomicU32::new(0);
@@ -49,7 +49,8 @@ pub(crate) fn tick_count() -> u64 {
 }
 
 pub fn set_tick_frequency<T, S>(tick_frequency: T, sysclock: S)
-    where Hertz: From<T> + From<S>
+where
+    Hertz: From<T> + From<S>,
 {
     let divisor = Hertz::from(sysclock).0 / Hertz::from(tick_frequency).0;
     TICK_PER_MS.store(divisor, Ordering::Relaxed);
@@ -72,7 +73,7 @@ impl<T> SysClock<T> {
 impl embedded_time::Clock for SysClock<u64> {
     type T = u64;
     // todo: make systick frequency const
-    const SCALING_FACTOR: Fraction =  Fraction::new(1, 1_000);
+    const SCALING_FACTOR: Fraction = Fraction::new(1, 1_000);
 
     fn try_now(&self) -> Result<Instant<Self>, Error> {
         Ok(Instant::new(crate::syscall::tick_count()))
@@ -82,7 +83,7 @@ impl embedded_time::Clock for SysClock<u64> {
 impl embedded_time::Clock for SysClock<u32> {
     type T = u32;
     // todo: make systick frequency const
-    const SCALING_FACTOR: Fraction =  Fraction::new(1, 1_000);
+    const SCALING_FACTOR: Fraction = Fraction::new(1, 1_000);
 
     fn try_now(&self) -> Result<Instant<Self>, Error> {
         Ok(Instant::new(crate::syscall::tick_count() as u32))

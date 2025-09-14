@@ -1,20 +1,15 @@
 #![no_std]
 
-use stm32f4xx_hal as hal;
+use hal::pac::Peripherals;
 use hal::prelude::*;
-use hal::pac::{
-    Peripherals,
-};
 use hal::time::Hertz;
+use stm32f4xx_hal as hal;
 
-
-pub struct SeggerCortexMTrace {
-}
+pub struct SeggerCortexMTrace {}
 
 impl SeggerCortexMTrace {
     pub fn new() -> Self {
-        let stm32_peripherals = Peripherals::take()
-            .expect("cannot take stm32 peripherals");
+        let stm32_peripherals = Peripherals::take().expect("cannot take stm32 peripherals");
 
         /* system clock */
         let rcc = stm32_peripherals.RCC.constrain();
@@ -25,10 +20,7 @@ impl SeggerCortexMTrace {
         let _gpiob = stm32_peripherals.GPIOB.split();
         let _gpioc = stm32_peripherals.GPIOC.split();
 
-
         /* assemble... */
-        SeggerCortexMTrace {
-
-        }
+        SeggerCortexMTrace {}
     }
 }

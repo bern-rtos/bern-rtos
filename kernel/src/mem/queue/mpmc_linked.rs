@@ -1,11 +1,10 @@
+use crate::mem::boxed::Box;
 ///
 /// Based on [`heapless::llsc`](https://github.com/japaric/heapless/blob/master/src/pool/llsc.rs).
-
 use core::ops::{Deref, DerefMut};
 use core::ptr;
 use core::ptr::NonNull;
 use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
-use crate::mem::boxed::Box;
 
 type Link<T> = AtomicPtr<Node<T>>;
 
@@ -37,8 +36,6 @@ impl<T> DerefMut for Node<T> {
     }
 }
 
-
-
 pub struct Queue<T> {
     head: Link<T>,
     len: AtomicUsize,
@@ -55,21 +52,24 @@ impl<T> Queue<T> {
     pub fn push_front(&self, node: Box<Node<T>>) {
         let node_raw = Box::leak(node);
 
-        loop { // CAS loop
+        loop {
+            // CAS loop
             let head = self.head.load(Ordering::Relaxed);
             // Note(unsafe): Pointer requirements are met.
-            unsafe { node_raw.as_ref() }.next.store(head, Ordering::Relaxed);
+            unsafe { node_raw.as_ref() }
+                .next
+                .store(head, Ordering::Relaxed);
 
             match self.head.compare_exchange(
                 head,
                 node_raw.as_ptr(),
                 Ordering::Release,
-                Ordering::Relaxed
+                Ordering::Relaxed,
             ) {
                 Ok(_) => {
                     self.len.fetch_add(1, Ordering::Relaxed);
                     return;
-                },
+                }
                 Err(_) => continue, // loop was interrutped
             }
         }
@@ -78,19 +78,20 @@ impl<T> Queue<T> {
     pub fn push_back(&self, node: Box<Node<T>>) {
         let node_raw = Box::leak(node);
 
-        loop { // CAS loop
+        loop {
+            // CAS loop
             match self.traverse_to_end() {
                 None => {
                     match self.head.compare_exchange(
                         ptr::null_mut(),
                         node_raw.as_ptr(),
                         Ordering::Release,
-                        Ordering::Relaxed
+                        Ordering::Relaxed,
                     ) {
                         Ok(_) => {
                             self.len.fetch_add(1, Ordering::Relaxed);
                             return;
-                        },
+                        }
                         Err(_) => continue, // loop was interrutped
                     }
                 }
@@ -100,12 +101,12 @@ impl<T> Queue<T> {
                         ptr::null_mut(),
                         node_raw.as_ptr(),
                         Ordering::Release,
-                        Ordering::Relaxed
+                        Ordering::Relaxed,
                     ) {
                         Ok(_) => {
                             self.len.fetch_add(1, Ordering::Relaxed);
                             return;
-                        },
+                        }
                         Err(_) => continue, // loop was interrutped
                     }
                 }
@@ -120,17 +121,15 @@ impl<T> Queue<T> {
             // Note(unsafe): `head` is valid.
             if let Some(node) = unsafe { head.as_mut() } {
                 let next = node.next.load(Ordering::Relaxed);
-                match self.head.compare_exchange(
-                    head,
-                    next,
-                    Ordering::Release,
-                    Ordering::Relaxed
-                ) {
+                match self
+                    .head
+                    .compare_exchange(head, next, Ordering::Release, Ordering::Relaxed)
+                {
                     // Note(unsafe): `head` was checked to be non-null.
                     Ok(_) => unsafe {
                         node.next = AtomicPtr::default();
                         self.len.fetch_sub(1, Ordering::Relaxed);
-                        return Some(Box::from_raw(NonNull::new_unchecked(node)))
+                        return Some(Box::from_raw(NonNull::new_unchecked(node)));
                     },
                     Err(_) => continue,
                 }
@@ -163,13 +162,11 @@ impl<T> Queue<T> {
     pub fn len(&self) -> usize {
         self.len.load(Ordering::Relaxed)
     }
-
 }
 
 // Note(unsafe): Queue is lock-free.
-unsafe impl<T> Sync for Queue<T> { }
-unsafe impl<T> Send for Queue<T> { }
-
+unsafe impl<T> Sync for Queue<T> {}
+unsafe impl<T> Send for Queue<T> {}
 
 #[cfg(all(test, not(target_os = "none")))]
 mod tests {
@@ -182,14 +179,14 @@ mod tests {
 
     const fn node_array() -> [Node<MyStruct>; 8] {
         [
-            Node::new(MyStruct { a: 0, b: 10}),
-            Node::new(MyStruct { a: 1, b: 11}),
-            Node::new(MyStruct { a: 2, b: 12}),
-            Node::new(MyStruct { a: 3, b: 13}),
-            Node::new(MyStruct { a: 4, b: 14}),
-            Node::new(MyStruct { a: 5, b: 15}),
-            Node::new(MyStruct { a: 6, b: 16}),
-            Node::new(MyStruct { a: 7, b: 17}),
+            Node::new(MyStruct { a: 0, b: 10 }),
+            Node::new(MyStruct { a: 1, b: 11 }),
+            Node::new(MyStruct { a: 2, b: 12 }),
+            Node::new(MyStruct { a: 3, b: 13 }),
+            Node::new(MyStruct { a: 4, b: 14 }),
+            Node::new(MyStruct { a: 5, b: 15 }),
+            Node::new(MyStruct { a: 6, b: 16 }),
+            Node::new(MyStruct { a: 7, b: 17 }),
         ]
     }
 

@@ -1,9 +1,9 @@
 //! ARM Cortex-M implementation of [`IStartup`].
 
-use core::arch::asm;
-use crate::IStartup;
 use crate::arch::Arch;
 use crate::startup::Region;
+use crate::IStartup;
+use core::arch::asm;
 
 extern "C" {
     static mut __smkernel: usize;
@@ -39,13 +39,12 @@ impl IStartup for Arch {
         }
     }
 
-
     fn kernel_data() -> Region {
         unsafe {
             Region {
                 start: &__smkernel as *const _,
                 end: &__emkernel as *const _,
-                data: Some(&__sikernel as *const _)
+                data: Some(&__sikernel as *const _),
             }
         }
     }
@@ -55,7 +54,7 @@ impl IStartup for Arch {
             Region {
                 start: &__shkernel as *const _,
                 end: &__ehkernel as *const _,
-                data: None
+                data: None,
             }
         }
     }

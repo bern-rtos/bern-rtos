@@ -2,23 +2,23 @@
 
 #![allow(unreachable_code)]
 
-use mockall::*;
 use mockall::predicate::*;
+use mockall::*;
 
-use crate::memory_protection::{IMemoryProtection, Access, Config, Type, Permission};
-use crate::scheduler::IScheduler;
-use crate::syscall::ISyscall;
-use crate::core::ICore;
-use crate::sync::ISync;
-use crate::startup::{IStartup, Region};
 use crate::core::ExecMode;
+use crate::core::ICore;
+use crate::memory_protection::{Access, Config, IMemoryProtection, Permission, Type};
+use crate::scheduler::IScheduler;
+use crate::startup::{IStartup, Region};
+use crate::sync::ISync;
+use crate::syscall::ISyscall;
 use bern_units::memory_size::Byte;
 
 // re-exports
 pub use crate::mock::MockArch as Arch;
 pub use crate::mock::MockArchCore as ArchCore;
 
-mockall::mock!{
+mockall::mock! {
     pub Arch {}
 
     impl IMemoryProtection for Arch {
@@ -57,7 +57,7 @@ mockall::mock!{
     }
 }
 
-mockall::mock!{
+mockall::mock! {
     pub ArchCore {}
 
     impl ICore for ArchCore {

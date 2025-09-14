@@ -1,8 +1,3 @@
-use core::cell::Cell;
-use core::ptr;
-use core::ptr::NonNull;
-use core::sync::atomic::{AtomicU8, Ordering};
-use core::ops::{Deref, DerefMut};
 use crate::alloc::allocator::AllocError;
 use crate::alloc::const_pool::{ConstBox, Item};
 use crate::exec::process;
@@ -13,6 +8,11 @@ use crate::mem::boxed::Box;
 use crate::mem::queue::mpmc_linked::{Node, Queue};
 use crate::stack::Stack;
 use crate::{log, syscall};
+use core::cell::Cell;
+use core::ops::{Deref, DerefMut};
+use core::ptr;
+use core::ptr::NonNull;
+use core::sync::atomic::{AtomicU8, Ordering};
 
 //pub trait WorkTrait: 'static + FnOnce() { }
 pub trait Workable {
@@ -28,7 +28,6 @@ pub struct WorkItem<T> {
 }
 
 impl<T> WorkItem<T> {
-
     fn trait_node(&'static mut self) -> &'static Node<&'static dyn Workable> {
         // todo: remove this lifetime hack
         let self_ref = unsafe { &mut *(self as *mut _) };
@@ -43,9 +42,7 @@ impl<T> Workable for WorkItem<T> {
     }
 
     fn release(&self) {
-        unsafe {
-            ptr::drop_in_place(self.owner.as_ptr())
-        }
+        unsafe { ptr::drop_in_place(self.owner.as_ptr()) }
     }
 }
 
@@ -79,7 +76,11 @@ impl Workqueue {
         }
     }
 
-    pub fn submit<T: 'static>(&self, work: ConstBox<WorkItem<T>>, function: fn(&T)) -> Result<(), AllocError> {
+    pub fn submit<T: 'static>(
+        &self,
+        work: ConstBox<WorkItem<T>>,
+        function: fn(&T),
+    ) -> Result<(), AllocError> {
         let mut item = ConstBox::leak(work);
         unsafe {
             (*item.as_mut()).owner = item;
@@ -87,7 +88,9 @@ impl Workqueue {
         }
         let trait_node = unsafe { (*item.as_mut()).trait_node() };
         unsafe {
-            self.work.push_back(Box::from_raw(NonNull::new_unchecked(trait_node as *const _ as *mut _)));
+            self.work.push_back(Box::from_raw(NonNull::new_unchecked(
+                trait_node as *const _ as *mut _,
+            )));
         }
 
         log::trace!("Submitting work to queue.");
@@ -110,7 +113,7 @@ impl Workqueue {
 }
 
 // Note(unsafe):
-unsafe impl Sync for Workqueue { }
+unsafe impl Sync for Workqueue {}
 
 pub struct WorkqueueBuilder<'a> {
     context: &'a process::Context,
@@ -141,13 +144,15 @@ impl<'a> WorkqueueBuilder<'a> {
             None => panic!("No stack added to worker."),
         };
 
-        let worker =
-            Box::try_new_in(Workqueue {
+        let worker = Box::try_new_in(
+            Workqueue {
                 _process: self.context.process(),
                 work: Queue::new(),
                 event_id: Cell::new(id),
                 ref_count: Default::default(),
-            }, self.context.process().allocator());
+            },
+            self.context.process().allocator(),
+        );
         let worker = match worker {
             Ok(w) => w,
             Err(_) => panic!("No memory left."),
@@ -170,10 +175,10 @@ pub struct WorkqueueHandle {
 
 impl WorkqueueHandle {
     pub fn new(workqueue: NonNull<Workqueue>) -> Self {
-        unsafe { workqueue.as_ref() }.ref_count.fetch_add(1, Ordering::Relaxed);
-        WorkqueueHandle {
-            workqueue,
-        }
+        unsafe { workqueue.as_ref() }
+            .ref_count
+            .fetch_add(1, Ordering::Relaxed);
+        WorkqueueHandle { workqueue }
     }
 }
 

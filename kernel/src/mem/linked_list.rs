@@ -13,16 +13,16 @@
 
 #![allow(unused)]
 
-use core::{mem, ptr};
-use core::ptr::{NonNull};
-use core::mem::MaybeUninit;
-use core::cell::RefCell;
-use core::borrow::BorrowMut;
+use crate::alloc::allocator::{AllocError, Allocator};
 use crate::mem::boxed::Box;
-use core::ops::{Deref, DerefMut};
-use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
+use core::borrow::BorrowMut;
+use core::cell::RefCell;
 use core::marker::PhantomData;
-use crate::alloc::allocator::{Allocator, AllocError};
+use core::mem::MaybeUninit;
+use core::ops::{Deref, DerefMut};
+use core::ptr::NonNull;
+use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
+use core::{mem, ptr};
 
 /******************************************************************************/
 
@@ -110,7 +110,11 @@ impl<T> LinkedList<T> {
     /// Allocate a new element and move it to the end of the list
     ///
     /// **Note:** This fails when we're out of memory
-    pub fn emplace_back(&self, element: T, alloc: &'static dyn Allocator) -> Result<(), AllocError> {
+    pub fn emplace_back(
+        &self,
+        element: T,
+        alloc: &'static dyn Allocator,
+    ) -> Result<(), AllocError> {
         let node = Box::try_new_in(Node::new(element), alloc);
         // Note(unsafe): map() is only called if the pointer is non-null.
         node.map(|mut n| unsafe {
@@ -126,7 +130,9 @@ impl<T> LinkedList<T> {
         // Note(unsafe): Pointer requirements are met.
         unsafe {
             (*node_raw.as_ref()).prev.store(tail, Ordering::Relaxed);
-            (*node_raw.as_ref()).next.store(ptr::null_mut(), Ordering::Relaxed);
+            (*node_raw.as_ref())
+                .next
+                .store(ptr::null_mut(), Ordering::Relaxed);
 
             match tail.as_mut() {
                 None => self.head.store(node_raw.as_ptr(), Ordering::Relaxed),
@@ -174,16 +180,22 @@ impl<T> LinkedList<T> {
             match (*node_ptr.as_ref()).prev.load(Ordering::Acquire).as_mut() {
                 None => {
                     self.head.store(new_node_ptr.as_ptr(), Ordering::Relaxed);
-                    (*new_node_ptr.as_ref()).prev.store(ptr::null_mut(), Ordering::Relaxed);
-                },
+                    (*new_node_ptr.as_ref())
+                        .prev
+                        .store(ptr::null_mut(), Ordering::Relaxed);
+                }
                 Some(prev) => {
                     (*prev).next.store(new_node_ptr.as_ptr(), Ordering::Relaxed);
                     (*new_node_ptr.as_ref()).prev.store(prev, Ordering::Relaxed);
-                },
+                }
             }
 
-            (*node_ptr.as_ref()).prev.store(new_node_ptr.as_ptr(), Ordering::Release);
-            (*new_node_ptr.as_ref()).next.store(node_ptr.as_ptr(), Ordering::Relaxed);
+            (*node_ptr.as_ref())
+                .prev
+                .store(new_node_ptr.as_ptr(), Ordering::Release);
+            (*new_node_ptr.as_ref())
+                .next
+                .store(node_ptr.as_ptr(), Ordering::Relaxed);
         }
 
         self.len.fetch_add(1, Ordering::Relaxed);
@@ -229,9 +241,10 @@ impl<T> LinkedList<T> {
     pub fn front(&self) -> Option<&T> {
         // Note(unsafe): Pointer requirements are met.
         unsafe {
-            self.head.load(Ordering::Relaxed).as_mut().map(|head|
-                &(*head).inner
-            )
+            self.head
+                .load(Ordering::Relaxed)
+                .as_mut()
+                .map(|head| &(*head).inner)
         }
     }
 
@@ -239,9 +252,10 @@ impl<T> LinkedList<T> {
     pub fn back(&self) -> Option<&T> {
         // Note(unsafe): Pointer requirements are met.
         unsafe {
-            self.tail.load(Ordering::Relaxed).as_mut().map(|tail|
-                &(*tail).inner
-            )
+            self.tail
+                .load(Ordering::Relaxed)
+                .as_mut()
+                .map(|tail| &(*tail).inner)
         }
     }
 
@@ -249,7 +263,6 @@ impl<T> LinkedList<T> {
     pub fn len(&self) -> usize {
         self.len.load(Ordering::Relaxed)
     }
-
 
     /// Remove a node from any point in the list.
     ///
@@ -278,8 +291,12 @@ impl<T> LinkedList<T> {
             Some(next) => next.prev.store(prev, Ordering::Relaxed),
         };
 
-        (*node.as_mut()).prev.store(ptr::null_mut(), Ordering::Relaxed);
-        (*node.as_mut()).next.store(ptr::null_mut(), Ordering::Relaxed);
+        (*node.as_mut())
+            .prev
+            .store(ptr::null_mut(), Ordering::Relaxed);
+        (*node.as_mut())
+            .next
+            .store(ptr::null_mut(), Ordering::Relaxed);
         self.len.fetch_sub(1, Ordering::Relaxed);
 
         Box::from_raw(node)
@@ -288,24 +305,23 @@ impl<T> LinkedList<T> {
     /// Provides a forward iterator.
     pub fn iter(&self) -> Iter<'_, T> {
         // Note(unsafe): Pointer requirements are met.
-        let next = unsafe {
-            self.head.load(Ordering::Relaxed).as_ref()
-        };
+        let next = unsafe { self.head.load(Ordering::Relaxed).as_ref() };
         Iter { next }
     }
 
     /// Provides a forward iterator with mutable references.
     pub fn iter_mut(&self) -> IterMut<'_, T> {
         // Note(unsafe): Pointer requirements are met.
-        let next = unsafe {
-            self.head.load(Ordering::Relaxed).as_mut()
-        };
+        let next = unsafe { self.head.load(Ordering::Relaxed).as_mut() };
         IterMut { next }
     }
 
     /// Provides a cursor with editing operation at the front element.
     pub fn cursor_front_mut(&self) -> Cursor<'_, T> {
-        Cursor { node: self.head.load(Ordering::Relaxed), list: self }
+        Cursor {
+            node: self.head.load(Ordering::Relaxed),
+            list: self,
+        }
     }
 }
 
@@ -318,16 +334,13 @@ pub struct Iter<'a, T> {
     next: Option<&'a Node<T>>,
 }
 
-impl<'a,T> Iterator for Iter<'a, T>
-{
+impl<'a, T> Iterator for Iter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.next.map(|node| unsafe {
             // Note(unsafe): Pointer requirements are met.
-            self.next = unsafe {
-                (*node).next.load(Ordering::Relaxed).as_ref()
-            };
+            self.next = unsafe { (*node).next.load(Ordering::Relaxed).as_ref() };
             &(*node).inner
         })
     }
@@ -346,9 +359,7 @@ impl<'a, T> Iterator for IterMut<'a, T> {
     fn next(&mut self) -> Option<Self::Item> {
         self.next.take().map(|node| unsafe {
             // Note(unsafe): Pointer requirements are met.
-            self.next = unsafe {
-                (*node).next.load(Ordering::Relaxed).as_mut()
-            };
+            self.next = unsafe { (*node).next.load(Ordering::Relaxed).as_mut() };
             &mut (*node).inner
         })
     }
@@ -361,7 +372,7 @@ impl<'a, T> Iterator for IterMut<'a, T> {
 /// In contrast to an iterator a cursor can move from front to back and take an
 /// element out of the list.
 #[derive(Debug)]
-pub struct Cursor<'a,T> {
+pub struct Cursor<'a, T> {
     node: *mut Node<T>,
     list: &'a LinkedList<T>,
 }
@@ -370,21 +381,13 @@ impl<'a, T> Cursor<'a, T> {
     /// Get reference to value of node if there is any
     pub fn inner(&self) -> Option<&T> {
         // Note(unsafe): Pointer requirements are met.
-        unsafe {
-            self.node.as_ref().map(|node|
-                &(*node).inner
-            )
-        }
+        unsafe { self.node.as_ref().map(|node| &(*node).inner) }
     }
 
     /// Get mutable reference to value of node if there is any
     pub fn inner_mut(&self) -> Option<&mut T> {
         // Note(unsafe): Pointer requirements are met.
-        unsafe {
-            self.node.as_mut().map(|node|
-                &mut (*node).inner
-            )
-        }
+        unsafe { self.node.as_mut().map(|node| &mut (*node).inner) }
     }
 
     /// Get raw pointer of node. Only use if you really have to.
@@ -409,9 +412,8 @@ impl<'a, T> Cursor<'a, T> {
         self.move_next();
         // Note(unsafe): Node is checked be non-null.
         unsafe {
-            node.as_mut().map(move |node|
-                self.list.unlink_raw(NonNull::new_unchecked(node))
-            )
+            node.as_mut()
+                .map(move |node| self.list.unlink_raw(NonNull::new_unchecked(node)))
         }
     }
 }
@@ -421,9 +423,9 @@ impl<'a, T> Cursor<'a, T> {
 #[cfg(all(test, not(target_os = "none")))]
 mod tests {
     use super::*;
+    use crate::alloc::bump::Bump;
     use core::borrow::Borrow;
     use std::mem::size_of;
-    use crate::alloc::bump::Bump;
 
     #[derive(Debug, Copy, Clone)]
     struct MyStruct {
@@ -436,8 +438,9 @@ mod tests {
         static ALLOCATOR: Bump = unsafe {
             Bump::new(
                 NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
-                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
-            )};
+                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _),
+            )
+        };
 
         let mut list = LinkedList::new();
         assert_eq!(list.head.load(Ordering::Relaxed), ptr::null_mut());
@@ -472,8 +475,9 @@ mod tests {
         static ALLOCATOR: Bump = unsafe {
             Bump::new(
                 NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
-                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
-            )};
+                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _),
+            )
+        };
 
         let mut list = LinkedList::new();
         assert_eq!(list.len(), 0);
@@ -492,8 +496,9 @@ mod tests {
         static ALLOCATOR: Bump = unsafe {
             Bump::new(
                 NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
-                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
-            )};
+                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _),
+            )
+        };
 
         let mut list = LinkedList::new();
         list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
@@ -513,12 +518,13 @@ mod tests {
     fn memory_overflow() {
         const ELEMENT_LEN: usize = size_of::<Node<MyStruct>>();
         // Add some extra space for alignment
-        static mut BUFFER: [u8; ELEMENT_LEN*16 + 8] = [0; ELEMENT_LEN*16 + 8];
+        static mut BUFFER: [u8; ELEMENT_LEN * 16 + 8] = [0; ELEMENT_LEN * 16 + 8];
         static ALLOCATOR: Bump = unsafe {
             Bump::new(
                 NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
-                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
-            )};
+                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _),
+            )
+        };
 
         let mut list = LinkedList::new();
         for i in 0..16 {
@@ -527,22 +533,22 @@ mod tests {
         assert!(list.emplace_back(MyStruct { id: 16 }, &ALLOCATOR).is_err());
     }
 
-
     #[test]
     fn iterate() {
         static mut BUFFER: [u8; 128] = [0; 128];
         static ALLOCATOR: Bump = unsafe {
             Bump::new(
                 NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
-                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
-            )};
+                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _),
+            )
+        };
 
         let mut list = LinkedList::new();
         list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
         list.emplace_back(MyStruct { id: 43 }, &ALLOCATOR);
         list.emplace_back(MyStruct { id: 44 }, &ALLOCATOR);
 
-        let truth = vec![42,43,44,45];
+        let truth = vec![42, 43, 44, 45];
         for (i, element) in list.iter().enumerate() {
             assert_eq!(element.id, truth[i]);
         }
@@ -558,21 +564,22 @@ mod tests {
         static ALLOCATOR: Bump = unsafe {
             Bump::new(
                 NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
-                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
-            )};
+                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _),
+            )
+        };
 
         let mut list = LinkedList::new();
         list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
         list.emplace_back(MyStruct { id: 43 }, &ALLOCATOR);
         list.emplace_back(MyStruct { id: 44 }, &ALLOCATOR);
 
-        let truth = vec![42,43,44,45];
+        let truth = vec![42, 43, 44, 45];
         for (i, element) in list.iter_mut().enumerate() {
             assert_eq!(element.id, truth[i]);
             element.id = i as u32;
         }
         // values should have changed
-        let truth = vec![0,1,2,3];
+        let truth = vec![0, 1, 2, 3];
         for (i, element) in list.iter().enumerate() {
             assert_eq!(element.id, truth[i]);
         }
@@ -584,8 +591,9 @@ mod tests {
         static ALLOCATOR: Bump = unsafe {
             Bump::new(
                 NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
-                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
-            )};
+                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _),
+            )
+        };
 
         let mut list = LinkedList::new();
         list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
@@ -605,7 +613,7 @@ mod tests {
         }
         another_list.push_back(target.unwrap());
 
-        let truth = vec![42,44];
+        let truth = vec![42, 44];
         for (i, element) in list.iter().enumerate() {
             assert_eq!(element.id, truth[i]);
         }
@@ -621,8 +629,9 @@ mod tests {
         static ALLOCATOR: Bump = unsafe {
             Bump::new(
                 NonNull::new_unchecked(BUFFER.as_ptr() as *mut _),
-                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _)
-            )};
+                NonNull::new_unchecked(BUFFER.as_ptr().add(BUFFER.len()) as *mut _),
+            )
+        };
 
         let mut list = LinkedList::new();
         list.emplace_back(MyStruct { id: 42 }, &ALLOCATOR);
@@ -634,9 +643,7 @@ mod tests {
         let mut head = list.pop_front().unwrap();
         head.id = 47;
 
-        list.insert_when(head, |head, node| {
-            head.id < node.id
-        });
+        list.insert_when(head, |head, node| head.id < node.id);
 
         let truth = vec![43, 44, 45, 47, 48];
         for (i, element) in list.iter().enumerate() {

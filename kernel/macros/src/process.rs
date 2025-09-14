@@ -3,21 +3,20 @@ use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::path::PathBuf;
 
-use syn::parse::{Parse, ParseStream};
-use syn::{parse, Result};
-use syn::LitInt;
-use proc_macro2::{Span, TokenStream};
 use proc_macro2::Ident;
+use proc_macro2::{Span, TokenStream};
+use quote::{quote, ToTokens};
+use syn::parse::{Parse, ParseStream};
+use syn::LitInt;
 use syn::Token;
-use quote::{ToTokens, quote};
+use syn::{parse, Result};
 
 use bern_conf::CONF;
 
 pub struct ProcessInfo {
     ident: Ident,
-    memory_size: LitInt
+    memory_size: LitInt,
 }
-
 
 impl Parse for ProcessInfo {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -25,17 +24,15 @@ impl Parse for ProcessInfo {
         input.parse::<Token![,]>()?;
         let memory_size: LitInt = input.parse()?;
 
-        Ok(ProcessInfo {
-            ident,
-            memory_size,
-        })
+        Ok(ProcessInfo { ident, memory_size })
     }
 }
 
 impl ToTokens for ProcessInfo {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let process_ident = self.ident.clone();
-        let process_ident_upper = Ident::new(&process_ident.to_string().to_uppercase(), Span::call_site());
+        let process_ident_upper =
+            Ident::new(&process_ident.to_string().to_uppercase(), Span::call_site());
         let size = self.memory_size.clone();
 
         // Check memory size requirements
@@ -43,11 +40,17 @@ impl ToTokens for ProcessInfo {
         let value = self.memory_size.base10_parse::<u32>().unwrap();
         let next = 2u32.pow((value as f32).log(2f32).ceil() as u32);
         if (value & (value - 1)) != 0 {
-            tokens.extend(parse::Error::new(
-                Span::call_site(),
-                format!("Process memory size must be power of 2. \
-                Next valid size to {} is {}.", value, next),
-            ).to_compile_error());
+            tokens.extend(
+                parse::Error::new(
+                    Span::call_site(),
+                    format!(
+                        "Process memory size must be power of 2. \
+                Next valid size to {} is {}.",
+                        value, next
+                    ),
+                )
+                .to_compile_error(),
+            );
             return;
         }
 
@@ -64,7 +67,7 @@ impl ToTokens for ProcessInfo {
         // of checking the linker script within this macro, we declare the
         // static variable `no_mangle`, so that the compiler does the check for
         // us.
-        let formatted = TokenStream::from(quote!{
+        let formatted = TokenStream::from(quote! {
             {
                 use bern_kernel::exec::process::{Process, ProcessMemory};
 

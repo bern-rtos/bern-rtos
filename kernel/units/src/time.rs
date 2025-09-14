@@ -1,6 +1,6 @@
 //! Units representing time.
 
-use derive_more::{Add, Sub, Mul, Div};
+use derive_more::{Add, Div, Mul, Sub};
 
 //#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
 //pub struct MicroSecond(pub u64);
@@ -103,7 +103,6 @@ impl ExtMilliSecond for u64 {
     }
 }
 
-
 impl From<u32> for MilliSecond {
     fn from(ms: u32) -> Self {
         (ms as u64).ms()
@@ -116,13 +115,11 @@ impl From<u64> for MilliSecond {
     }
 }
 
-
 impl From<Second> for MilliSecond {
     fn from(s: Second) -> Self {
         Self(s.0 * 1_000)
     }
 }
-
 
 impl From<Minute> for MilliSecond {
     fn from(min: Minute) -> Self {
@@ -135,7 +132,6 @@ impl From<Minute> for Second {
         Self(min.0 * 60)
     }
 }
-
 
 impl From<Hour> for MilliSecond {
     fn from(h: Hour) -> Self {
@@ -154,7 +150,6 @@ impl From<Hour> for Minute {
         Self(h.0 * 60)
     }
 }
-
 
 impl From<Day> for MilliSecond {
     fn from(d: Day) -> Self {

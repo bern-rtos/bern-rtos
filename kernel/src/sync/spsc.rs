@@ -5,18 +5,17 @@ pub const fn channel<T, const N: usize>() -> Channel<ConstQueue<T, { N }>> {
     Channel::new(ConstQueue::new())
 }
 
-
 #[cfg(all(test, not(target_os = "none")))]
 mod tests {
     use super::*;
-    use std::thread;
-    use std::boxed::Box;
     use crate::mem::queue::QueueError;
     use crate::sync::channel::{ChannelError, RefMessage};
+    use std::boxed::Box;
+    use std::thread;
 
     #[test]
     fn single_producer() {
-        static CHANNEL: Channel<ConstQueue<u32, 16>>  = channel::<u32, 16>();
+        static CHANNEL: Channel<ConstQueue<u32, 16>> = channel::<u32, 16>();
         let (tx, rx) = CHANNEL.split();
 
         assert_eq!(rx.free(), 15);
@@ -38,7 +37,7 @@ mod tests {
 
     #[test]
     fn overflow() {
-        static CHANNEL: Channel<ConstQueue<u32, 16>>  = channel::<u32, 16>();
+        static CHANNEL: Channel<ConstQueue<u32, 16>> = channel::<u32, 16>();
         let (tx, _rx) = CHANNEL.split();
 
         for i in 0..15 {
@@ -52,7 +51,7 @@ mod tests {
 
     #[test]
     fn underflow() {
-        static CHANNEL: Channel<ConstQueue<u32, 16>>  = channel::<u32, 16>();
+        static CHANNEL: Channel<ConstQueue<u32, 16>> = channel::<u32, 16>();
         let (tx, rx) = CHANNEL.split();
 
         for i in 0..5 {
@@ -71,7 +70,7 @@ mod tests {
 
     #[test]
     fn spsc_thread() {
-        static CHANNEL: Channel<ConstQueue<u32, 16>>  = channel::<u32, 16>();
+        static CHANNEL: Channel<ConstQueue<u32, 16>> = channel::<u32, 16>();
         let (tx, rx) = CHANNEL.split();
 
         let prod_a = thread::spawn(move || {
@@ -91,7 +90,7 @@ mod tests {
 
     #[test]
     fn static_channel() {
-        static CHANNEL: Channel<ConstQueue<u32, 16>>  = channel::<u32, 16>();
+        static CHANNEL: Channel<ConstQueue<u32, 16>> = channel::<u32, 16>();
         let (tx, rx) = CHANNEL.split();
         tx.send(42).unwrap();
 
@@ -100,7 +99,7 @@ mod tests {
 
     #[test]
     fn by_ref() {
-        static CHANNEL: Channel<ConstQueue<RefMessage<u32>, 16>>  = channel::<RefMessage<u32>, 16>();
+        static CHANNEL: Channel<ConstQueue<RefMessage<u32>, 16>> = channel::<RefMessage<u32>, 16>();
         let (tx, rx) = CHANNEL.split();
 
         let a = Box::new(42);

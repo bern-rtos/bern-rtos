@@ -1,15 +1,15 @@
 //! Heap implementation based on a free linked list. The list is sorted by
 //! memory address, so that adjecent free blocks can be found and merged easily.
 
+use crate::alloc::allocator::{AllocError, Allocator};
+use crate::mem::boxed::Box;
+use crate::mem::linked_list::{LinkedList, Node};
+use bern_units::memory_size::Byte;
 use core::alloc::Layout;
 use core::cell::Cell;
 use core::mem::size_of;
 use core::ptr;
-use core::ptr::{NonNull, slice_from_raw_parts_mut};
-use bern_units::memory_size::Byte;
-use crate::alloc::allocator::{Allocator, AllocError};
-use crate::mem::linked_list::{LinkedList, Node};
-use crate::mem::boxed::Box;
+use core::ptr::{slice_from_raw_parts_mut, NonNull};
 
 struct Free {
     size: usize,
@@ -52,9 +52,7 @@ impl Heap {
 
         let ptr = block.as_ptr() as *mut Node<Free>;
 
-        let node = Node::new(Free {
-            size
-        });
+        let node = Node::new(Free { size });
 
         ptr.write(node);
 
@@ -75,10 +73,8 @@ impl Heap {
                     // when when took a node.
                     self.free.push_back(boxed);
                 } else {
-                    self.free.insert(
-                        NonNull::new_unchecked(cursor.node()),
-                        boxed,
-                    );
+                    self.free
+                        .insert(NonNull::new_unchecked(cursor.node()), boxed);
                 }
                 return;
             } else if cursor.node().is_null() {
@@ -93,9 +89,7 @@ impl Heap {
 
     #[allow(unused)]
     fn align(ptr: *mut u8, align: usize) -> *mut u8 {
-        unsafe {
-            ptr.add(ptr.align_offset(align))
-        }
+        unsafe { ptr.add(ptr.align_offset(align)) }
     }
 
     ///
@@ -103,10 +97,7 @@ impl Heap {
     /// - Pointer must not be `null`
     /// - Range must be checked
     unsafe fn slice_ptr_from_raw(ptr: *mut u8, len: usize) -> NonNull<[u8]> {
-        NonNull::new_unchecked(slice_from_raw_parts_mut(
-            ptr,
-            len,
-        ))
+        NonNull::new_unchecked(slice_from_raw_parts_mut(ptr, len))
     }
 }
 
@@ -123,7 +114,7 @@ impl Allocator for Heap {
 
         // Find free block that is large enough.
         let mut cursor = self.free.cursor_front_mut();
-        for i in 0..self.free.len() + 1{
+        for i in 0..self.free.len() + 1 {
             match cursor.inner() {
                 None => return Err(AllocError::OutOfMemory),
                 Some(node) => {
@@ -173,10 +164,7 @@ impl Allocator for Heap {
             size = MIN_FREE_SIZE;
         }
 
-        self.insert_free(Heap::slice_ptr_from_raw(
-            ptr.as_ptr(),
-            size,
-        ));
+        self.insert_free(Heap::slice_ptr_from_raw(ptr.as_ptr(), size));
     }
 
     fn capacity(&self) -> Byte {
@@ -189,7 +177,6 @@ impl Allocator for Heap {
 }
 
 unsafe impl Sync for Heap {}
-
 
 #[cfg(all(test, not(target_os = "none")))]
 mod tests {
@@ -205,7 +192,9 @@ mod tests {
         }
 
         for _i in 0..10 {
-            let _a = HEAP.alloc(Layout::from_size_align(100, 4).unwrap()).unwrap();
+            let _a = HEAP
+                .alloc(Layout::from_size_align(100, 4).unwrap())
+                .unwrap();
         }
     }
 
@@ -220,7 +209,9 @@ mod tests {
         }
 
         for _i in 0..11 {
-            let _a = HEAP.alloc(Layout::from_size_align(100, 4).unwrap()).unwrap();
+            let _a = HEAP
+                .alloc(Layout::from_size_align(100, 4).unwrap())
+                .unwrap();
         }
     }
 
@@ -243,7 +234,7 @@ mod tests {
                 unsafe {
                     HEAP.dealloc(
                         NonNull::new_unchecked(e.take().unwrap().as_ptr() as *mut u8),
-                        layout.clone()
+                        layout.clone(),
                     );
                 }
             }

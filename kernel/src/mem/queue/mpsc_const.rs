@@ -1,13 +1,11 @@
+use crate::mem::queue::{FiFoQueue, QueueError, SyncProducer};
 /// Multi Producer Single Consumer queue
 ///
 /// Similar to `std::mpmc::channel`, <https://docs.rs/heapless/latest/heapless/spsc/index.html>
 /// and <https://www.codeproject.com/Articles/153898/Yet-another-implementation-of-a-lock-free-circul>
-
-
 use core::cell::UnsafeCell;
 use core::mem::MaybeUninit;
 use core::sync::atomic::{AtomicU16, Ordering};
-use crate::mem::queue::{FiFoQueue, QueueError, SyncProducer};
 
 pub struct ConstQueue<T, const N: usize> {
     data: [UnsafeCell<MaybeUninit<T>>; N],
@@ -50,12 +48,9 @@ impl<T, const N: usize> ConstQueue<T, { N }> {
             // and `self.reader_limit` was advanced from the other
             // thread/interrupt. In this case the `reader_limit` is already
             // correct and we do not need to store it again.
-            self.reader_limit.compare_exchange(
-                reader_limit,
-                writer,
-                Ordering::Relaxed,
-                Ordering::Relaxed
-            ).ok();
+            self.reader_limit
+                .compare_exchange(reader_limit, writer, Ordering::Relaxed, Ordering::Relaxed)
+                .ok();
             self.reader_limit.store(writer, Ordering::Relaxed);
         }
     }
@@ -85,7 +80,8 @@ impl<T, const N: usize> FiFoQueue<T, { N }> for ConstQueue<T, { N }> {
         self.write_acquire();
 
         // Try to take an item
-        loop { // CAS loop
+        loop {
+            // CAS loop
             writer = self.writer.load(Ordering::Relaxed) as usize;
 
             if Self::increment(writer) == reader {
@@ -97,10 +93,10 @@ impl<T, const N: usize> FiFoQueue<T, { N }> for ConstQueue<T, { N }> {
                 writer as u16,
                 Self::increment(writer) as u16,
                 Ordering::Release,
-                Ordering::Relaxed
+                Ordering::Relaxed,
             ) {
                 Ok(_) => break,
-                Err(_) => { },
+                Err(_) => {}
             }
         }
 
@@ -114,7 +110,8 @@ impl<T, const N: usize> FiFoQueue<T, { N }> for ConstQueue<T, { N }> {
     }
 
     fn try_pop_front(&self) -> Result<T, QueueError>
-        where T: Copy
+    where
+        T: Copy,
     {
         let mut reader = self.reader.load(Ordering::Relaxed) as usize;
         let limit = self.reader_limit.load(Ordering::Relaxed) as usize;
@@ -125,9 +122,7 @@ impl<T, const N: usize> FiFoQueue<T, { N }> for ConstQueue<T, { N }> {
 
         reader = Self::increment(reader);
 
-        let item = unsafe {
-            (&mut *self.data[reader].get()).assume_init()
-        };
+        let item = unsafe { (&mut *self.data[reader].get()).assume_init() };
 
         self.reader.store(reader as u16, Ordering::Relaxed);
 
@@ -146,7 +141,6 @@ impl<T, const N: usize> FiFoQueue<T, { N }> for ConstQueue<T, { N }> {
     }
 }
 
-unsafe impl<T, const N: usize> Sync for ConstQueue<T, { N }> { }
+unsafe impl<T, const N: usize> Sync for ConstQueue<T, { N }> {}
 
-unsafe impl<T, const N: usize> SyncProducer for ConstQueue<T, { N }> { }
-
+unsafe impl<T, const N: usize> SyncProducer for ConstQueue<T, { N }> {}

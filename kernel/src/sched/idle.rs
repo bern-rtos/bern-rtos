@@ -1,7 +1,7 @@
-use core::sync::atomic::{compiler_fence, Ordering};
 use crate::exec::process::{Process, ProcessMemory};
 use crate::exec::thread::Thread;
 use crate::stack::Stack;
+use core::sync::atomic::{compiler_fence, Ordering};
 
 extern "C" {
     static mut __smprocess_default_idle: usize;
@@ -11,8 +11,8 @@ extern "C" {
 
 #[no_mangle]
 #[link_section = ".kernel.process"]
-static BERN_DEFAULT_IDLE: Process = Process::new(
-    unsafe { ProcessMemory {
+static BERN_DEFAULT_IDLE: Process = Process::new(unsafe {
+    ProcessMemory {
         size: 256,
 
         data_start: (&__smprocess_default_idle) as *const _ as *const u8,
@@ -21,22 +21,22 @@ static BERN_DEFAULT_IDLE: Process = Process::new(
 
         heap_start: 1 as *const u8,
         heap_end: 1 as *const u8,
-    }}
-);
+    }
+});
 
 #[link_section = ".process.default_idle"]
 static mut STACK: [u8; 256] = [0; 256];
 
 pub(crate) fn init() {
     crate::log::trace!("Init idle thread");
-    BERN_DEFAULT_IDLE.init(|c| {
-        Thread::new(c)
-            .idle_task()
-            .stack(unsafe { Stack::new(&mut STACK, STACK.len()) })
-            .spawn(|| {
-                loop {
+    BERN_DEFAULT_IDLE
+        .init(|c| {
+            Thread::new(c)
+                .idle_task()
+                .stack(unsafe { Stack::new(&mut STACK, STACK.len()) })
+                .spawn(|| loop {
                     compiler_fence(Ordering::SeqCst);
-                }
-            });
-    }).ok();
+                });
+        })
+        .ok();
 }

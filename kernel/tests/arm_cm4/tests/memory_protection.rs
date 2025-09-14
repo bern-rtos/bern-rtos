@@ -4,8 +4,8 @@
 #![feature(default_alloc_error_handler)]
 
 mod common;
-use common::main as _;
 use bern_kernel::sync::Mutex;
+use common::main as _;
 
 extern crate alloc;
 use alloc::sync::Arc;
@@ -16,26 +16,22 @@ fn overflow_stack(a: u32) -> u32 {
     overflow_stack(a + 1)
 }
 
-
 static PROC: &Process = bern_kernel::new_process!(test, 4096);
 
 #[bern_test::tests]
 mod tests {
     use super::*;
     use crate::common::*;
-    use bern_kernel::*;
     use bern_kernel::exec::runnable::Priority;
     use bern_kernel::exec::thread::Thread;
     use bern_kernel::stack::Stack;
     use bern_kernel::units::frequency::ExtMilliHertz;
+    use bern_kernel::*;
 
     #[test_set_up]
     fn init_scheduler() {
         init();
-        time::set_tick_frequency(
-            1.kHz(),
-            72.MHz()
-        );
+        time::set_tick_frequency(1.kHz(), 72.MHz());
     }
 
     #[test_tear_down]
@@ -69,7 +65,8 @@ mod tests {
                     bern_test::test_succeeded();
                     __tear_down();
                 });
-        }).unwrap();
+        })
+        .unwrap();
 
         start();
     }
@@ -81,11 +78,9 @@ mod tests {
         PROC.init(move |c| {
             Thread::new(c)
                 .stack(Stack::try_new_in(c, 1024).unwrap())
-                .spawn(move || {
-                    loop {
-                        led.toggle();
-                        sleep(10);
-                    }
+                .spawn(move || loop {
+                    led.toggle();
+                    sleep(10);
                 });
 
             // watchdog
@@ -99,7 +94,8 @@ mod tests {
                     bern_test::test_succeeded();
                     __tear_down();
                 });
-        }).unwrap();
+        })
+        .unwrap();
 
         start();
     }
@@ -125,10 +121,9 @@ mod tests {
                     bern_test::test_succeeded();
                     __tear_down();
                 });
-        }).unwrap();
+        })
+        .unwrap();
 
         start();
     }
-
-
 }

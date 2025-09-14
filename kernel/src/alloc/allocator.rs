@@ -1,6 +1,6 @@
+use bern_units::memory_size::Byte;
 use core::alloc::Layout;
 use core::ptr::NonNull;
-use bern_units::memory_size::Byte;
 
 #[allow(unused)]
 #[derive(Debug, Eq, PartialEq)]

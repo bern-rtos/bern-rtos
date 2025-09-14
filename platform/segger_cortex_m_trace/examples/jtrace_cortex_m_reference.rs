@@ -2,19 +2,16 @@
 #![no_std]
 
 use bern_kernel as kernel;
-use kernel::{
-    sched,
-    sync::mutex::Mutex,
-};
+use kernel::{sched, sync::mutex::Mutex};
 
 use panic_halt as _;
 
+use bern_kernel::exec::thread::{Priority, Runnable};
+use bern_kernel::sync::semaphore::Semaphore;
 use cortex_m;
 use cortex_m_rt::entry;
 use segger_cortex_m_trace::SeggerCortexMTrace;
 use stm32f4xx_hal::prelude::*;
-use bern_kernel::exec::thread::{Priority, Runnable};
-use bern_kernel::sync::semaphore::Semaphore;
 
 #[link_section = ".shared"]
 static MUTEX: Mutex<u32> = Mutex::new(42);
@@ -33,26 +30,22 @@ fn main() -> ! {
     Runnable::new()
         .idle_task()
         .static_stack(kernel::alloc_static_stack!(128))
-        .spawn(move || {
-            loop {
-                cortex_m::asm::nop();
-            }
+        .spawn(move || loop {
+            cortex_m::asm::nop();
         });
 
     /* task 1 */
     Runnable::new()
         .priority(Priority(1))
         .static_stack(kernel::alloc_static_stack!(512))
-        .spawn(move || {
-            loop {
-                {
-                    match MUTEX.lock(1000) {
-                        Ok(mut value) => *value = 54,
-                        Err(_) => (),
-                    }
+        .spawn(move || loop {
+            {
+                match MUTEX.lock(1000) {
+                    Ok(mut value) => *value = 54,
+                    Err(_) => (),
                 }
-                kernel::sleep(100);
             }
+            kernel::sleep(100);
         });
 
     /* task 2 */
@@ -63,10 +56,8 @@ fn main() -> ! {
             /* spawn a new task while the system is running */
             Runnable::new()
                 .static_stack(kernel::alloc_static_stack!(512))
-                .spawn(move || {
-                    loop {
-                        kernel::sleep(800);
-                    }
+                .spawn(move || loop {
+                    kernel::sleep(800);
                 });
 
             loop {
@@ -77,7 +68,6 @@ fn main() -> ! {
                 kernel::sleep(1000);
             }
         });
-
 
     let mut a = 10;
     Runnable::new()
@@ -109,10 +99,8 @@ fn main() -> ! {
     Runnable::new()
         .priority(Priority(4))
         .static_stack(kernel::alloc_static_stack!(128))
-        .spawn(move || {
-            loop {
-                cortex_m::asm::nop();
-            }
+        .spawn(move || loop {
+            cortex_m::asm::nop();
         });
 
     sched::start();

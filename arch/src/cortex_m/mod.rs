@@ -1,15 +1,15 @@
 //! ARM Cortex-M hardware support.
 
-pub mod syscall;
 pub mod core;
-pub mod sync;
-mod scheduler;
-mod tick;
-mod register;
-pub mod startup;
+mod interrupt;
 pub mod memory_protection;
 mod mpu;
-mod interrupt;
+mod register;
+mod scheduler;
+pub mod startup;
+pub mod sync;
+pub mod syscall;
+mod tick;
 
 pub struct Arch;
 

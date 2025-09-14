@@ -1,15 +1,14 @@
 #![no_main]
 #![no_std]
-
 #![feature(default_alloc_error_handler)]
 
+use crate::common_timing::{Board, _stm32f4xx_hal_gpio_ExtiPin};
 use bern_kernel::exec::interrupt::{InterruptHandler, InterruptStack};
 use bern_kernel::exec::process::Context;
-use crate::common_timing::{_stm32f4xx_hal_gpio_ExtiPin, Board};
-use core::sync::atomic::{compiler_fence, Ordering};
 use bern_kernel::exec::runnable::Priority;
 use bern_kernel::exec::thread::Thread;
 use bern_kernel::stack::Stack;
+use core::sync::atomic::{compiler_fence, Ordering};
 
 mod common_timing;
 
@@ -32,9 +31,7 @@ pub fn spawn_timing_thread(c: &Context, mut board: Board) {
     Thread::new(c)
         .priority(Priority::new(0))
         .stack(Stack::try_new_in(c, 1024).unwrap())
-        .spawn(move || {
-            loop {
-                compiler_fence(Ordering::SeqCst);
-            }
+        .spawn(move || loop {
+            compiler_fence(Ordering::SeqCst);
         });
 }

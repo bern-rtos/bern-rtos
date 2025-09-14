@@ -1,15 +1,14 @@
+use crate::mem::queue::{FiFoQueue, PushRaw, QueueError, RawItem};
 /// Single Produce Single Consumer queue.
 ///
 /// The queue can send data from *one* thread *one* other thread. This queue has
 /// very little memory and runtime overhead.
 ///
 /// Similar to `std::mpmc::channel` and <https://docs.rs/heapless/latest/heapless/spsc/index.html>
-
 use core::cell::UnsafeCell;
 use core::mem;
-use core::mem::{MaybeUninit, size_of};
+use core::mem::{size_of, MaybeUninit};
 use core::sync::atomic::{AtomicU16, Ordering};
-use crate::mem::queue::{FiFoQueue, PushRaw, QueueError, RawItem};
 
 pub struct ConstQueue<T, const N: usize> {
     data: [UnsafeCell<MaybeUninit<T>>; N],
@@ -47,7 +46,7 @@ impl<T, const N: usize> ConstQueue<T, { N }> {
 
 impl<T, const N: usize> FiFoQueue<T, { N }> for ConstQueue<T, { N }> {
     fn try_push_back(&self, item: T) -> Result<(), QueueError> {
-        let mut writer= self.writer.load(Ordering::Relaxed) as usize;
+        let mut writer = self.writer.load(Ordering::Relaxed) as usize;
         let reader = self.reader.load(Ordering::Relaxed) as usize;
 
         if self.free_from_raw(writer, reader) == 0 {
@@ -65,19 +64,16 @@ impl<T, const N: usize> FiFoQueue<T, { N }> for ConstQueue<T, { N }> {
     }
 
     fn try_pop_front(&self) -> Result<T, QueueError>
-        where T: Copy
+    where
+        T: Copy,
     {
         if self.free() == self.capacity() {
             return Err(QueueError::Emtpty);
         }
 
-        let reader = Self::increment(
-            self.reader.load(Ordering::Relaxed) as usize
-        );
+        let reader = Self::increment(self.reader.load(Ordering::Relaxed) as usize);
 
-        let item = unsafe {
-            (&mut *self.data[reader].get()).assume_init()
-        };
+        let item = unsafe { (&mut *self.data[reader].get()).assume_init() };
 
         self.reader.store(reader as u16, Ordering::Relaxed);
 
@@ -97,7 +93,8 @@ impl<T, const N: usize> FiFoQueue<T, { N }> for ConstQueue<T, { N }> {
 }
 
 impl<T, const N: usize> PushRaw for ConstQueue<T, { N }>
-    where T: Copy
+where
+    T: Copy,
 {
     unsafe fn try_push_back_raw(&self, item: RawItem) -> Result<(), QueueError> {
         assert_eq!(item.size, size_of::<T>());
@@ -106,4 +103,4 @@ impl<T, const N: usize> PushRaw for ConstQueue<T, { N }>
     }
 }
 
-unsafe impl<T, const N: usize> Sync for ConstQueue<T, { N }> { }
+unsafe impl<T, const N: usize> Sync for ConstQueue<T, { N }> {}

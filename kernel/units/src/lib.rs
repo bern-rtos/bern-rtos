@@ -2,6 +2,6 @@
 
 #![no_std]
 
+pub mod frequency;
 pub mod memory_size;
 pub mod time;
-pub mod frequency;

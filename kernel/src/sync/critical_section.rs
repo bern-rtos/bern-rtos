@@ -1,5 +1,5 @@
-use bern_arch::ISync;
 use bern_arch::arch::Arch;
+use bern_arch::ISync;
 
 // similar to cortex_m::interrupt::free
 #[inline(always)]

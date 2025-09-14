@@ -1,22 +1,21 @@
-use core::ops::Deref;
-use core::ptr::NonNull;
 use crate::alloc::allocator::Allocator;
 use crate::alloc::bump::Bump;
-use bern_arch::arch::Arch;
-use bern_arch::IStartup;
-use bern_arch::startup::Region;
-use bern_units::memory_size::Byte;
 use crate::kernel::KERNEL;
+use crate::log::trace;
 use crate::mem::boxed::Box;
 use crate::mem::linked_list::Node;
-use crate::log::trace;
+use bern_arch::arch::Arch;
+use bern_arch::startup::Region;
+use bern_arch::IStartup;
+use bern_units::memory_size::Byte;
+use core::ops::Deref;
+use core::ptr::NonNull;
 
 #[cfg(feature = "log-defmt")]
 use defmt::Formatter;
 
 #[cfg(feature = "_log_fmt")]
 use core::fmt::Display;
-
 
 pub struct Process {
     inner: Node<ProcessInternal>,
@@ -27,31 +26,35 @@ impl Process {
         let proc_allocator = unsafe {
             Bump::new(
                 NonNull::new_unchecked(memory.heap_start as *mut _),
-                NonNull::new_unchecked(memory.heap_end as *mut _)
-            )};
+                NonNull::new_unchecked(memory.heap_end as *mut _),
+            )
+        };
 
         Process {
             inner: Node::new(ProcessInternal {
                 memory,
                 proc_allocator,
-            })
+            }),
         }
     }
 
     pub fn init<F>(&'static self, f: F) -> Result<(), ProcessError>
-        where F: FnOnce(&Context)
+    where
+        F: FnOnce(&Context),
     {
         if KERNEL.is_process_registered(self.inner.deref()) {
             return Err(ProcessError::AlreadyInit);
         }
         // Note(unsafe): Process is not initialized more than once.
-        unsafe { self.inner.init_memory(); }
+        unsafe {
+            self.inner.init_memory();
+        }
         KERNEL.register_process(self.node());
 
         KERNEL.start_init_process(self.inner.deref());
 
         f(&Context {
-            process: self.inner.deref()
+            process: self.inner.deref(),
         });
 
         KERNEL.end_init_process();
@@ -60,14 +63,11 @@ impl Process {
     }
 
     pub(crate) fn node(&self) -> Box<Node<ProcessInternal>> {
-        unsafe {
-            Box::from_raw(NonNull::new_unchecked(&self.inner as *const _ as *mut _))
-        }
+        unsafe { Box::from_raw(NonNull::new_unchecked(&self.inner as *const _ as *mut _)) }
     }
 }
 
-unsafe impl Sync for Process { }
-
+unsafe impl Sync for Process {}
 
 pub struct ProcessMemory {
     pub size: usize,
@@ -97,7 +97,8 @@ impl ProcessInternal {
     /// # Safety
     /// Only call this method once.
     unsafe fn init_memory(&self) {
-        trace!("Process memory: data 0x{:08X} - 0x{:08X}, alloc 0x{:08X} - 0x{:08X}",
+        trace!(
+            "Process memory: data 0x{:08X} - 0x{:08X}, alloc 0x{:08X} - 0x{:08X}",
             self.memory.data_start as usize,
             self.memory.data_end as usize,
             self.memory.heap_start as usize,
@@ -107,7 +108,7 @@ impl ProcessInternal {
         Arch::init_static_region(Region {
             start: self.memory.data_start as *const _,
             end: self.memory.data_end as *const _,
-            data: Some(self.memory.data_load as *const _)
+            data: Some(self.memory.data_load as *const _),
         });
     }
 
@@ -125,7 +126,7 @@ impl ProcessInternal {
 }
 
 // Note(unsafe): The values of `Process` are read only.
-unsafe impl Sync for ProcessInternal { }
+unsafe impl Sync for ProcessInternal {}
 
 pub struct Context {
     process: &'static ProcessInternal,
@@ -151,10 +152,13 @@ impl defmt::Format for ProcessError {
 #[cfg(feature = "log-defmt")]
 impl defmt::Format for ProcessInternal {
     fn format(&self, fmt: Formatter) {
-        defmt::write!(fmt, "None    {:05}B/{:05}B ({}%)",
-                      self.proc_allocator.usage().0,
-                      self.proc_allocator.capacity().0,
-                      (self.proc_allocator.usage().0 as f32 / self.proc_allocator.capacity().0 as f32 * 100f32) as u8
+        defmt::write!(
+            fmt,
+            "None    {:05}B/{:05}B ({}%)",
+            self.proc_allocator.usage().0,
+            self.proc_allocator.capacity().0,
+            (self.proc_allocator.usage().0 as f32 / self.proc_allocator.capacity().0 as f32
+                * 100f32) as u8
         )
     }
 }
@@ -173,10 +177,13 @@ impl Display for ProcessError {
 #[cfg(feature = "_log_fmt")]
 impl Display for ProcessInternal {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "None    {:05}B/{:05}B ({}%)",
-               self.proc_allocator.usage().0,
-               self.proc_allocator.capacity().0,
-               (self.proc_allocator.usage().0 as f32 / self.proc_allocator.capacity().0 as f32 * 100f32) as u8
+        write!(
+            f,
+            "None    {:05}B/{:05}B ({}%)",
+            self.proc_allocator.usage().0,
+            self.proc_allocator.capacity().0,
+            (self.proc_allocator.usage().0 as f32 / self.proc_allocator.capacity().0 as f32
+                * 100f32) as u8
         )
     }
 }

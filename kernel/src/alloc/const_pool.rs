@@ -1,9 +1,9 @@
-use core::{mem, ptr};
+use crate::log;
 use core::mem::MaybeUninit;
 use core::ops::{Deref, DerefMut};
 use core::ptr::NonNull;
 use core::sync::atomic::{AtomicBool, Ordering};
-use crate::log;
+use core::{mem, ptr};
 
 pub struct Item<T> {
     data: MaybeUninit<T>,
@@ -23,14 +23,14 @@ impl<T> Item<T> {
     }
 
     pub fn try_acquire(&self) -> Option<ConstBox<T>> {
-        match self.lock.compare_exchange(
-            false,
-            true,
-            Ordering::Acquire,
-            Ordering::Relaxed
-        ) {
+        match self
+            .lock
+            .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+        {
             // Note(unsafe): self is guaranteed to be non-null
-            Ok(_) => Some(ConstBox::new(unsafe { NonNull::new_unchecked(self as *const _ as *mut _) })),
+            Ok(_) => Some(ConstBox::new(unsafe {
+                NonNull::new_unchecked(self as *const _ as *mut _)
+            })),
             Err(_) => None,
         }
     }
@@ -61,7 +61,7 @@ pub struct ConstPool<T, const N: usize> {
     items: [Item<T>; N],
 }
 
-impl<T, const N: usize> ConstPool<T, { N  }> {
+impl<T, const N: usize> ConstPool<T, { N }> {
     const INIT: Item<T> = Item::new();
 
     pub const fn new() -> Self {
@@ -93,17 +93,15 @@ impl<T, const N: usize> ConstPool<T, { N  }> {
     }
 }
 
-unsafe impl<T, const N: usize> Sync for ConstPool<T, { N }> { }
+unsafe impl<T, const N: usize> Sync for ConstPool<T, { N }> {}
 
 pub struct ConstBox<T> {
-    item: NonNull<Item<T>>
+    item: NonNull<Item<T>>,
 }
 
 impl<T> ConstBox<T> {
     const fn new(item: NonNull<Item<T>>) -> Self {
-        ConstBox {
-            item
-        }
+        ConstBox { item }
     }
 
     pub fn leak(b: Self) -> NonNull<Item<T>> {
@@ -113,9 +111,7 @@ impl<T> ConstBox<T> {
     }
 
     pub unsafe fn from_raw(item: NonNull<Item<T>>) -> Self {
-        ConstBox {
-            item,
-        }
+        ConstBox { item }
     }
 }
 
@@ -133,7 +129,7 @@ impl<T> DerefMut for ConstBox<T> {
     }
 }
 
-impl<'a,T> Drop for ConstBox<T> {
+impl<'a, T> Drop for ConstBox<T> {
     fn drop(&mut self) {
         unsafe {
             ptr::drop_in_place(self.item.as_ptr());
@@ -161,6 +157,5 @@ mod tests {
             assert_eq!(pool.free(), 9);
         } // Drop element
         assert_eq!(pool.free(), 10);
-
     }
 }

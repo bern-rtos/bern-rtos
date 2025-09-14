@@ -10,14 +10,18 @@ impl TracePin for StNucleoF446 {
     #[inline]
     fn set_trace_out_high() {
         unsafe {
-            (*stm32f4xx_hal::pac::GPIOC::ptr()).odr.modify(|_, w|  w.odr7().set_bit());
+            (*stm32f4xx_hal::pac::GPIOC::ptr())
+                .odr
+                .modify(|_, w| w.odr7().set_bit());
         }
     }
 
     #[inline]
     fn set_trace_out_low() {
         unsafe {
-            (*stm32f4xx_hal::pac::GPIOC::ptr()).odr.modify(|_, w|  w.odr7().clear_bit());
+            (*stm32f4xx_hal::pac::GPIOC::ptr())
+                .odr
+                .modify(|_, w| w.odr7().clear_bit());
         }
     }
 

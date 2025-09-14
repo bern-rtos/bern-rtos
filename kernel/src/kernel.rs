@@ -1,27 +1,27 @@
-use core::cell::{Cell, UnsafeCell};
-use core::mem::MaybeUninit;
-use core::ptr::{NonNull, null_mut};
-use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
-use bern_arch::arch::Arch;
-use bern_arch::{IMemoryProtection, IStartup};
-use bern_arch::memory_protection::{Access, Config, Permission, Type};
-use bern_conf::CONF;
+use crate::alloc::allocator::{AllocError, Allocator};
 use crate::alloc::bump::Bump;
-use crate::alloc::allocator::{Allocator, AllocError};
-use crate::exec::process::{ProcessInternal};
-use crate::sched;
-use crate::log::{error, info, debug, trace};
+use crate::exec::process::ProcessInternal;
+use crate::log::{debug, error, info, trace};
 use crate::mem::boxed::Box;
 use crate::mem::linked_list::{LinkedList, Node};
+use crate::sched;
+use bern_arch::arch::Arch;
+use bern_arch::memory_protection::{Access, Config, Permission, Type};
+use bern_arch::{IMemoryProtection, IStartup};
+use bern_conf::CONF;
+use core::cell::{Cell, UnsafeCell};
+use core::mem::MaybeUninit;
+use core::ptr::{null_mut, NonNull};
+use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 
-#[cfg(feature = "log-defmt")]
-use defmt::Formatter;
-use bern_conf_type::{MemoryLocation, MemoryType};
 use crate::mem::queue::PushRaw;
 use crate::sync::channel::ChannelError;
 use crate::sync::critical_section;
 use crate::sync::ipc::channel::{ChannelID, IpcChannelInternal};
 use crate::sync::ipc::semaphore::{IpcSemaphoreInternal, SemaphoreID};
+use bern_conf_type::{MemoryLocation, MemoryType};
+#[cfg(feature = "log-defmt")]
+use defmt::Formatter;
 
 #[link_section = ".kernel"]
 pub(crate) static KERNEL: Kernel = Kernel::new();
@@ -74,7 +74,8 @@ impl Kernel {
         unsafe {
             let allocator = Bump::new(
                 NonNull::new_unchecked(Arch::kernel_heap().start as *mut u8),
-                NonNull::new_unchecked(Arch::kernel_heap().end as *mut u8));
+                NonNull::new_unchecked(Arch::kernel_heap().end as *mut u8),
+            );
             *self.allocator.get() = MaybeUninit::new(allocator);
         };
 
@@ -92,7 +93,8 @@ impl Kernel {
     }
 
     pub(crate) fn start_init_process(&self, process: &'static ProcessInternal) {
-        self.init_process.store(process as *const _ as *mut _, Ordering::Relaxed);
+        self.init_process
+            .store(process as *const _ as *mut _, Ordering::Relaxed);
         trace!("Set init process to 0x{:08X}", process as *const _ as usize);
     }
     pub(crate) fn end_init_process(&self) {
@@ -122,19 +124,26 @@ impl Kernel {
         false
     }
 
-    pub(crate) fn register_channel(&'static self, recv_queue: NonNull<dyn PushRaw>) -> Result<ChannelID, AllocError> {
+    pub(crate) fn register_channel(
+        &'static self,
+        recv_queue: NonNull<dyn PushRaw>,
+    ) -> Result<ChannelID, AllocError> {
         let id = self.ipc_channel_counter.load(Ordering::Relaxed);
         self.ipc_channel_counter.fetch_add(1, Ordering::Release);
 
         critical_section::exec(|| {
-            self.ipc_channels.emplace_back(
-                IpcChannelInternal::new(id, recv_queue),
-                self.allocator()
-            ).map(|_| id)
+            self.ipc_channels
+                .emplace_back(IpcChannelInternal::new(id, recv_queue), self.allocator())
+                .map(|_| id)
         })
     }
-    pub(crate) fn with_channel<F, R>(&self, channel_id: ChannelID, mut f: F) -> Result<R, ChannelError>
-        where F: FnMut(&mut IpcChannelInternal) -> Result<R, ChannelError>,
+    pub(crate) fn with_channel<F, R>(
+        &self,
+        channel_id: ChannelID,
+        mut f: F,
+    ) -> Result<R, ChannelError>
+    where
+        F: FnMut(&mut IpcChannelInternal) -> Result<R, ChannelError>,
     {
         self.ipc_channels
             .iter_mut()
@@ -147,18 +156,20 @@ impl Kernel {
         let semaphore_id = self.ipc_semaphore_counter.load(Ordering::Relaxed);
         self.ipc_semaphore_counter.fetch_add(1, Ordering::Release);
 
-        sched::event_register()
-            .and_then(|event_id| {
-                critical_section::exec(|| {
-                    self.ipc_semaphores.emplace_back(
+        sched::event_register().and_then(|event_id| {
+            critical_section::exec(|| {
+                self.ipc_semaphores
+                    .emplace_back(
                         IpcSemaphoreInternal::new(semaphore_id, event_id),
-                        self.allocator()
-                    ).map(|_| (semaphore_id, event_id))
-                })
+                        self.allocator(),
+                    )
+                    .map(|_| (semaphore_id, event_id))
             })
+        })
     }
     pub(crate) fn with_semaphore<F, R>(&self, semaphore_id: SemaphoreID, mut f: F) -> Result<R, ()>
-        where F: FnMut(&mut IpcSemaphoreInternal) -> Result<R, ()>,
+    where
+        F: FnMut(&mut IpcSemaphoreInternal) -> Result<R, ()>,
     {
         self.ipc_semaphores
             .iter_mut()
@@ -167,7 +178,6 @@ impl Kernel {
             .and_then(|s| f(s))
     }
 }
-
 
 fn setup_memory_regions() {
     Arch::init_static_region(Arch::kernel_data());
@@ -184,9 +194,13 @@ fn setup_memory_regions() {
             addr: CONF.memory_map.flash.start_address as *const _,
             memory: Type::Flash,
             size: CONF.memory_map.flash.size,
-            access: Access { user: Permission::ReadOnly, system: Permission::ReadOnly },
-            executable: true
-        });
+            access: Access {
+                user: Permission::ReadOnly,
+                system: Permission::ReadOnly,
+            },
+            executable: true,
+        },
+    );
 
     // Allow peripheral RW
     Arch::enable_memory_region(
@@ -195,9 +209,13 @@ fn setup_memory_regions() {
             addr: CONF.memory_map.peripheral.start_address as *const _,
             memory: Type::Peripheral,
             size: CONF.memory_map.peripheral.size,
-            access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
-            executable: false
-        });
+            access: Access {
+                user: Permission::ReadWrite,
+                system: Permission::ReadWrite,
+            },
+            executable: false,
+        },
+    );
 
     // Allow shared read/write
     Arch::enable_memory_region(
@@ -206,30 +224,77 @@ fn setup_memory_regions() {
             addr: CONF.memory_map.sram.start_address as *const _,
             memory: Type::SramInternal,
             size: CONF.shared.size,
-            access: Access { user: Permission::ReadWrite, system: Permission::ReadWrite },
-            executable: false
-        });
+            access: Access {
+                user: Permission::ReadWrite,
+                system: Permission::ReadWrite,
+            },
+            executable: false,
+        },
+    );
 
     let mut region_index = 6;
     for memory in CONF.memory_map.additional {
         let (ty, access, exec) = match (memory.memory_type, memory.location) {
-            (MemoryType::Rom, _) => (Type::Flash, Access { user: Permission::ReadOnly, system: Permission::ReadOnly }, true),
-            (MemoryType::Eeprom, _) => (Type::Flash, Access { user: Permission::ReadWrite, system: Permission::ReadWrite }, true),
-            (MemoryType::Flash, _) => (Type::Flash, Access { user: Permission::ReadWrite, system: Permission::ReadWrite }, true),
-            (MemoryType::Peripheral, _) => (Type::Peripheral, Access { user: Permission::ReadWrite, system: Permission::ReadWrite }, false),
-            (MemoryType::Ram, MemoryLocation::Internal) => (Type::SramInternal, Access { user: Permission::ReadWrite, system: Permission::ReadWrite }, false),
-            (MemoryType::Ram, MemoryLocation::External) => (Type::SramExternal, Access { user: Permission::ReadWrite, system: Permission::ReadWrite }, false),
+            (MemoryType::Rom, _) => (
+                Type::Flash,
+                Access {
+                    user: Permission::ReadOnly,
+                    system: Permission::ReadOnly,
+                },
+                true,
+            ),
+            (MemoryType::Eeprom, _) => (
+                Type::Flash,
+                Access {
+                    user: Permission::ReadWrite,
+                    system: Permission::ReadWrite,
+                },
+                true,
+            ),
+            (MemoryType::Flash, _) => (
+                Type::Flash,
+                Access {
+                    user: Permission::ReadWrite,
+                    system: Permission::ReadWrite,
+                },
+                true,
+            ),
+            (MemoryType::Peripheral, _) => (
+                Type::Peripheral,
+                Access {
+                    user: Permission::ReadWrite,
+                    system: Permission::ReadWrite,
+                },
+                false,
+            ),
+            (MemoryType::Ram, MemoryLocation::Internal) => (
+                Type::SramInternal,
+                Access {
+                    user: Permission::ReadWrite,
+                    system: Permission::ReadWrite,
+                },
+                false,
+            ),
+            (MemoryType::Ram, MemoryLocation::External) => (
+                Type::SramExternal,
+                Access {
+                    user: Permission::ReadWrite,
+                    system: Permission::ReadWrite,
+                },
+                false,
+            ),
         };
 
         Arch::enable_memory_region(
             region_index,
             Config {
-                    addr: memory.start_address as *const _,
-                    memory: ty,
-                    size: memory.size,
-                    access,
-                    executable: exec
-            });
+                addr: memory.start_address as *const _,
+                memory: ty,
+                size: memory.size,
+                access,
+                executable: exec,
+            },
+        );
         region_index += 1;
 
         if region_index >= Arch::n_memory_regions() {
@@ -244,8 +309,7 @@ fn setup_memory_regions() {
 
 // Note(unsafe): Values within `KERNEL` are only changed at startup, this
 // guarantees non-reentrant/single thread operation.
-unsafe impl Sync for Kernel { }
-
+unsafe impl Sync for Kernel {}
 
 pub fn init() {
     KERNEL.init();
@@ -254,7 +318,6 @@ pub fn init() {
 pub fn start() -> ! {
     KERNEL.start();
 }
-
 
 #[cfg(feature = "log-defmt")]
 impl defmt::Format for State {
@@ -269,10 +332,12 @@ impl defmt::Format for State {
 pub(crate) fn print_stats() {
     info!("Kernel stats");
     info!("============");
-    info!("Allocator: {}B/{}B ({}%)",
+    info!(
+        "Allocator: {}B/{}B ({}%)",
         KERNEL.allocator().usage().0,
         KERNEL.allocator().capacity().0,
-        (KERNEL.allocator().usage().0 as f32 / KERNEL.allocator().capacity().0 as f32 * 100f32) as u8
+        (KERNEL.allocator().usage().0 as f32 / KERNEL.allocator().capacity().0 as f32 * 100f32)
+            as u8
     );
 
     info!("Process stats");

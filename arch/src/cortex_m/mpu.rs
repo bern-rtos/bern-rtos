@@ -2,10 +2,10 @@
 //!
 //! Based on <https://github.com/helium/cortex-mpu>.
 
-use core::mem;
-use cortex_m::peripheral::{self, mpu, MPU};
-use cortex_m::asm;
 use bern_units::memory_size::Byte;
+use core::mem;
+use cortex_m::asm;
+use cortex_m::peripheral::{self, mpu, MPU};
 
 /// Valid sizes for the MPU.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -185,7 +185,9 @@ impl Mpu<'_> {
     #[inline]
     pub fn enable(&mut self) {
         unsafe {
-            self.0.ctrl.write(MPU_ENABLE | MPU_PRIVILEGED_DEFAULT_ENABLE);
+            self.0
+                .ctrl
+                .write(MPU_ENABLE | MPU_PRIVILEGED_DEFAULT_ENABLE);
         }
         asm::dsb();
         asm::isb();
@@ -214,10 +216,7 @@ impl Mpu<'_> {
     /// Apply memory base address and region.
     #[inline]
     pub fn set_region_base_address(&mut self, addr: u32, region: RegionNumber) {
-        let register = Self::prepare_region_base_address(
-            addr,
-            region
-        );
+        let register = Self::prepare_region_base_address(addr, region);
 
         unsafe {
             self.0.rbar.write(register);
@@ -225,12 +224,13 @@ impl Mpu<'_> {
     }
 
     /// Compile RASR register values from configuration.
-    pub const fn prepare_region_attributes(executable: bool,
-                                     access: (Permission, Permission),
-                                     attributes: Attributes,
-                                     subregions: Subregions,
-                                     region_size: Size) -> u32 {
-
+    pub const fn prepare_region_attributes(
+        executable: bool,
+        access: (Permission, Permission),
+        attributes: Attributes,
+        subregions: Subregions,
+        region_size: Size,
+    ) -> u32 {
         // (privileged, unprivileged)
         let ap = match access {
             (Permission::NoAccess, Permission::NoAccess) => 0b000,
@@ -246,52 +246,89 @@ impl Mpu<'_> {
             Attributes::StronglyOrdered => (0b000, 0, 0, 0),
             Attributes::Device { shareable: true } => (0b000, 0, 1, 0),
             Attributes::Device { shareable: false } => (0b010, 0, 0, 0),
-            Attributes::Normal { shareable, cache_policy } => match cache_policy {
-                (CachePolicy::WriteThrough, CachePolicy::WriteThrough) => (0b000, 1, 0, shareable as u32),
-                (CachePolicy::WriteBack { wa: false }, CachePolicy::WriteBack { wa: false }) => (0b000, 1, 1, shareable as u32),
+            Attributes::Normal {
+                shareable,
+                cache_policy,
+            } => match cache_policy {
+                (CachePolicy::WriteThrough, CachePolicy::WriteThrough) => {
+                    (0b000, 1, 0, shareable as u32)
+                }
+                (CachePolicy::WriteBack { wa: false }, CachePolicy::WriteBack { wa: false }) => {
+                    (0b000, 1, 1, shareable as u32)
+                }
                 (CachePolicy::NoCache, CachePolicy::NoCache) => (0b001, 0, 0, shareable as u32),
-                (CachePolicy::WriteBack { wa: true }, CachePolicy::WriteBack { wa: true }) => (0b001, 1, 1, shareable as u32),
+                (CachePolicy::WriteBack { wa: true }, CachePolicy::WriteBack { wa: true }) => {
+                    (0b001, 1, 1, shareable as u32)
+                }
 
-                (CachePolicy::NoCache, CachePolicy::WriteBack { wa: true }) => (0b100, 0, 1, shareable as u32),
-                (CachePolicy::NoCache, CachePolicy::WriteThrough) => (0b100, 1, 0, shareable as u32),
-                (CachePolicy::NoCache, CachePolicy::WriteBack { wa: false }) => (0b100, 1, 1, shareable as u32),
-                (CachePolicy::WriteBack { wa: true }, CachePolicy::NoCache) => (0b101, 0, 0, shareable as u32),
-                (CachePolicy::WriteBack { wa: true }, CachePolicy::WriteThrough) => (0b101, 1, 0, shareable as u32),
-                (CachePolicy::WriteBack { wa: true }, CachePolicy::WriteBack { wa: false }) => (0b101, 1, 1, shareable as u32),
-                (CachePolicy::WriteThrough, CachePolicy::NoCache) => (0b110, 0, 0, shareable as u32),
-                (CachePolicy::WriteThrough, CachePolicy::WriteBack { wa: true}) => (0b110, 0, 1, shareable as u32),
-                (CachePolicy::WriteThrough, CachePolicy::WriteBack { wa: false}) => (0b110, 1, 1, shareable as u32),
-                (CachePolicy::WriteBack { wa: false }, CachePolicy::NoCache) => (0b111, 0, 0, shareable as u32),
-                (CachePolicy::WriteBack { wa: false }, CachePolicy::WriteBack { wa: true}) => (0b111, 0, 1, shareable as u32),
-                (CachePolicy::WriteBack { wa: false }, CachePolicy::WriteThrough) => (0b111, 1, 0, shareable as u32),
+                (CachePolicy::NoCache, CachePolicy::WriteBack { wa: true }) => {
+                    (0b100, 0, 1, shareable as u32)
+                }
+                (CachePolicy::NoCache, CachePolicy::WriteThrough) => {
+                    (0b100, 1, 0, shareable as u32)
+                }
+                (CachePolicy::NoCache, CachePolicy::WriteBack { wa: false }) => {
+                    (0b100, 1, 1, shareable as u32)
+                }
+                (CachePolicy::WriteBack { wa: true }, CachePolicy::NoCache) => {
+                    (0b101, 0, 0, shareable as u32)
+                }
+                (CachePolicy::WriteBack { wa: true }, CachePolicy::WriteThrough) => {
+                    (0b101, 1, 0, shareable as u32)
+                }
+                (CachePolicy::WriteBack { wa: true }, CachePolicy::WriteBack { wa: false }) => {
+                    (0b101, 1, 1, shareable as u32)
+                }
+                (CachePolicy::WriteThrough, CachePolicy::NoCache) => {
+                    (0b110, 0, 0, shareable as u32)
+                }
+                (CachePolicy::WriteThrough, CachePolicy::WriteBack { wa: true }) => {
+                    (0b110, 0, 1, shareable as u32)
+                }
+                (CachePolicy::WriteThrough, CachePolicy::WriteBack { wa: false }) => {
+                    (0b110, 1, 1, shareable as u32)
+                }
+                (CachePolicy::WriteBack { wa: false }, CachePolicy::NoCache) => {
+                    (0b111, 0, 0, shareable as u32)
+                }
+                (CachePolicy::WriteBack { wa: false }, CachePolicy::WriteBack { wa: true }) => {
+                    (0b111, 0, 1, shareable as u32)
+                }
+                (CachePolicy::WriteBack { wa: false }, CachePolicy::WriteThrough) => {
+                    (0b111, 1, 0, shareable as u32)
+                }
             },
         };
 
-        let register = (!executable as u32) << 28 |
-            ap << 24 |
-            tex << 19 | s << 18 | c << 17 | b << 16 |
-            (subregions.bits() as u32) << 8 |
-            (region_size.bits() as u32) << 1 |
-            MPU_REGION_ENABLE;
+        let register = (!executable as u32) << 28
+            | ap << 24
+            | tex << 19
+            | s << 18
+            | c << 17
+            | b << 16
+            | (subregions.bits() as u32) << 8
+            | (region_size.bits() as u32) << 1
+            | MPU_REGION_ENABLE;
 
         register
     }
 
     /// Apply memory region attributes and size.
     #[inline]
-    pub fn set_region_attributes(&mut self,
-                                 executable: bool,
-                                 access: (Permission, Permission),
-                                 attributes: Attributes,
-                                 subregions: Subregions,
-                                 region_size: Size) {
-
+    pub fn set_region_attributes(
+        &mut self,
+        executable: bool,
+        access: (Permission, Permission),
+        attributes: Attributes,
+        subregions: Subregions,
+        region_size: Size,
+    ) {
         let register = Self::prepare_region_attributes(
             executable,
             access,
             attributes,
             subregions,
-            region_size
+            region_size,
         );
 
         unsafe {
@@ -310,12 +347,24 @@ impl Mpu<'_> {
     /// Apply 3 precompiled regions.
     pub fn set_regions(&mut self, memory_region: &[MemoryRegion; 3]) {
         unsafe {
-            self.0.rbar_a1.write(memory_region[0].region_base_address_reg);
-            self.0.rasr_a1.write(memory_region[0].region_attribute_size_reg);
-            self.0.rbar_a2.write(memory_region[1].region_base_address_reg);
-            self.0.rasr_a2.write(memory_region[1].region_attribute_size_reg);
-            self.0.rbar_a3.write(memory_region[2].region_base_address_reg);
-            self.0.rasr_a3.write(memory_region[2].region_attribute_size_reg);
+            self.0
+                .rbar_a1
+                .write(memory_region[0].region_base_address_reg);
+            self.0
+                .rasr_a1
+                .write(memory_region[0].region_attribute_size_reg);
+            self.0
+                .rbar_a2
+                .write(memory_region[1].region_base_address_reg);
+            self.0
+                .rasr_a2
+                .write(memory_region[1].region_attribute_size_reg);
+            self.0
+                .rbar_a3
+                .write(memory_region[2].region_base_address_reg);
+            self.0
+                .rasr_a3
+                .write(memory_region[2].region_attribute_size_reg);
         }
     }
 

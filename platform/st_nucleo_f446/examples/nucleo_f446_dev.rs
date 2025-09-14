@@ -9,8 +9,8 @@ mod rtt_global;
 #[allow(unused_imports)]
 use bern_kernel::log::{debug, error, info, trace, warn};
 
-use cortex_m;
 use bern_kernel::bern_arch::cortex_m::cortex_m_rt::entry;
+use cortex_m;
 use st_nucleo_f446::StNucleoF446;
 
 use bern_kernel::sync::{Mutex, Semaphore};
@@ -19,9 +19,8 @@ use core::sync::atomic;
 use core::sync::atomic::Ordering;
 
 extern crate alloc;
-use alloc::sync::Arc;
 use alloc::boxed::Box;
-use stm32f4xx_hal::gpio::ExtiPin;
+use alloc::sync::Arc;
 use bern_kernel::alloc::const_pool::ConstPool;
 use bern_kernel::exec::interrupt::{InterruptHandler, InterruptStack};
 use bern_kernel::exec::process::Process;
@@ -31,20 +30,21 @@ use bern_kernel::exec::worker::{WorkItem, Workqueue};
 use bern_kernel::mem::queue::spsc_const::ConstQueue;
 use bern_kernel::stack::Stack;
 use bern_kernel::units::frequency::ExtMilliHertz;
+use stm32f4xx_hal::gpio::ExtiPin;
 
 //use bern_kernel::log::rtt_target::{rtt_init_print};
 use bern_kernel::{sleep, sync};
 
-use log::LevelFilter;
 use crate::rtt_global::RttLogger;
+use log::LevelFilter;
 
 //use systemview_target::SystemView;
 //rtos_trace::global_trace!{SystemView}
 //static SYSTEMVIEW: SystemView = SystemView::new();
 static LOGGER: RttLogger = RttLogger::new();
 
-#[link_section=".process.my_process"]
-static mut SOME_ARR: [u8; 8] = [1,2,3,4,5,6,7,8];
+#[link_section = ".process.my_process"]
+static mut SOME_ARR: [u8; 8] = [1, 2, 3, 4, 5, 6, 7, 8];
 
 static PROC: &Process = bern_kernel::new_process!(my_process, 8192);
 static PROC_RX: &Process = bern_kernel::new_process!(proc_rx, 8192);
@@ -62,10 +62,7 @@ fn main() -> ! {
     log::set_max_level(LevelFilter::Trace);
 
     bern_kernel::init();
-    bern_kernel::time::set_tick_frequency(
-        1.kHz(),
-        72.MHz()
-    );
+    bern_kernel::time::set_tick_frequency(1.kHz(), 72.MHz());
 
     info!("Bern RTOS example application");
 
@@ -78,7 +75,7 @@ fn main() -> ! {
     let mut led_7 = board.shield.led_7;
 
     // place a static receive queue in the receiving process
-    #[link_section=".process.proc_rx"]
+    #[link_section = ".process.proc_rx"]
     static IPC_CHANNEL: ConstQueue<u32, 16> = ConstQueue::new();
 
     let channel = sync::ipc::spsc::channel();
@@ -92,9 +89,9 @@ fn main() -> ! {
         let button_event = Arc::new(Semaphore::new(0));
 
         let worker = Workqueue::new(c)
-                .priority(Priority::new(0))
-                .stack(Stack::try_new_in(c, 1024).unwrap())
-                .build();
+            .priority(Priority::new(0))
+            .stack(Stack::try_new_in(c, 1024).unwrap())
+            .build();
 
         Thread::new(c)
             .priority(Priority::new(1))
@@ -102,7 +99,9 @@ fn main() -> ! {
             .spawn(move || {
                 let bla = Arc::new(Mutex::new(96));
 
-                unsafe { SOME_ARR[0] += 1; }
+                unsafe {
+                    SOME_ARR[0] += 1;
+                }
 
                 loop {
                     heartbeat.set_high();
@@ -128,17 +127,14 @@ fn main() -> ! {
         Thread::new(c)
             .priority(Priority::new(2))
             .stack(Stack::try_new_in(c, 1024).unwrap())
-            .spawn(move || {
-                loop {
-                    if let Ok(p) = button_event_consumer.acquire(1000) {
-                        info!("Processing button event from thread.");
-                        led_7.toggle();
-                        p.forget();
-                    };
+            .spawn(move || loop {
+                if let Ok(p) = button_event_consumer.acquire(1000) {
+                    info!("Processing button event from thread.");
+                    led_7.toggle();
+                    p.forget();
+                };
 
-
-                    sleep(500);
-                }
+                sleep(500);
             });
 
         Thread::new(c)
@@ -175,7 +171,7 @@ fn main() -> ! {
                 button.clear_interrupt_pending_bit();
             });
 
-        #[link_section=".process.my_process"]
+        #[link_section = ".process.my_process"]
         static WORK_ITEMS: ConstPool<WorkItem<u32>, 10> = ConstPool::new();
         let button_event_producer = Arc::clone(&button_event);
         InterruptHandler::new(c)
@@ -188,35 +184,34 @@ fn main() -> ! {
                     //worker.submit(move || {
                     //    info!("Processing interrupt in worker queue.");
                     //}).ok();
-                    WORK_ITEMS.try_acquire()
-                        .map(|mut i| {
-                            **i = 7;
-                            worker.submit(
-                                i,
-                                move |d| {
-                                    info!("Processing button {} from Workqueue.", d);
-                                }
-                            ).ok();
-                        });
+                    WORK_ITEMS.try_acquire().map(|mut i| {
+                        **i = 7;
+                        worker
+                            .submit(i, move |d| {
+                                info!("Processing button {} from Workqueue.", d);
+                            })
+                            .ok();
+                    });
                 }
                 button_7.clear_interrupt_pending_bit();
             });
-    }).unwrap();
+    })
+    .unwrap();
 
-    PROC_RX.init(|c| {
-        Thread::new(c)
-            .priority(Priority::new(2))
-            .stack(Stack::try_new_in(c, 2048).unwrap())
-            .spawn(move || {
-                loop {
+    PROC_RX
+        .init(|c| {
+            Thread::new(c)
+                .priority(Priority::new(2))
+                .stack(Stack::try_new_in(c, 2048).unwrap())
+                .spawn(move || loop {
                     match ipc_rx.recv() {
                         Ok(v) => info!("IPC received {}", v),
-                        Err(_) => warn!("IPC queue empty")
+                        Err(_) => warn!("IPC queue empty"),
                     }
                     sleep(500);
-                }
-            });
-    }).unwrap();
+                });
+        })
+        .unwrap();
 
     bern_kernel::start();
 }

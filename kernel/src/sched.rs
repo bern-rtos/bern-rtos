@@ -2,27 +2,25 @@
 
 /// # Basic Concept
 /// Keep interrupt latency as short as possible, move work to PendSV.
-
 pub(crate) mod event;
 mod idle;
 
 use core::mem::MaybeUninit;
 use core::ptr::NonNull;
 
-use event::Event;
-use crate::exec::runnable::{self, Priority, Runnable, Transition};
-use crate::{KERNEL, log, syscall};
-use crate::time;
-use crate::sync::critical_section;
-use crate::mem::{boxed::Box, linked_list::*};
 use crate::alloc::allocator::AllocError;
+use crate::exec::runnable::{self, Priority, Runnable, Transition};
+use crate::mem::{boxed::Box, linked_list::*};
+use crate::sync::critical_section;
+use crate::time;
+use crate::{log, syscall, KERNEL};
+use event::Event;
 
-use bern_arch::{ICore, IMemoryProtection, IScheduler};
-use bern_arch::arch::{Arch, ArchCore};
-use bern_conf::CONF;
-use rtos_trace::{TaskInfo, trace};
 use crate::exec::interrupt::InterruptHandler;
-
+use bern_arch::arch::{Arch, ArchCore};
+use bern_arch::{ICore, IMemoryProtection, IScheduler};
+use bern_conf::CONF;
+use rtos_trace::{trace, TaskInfo};
 
 // These statics are MaybeUninit because, there currently no solution to
 // initialize an array dependent on a `const` size and a non-copy type.
@@ -60,7 +58,6 @@ pub(crate) fn init() {
         for element in tasks_ready.iter_mut() {
             *element = LinkedList::new();
         }
-
 
         SCHEDULER = MaybeUninit::new(Scheduler {
             core,
@@ -136,7 +133,7 @@ pub(crate) fn add_task(mut task: Runnable) {
                 task.stack().ptr(),
                 runnable::entry as *const usize,
                 task.runnable_ptr(),
-                syscall::task_exit as *const usize
+                syscall::task_exit as *const usize,
             );
             task.stack_mut().set_ptr(stack_ptr);
         }
@@ -144,10 +141,9 @@ pub(crate) fn add_task(mut task: Runnable) {
         let prio: usize = task.priority().into();
         trace_thread_info(&task);
 
-        sched.tasks_ready[prio].emplace_back(
-            task,
-            KERNEL.allocator()
-        ).ok();
+        sched.tasks_ready[prio]
+            .emplace_back(task, KERNEL.allocator())
+            .ok();
     });
 }
 
@@ -196,7 +192,7 @@ pub(crate) fn tick_update() {
     let mut trigger_switch = false;
     critical_section::exec(|| {
         // update pending -> ready list
-        let preempt_prio= match sched.task_running.as_ref() {
+        let preempt_prio = match sched.task_running.as_ref() {
             Some(task) => (*task).priority(),
             None => Priority::MAX,
         };
@@ -221,8 +217,8 @@ pub(crate) fn tick_update() {
         }
 
         #[cfg(feature = "time-slicing")]
-        if sched.tasks_ready[usize::from(preempt_prio)].len() > 0 &&
-            !preempt_prio.is_interrupt_handler()
+        if sched.tasks_ready[usize::from(preempt_prio)].len() > 0
+            && !preempt_prio.is_interrupt_handler()
         {
             trigger_switch = true;
         }
@@ -240,10 +236,10 @@ pub(crate) fn interrupt_handler_add(interrupt: InterruptHandler) {
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
 
     critical_section::exec(|| {
-        sched.interrupt_handlers.emplace_back(
-            interrupt,
-            KERNEL.allocator()
-        ).ok();
+        sched
+            .interrupt_handlers
+            .emplace_back(interrupt, KERNEL.allocator())
+            .ok();
     });
 }
 
@@ -253,10 +249,10 @@ pub(crate) fn event_register() -> Result<usize, AllocError> {
     critical_section::exec(|| {
         let id = sched.event_counter + 1;
         sched.event_counter = id;
-        sched.events.emplace_back(
-            Event::new(id),
-            KERNEL.allocator()
-        ).map(|_| id)
+        sched
+            .events
+            .emplace_back(Event::new(id), KERNEL.allocator())
+            .map(|_| id)
     })
 }
 
@@ -264,9 +260,7 @@ pub(crate) fn event_await(id: usize, _timeout: usize) -> Result<(), event::Error
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
 
     critical_section::exec(|| {
-        let event = match sched.events.iter_mut().find(|e|
-            e.id() == id
-        ) {
+        let event = match sched.events.iter_mut().find(|e| e.id() == id) {
             Some(e) => unsafe { NonNull::new_unchecked(e) },
             None => {
                 return Err(event::Error::InvalidId);
@@ -277,7 +271,8 @@ pub(crate) fn event_await(id: usize, _timeout: usize) -> Result<(), event::Error
         (*task).set_blocking_event(event);
         (*task).set_transition(Transition::Blocked);
         return Ok(());
-    }).map(|_| Arch::trigger_context_switch())
+    })
+    .map(|_| Arch::trigger_context_switch())
     // todo: returning ok will not work, because the result will be returned to the wrong task
 }
 
@@ -302,18 +297,17 @@ pub(crate) fn event_fire(id: usize) {
     }
 }
 
-rtos_trace::global_os_callbacks!{Scheduler}
+rtos_trace::global_os_callbacks! {Scheduler}
 
 impl rtos_trace::RtosTraceOSCallbacks for Scheduler {
     fn task_list() {
         let sched = unsafe { SCHEDULER.assume_init_mut() };
 
-        sched.task_running.as_ref()
-            .map(|thread| {
-                if thread.priority() != Priority::idle() {
-                    trace_thread_info(thread)
-                }
-            });
+        sched.task_running.as_ref().map(|thread| {
+            if thread.priority() != Priority::idle() {
+                trace_thread_info(thread)
+            }
+        });
 
         for (prio, threads) in sched.tasks_ready.iter().enumerate() {
             if prio == Priority::idle().into() {
@@ -355,7 +349,6 @@ fn trace_thread_info(thread: &Runnable) {
     trace::task_send_info(thread.id(), info);
 }
 
-
 #[no_mangle]
 fn kernel_interrupt_handler(irqn: u16) {
     trace::isr_enter();
@@ -373,7 +366,8 @@ fn kernel_interrupt_handler(irqn: u16) {
 }
 
 pub(crate) fn with_callee<F, R>(f: F) -> R
-    where F: FnOnce(&Runnable) -> R
+where
+    F: FnOnce(&Runnable) -> R,
 {
     let sched = unsafe { &mut *SCHEDULER.as_mut_ptr() };
     let task = &***sched.task_running.as_ref().unwrap();
@@ -387,7 +381,7 @@ pub(crate) fn print_thread_stats() {
     log::info!("Name    Priority    Stack usage            State");
     log::info!("----    --------    -----------            -----");
 
-    if let Some(running)= sched.task_running.as_ref() {
+    if let Some(running) = sched.task_running.as_ref() {
         log::info!("{}    Running", ***running);
     }
 
@@ -448,25 +442,23 @@ fn switch_context(stack_ptr: u32) -> u32 {
             Transition::None => sched.tasks_ready[prio].push_back(pausing),
             Transition::Sleeping => {
                 pausing.set_transition(Transition::None);
-                sched.tasks_sleeping.insert_when(
-                    pausing,
-                    |pausing, task| {
-                        pausing.next_wut() < task.next_wut()
-                    });
-            },
+                sched.tasks_sleeping.insert_when(pausing, |pausing, task| {
+                    pausing.next_wut() < task.next_wut()
+                });
+            }
             Transition::Blocked => {
                 let event = pausing.blocking_event().unwrap(); // cannot be none
                 pausing.set_transition(Transition::None);
-                unsafe { &mut *event.as_ptr() }.pending.insert_when(
-                    pausing,
-                    |pausing, task| {
+                unsafe { &mut *event.as_ptr() }
+                    .pending
+                    .insert_when(pausing, |pausing, task| {
                         pausing.priority() < task.priority()
                     });
             }
             Transition::Terminating => {
                 pausing.set_transition(Transition::None);
                 sched.tasks_terminated.push_back(pausing);
-            },
+            }
             _ => (),
         }
 
@@ -484,7 +476,6 @@ fn switch_context(stack_ptr: u32) -> u32 {
 
         let t = &(*task.as_ref().unwrap());
         Arch::apply_regions(t.memory_regions());
-
 
         if t.priority().is_idle() {
             trace::system_idle();

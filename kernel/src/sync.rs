@@ -1,15 +1,14 @@
 //! Synchronization primitives.
 
 #[allow(dead_code)]
-
 pub(crate) mod critical_mutex;
 pub(crate) mod critical_section;
 pub mod mutex;
 pub mod semaphore;
 
 pub mod channel;
-pub mod spsc;
 pub mod mpsc;
+pub mod spsc;
 
 pub mod ipc;
 

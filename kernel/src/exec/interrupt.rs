@@ -41,9 +41,7 @@ pub struct Context {
 
 impl Context {
     fn new(irqn: u16) -> Context {
-        Context {
-            irqn
-        }
+        Context { irqn }
     }
 
     pub fn irqn(&self) -> u16 {
@@ -89,12 +87,15 @@ impl InterruptBuilder {
     }
 
     pub fn handler<F>(&mut self, handler: F)
-        where F: 'static + FnMut(&Context)
+    where
+        F: 'static + FnMut(&Context),
     {
         if self.stack == Some(Kernel) {
             let mut boxed_handler = match Box::try_new_in(handler, self.process.allocator()) {
                 Ok(b) => b,
-                Err(_) => { return; }
+                Err(_) => {
+                    return;
+                }
             };
 
             // todo: introduce lifetime and deallocation
@@ -104,7 +105,6 @@ impl InterruptBuilder {
         }
     }
 
-
     pub(crate) fn build(&mut self, handler: &'static mut dyn FnMut(&Context)) {
         // Note(unsafe): The stack type is checked before this function call.
         let interrupt = InterruptHandler {
@@ -113,7 +113,7 @@ impl InterruptBuilder {
             stack: unsafe { self.stack.unwrap_unchecked() },
             irqn: self.irqn,
         };
-            
+
         crate::sched::interrupt_handler_add(interrupt);
     }
 }

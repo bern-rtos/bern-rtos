@@ -1,8 +1,8 @@
+use super::Error;
+use crate::sched::event;
+use crate::syscall;
 use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicUsize, Ordering};
-use super::Error;
-use crate::syscall;
-use crate::sched::event;
 
 /// Atomic counting semaphore
 ///
@@ -23,7 +23,7 @@ impl Semaphore {
     pub fn new(permits: usize) -> Self {
         let semaphore = Semaphore {
             event_id: UnsafeCell::new(0),
-            permits:  AtomicUsize::new(permits),
+            permits: AtomicUsize::new(permits),
             permits_issued: AtomicUsize::new(0),
         };
 
@@ -34,13 +34,15 @@ impl Semaphore {
     /// Allocate an event ot the semaphore.
     ///
     /// **Note:** The kernel must be initialized before calling this method.
-    pub fn register(&self) -> Result<(),Error> {
+    pub fn register(&self) -> Result<(), Error> {
         let id = syscall::event_register();
         if id == 0 {
             Err(Error::OutOfMemory)
         } else {
             // NOTE(unsafe): only called before the semaphore is in use
-            unsafe { self.event_id.get().write(id); }
+            unsafe {
+                self.event_id.get().write(id);
+            }
             Ok(())
         }
     }
@@ -61,7 +63,7 @@ impl Semaphore {
     /// was poisoned.
     ///
     /// **Note:** The timeout function is not implemented yet.
-    pub fn acquire(&self, timeout: u32) ->  Result<SemaphorePermit<'_>, Error> {
+    pub fn acquire(&self, timeout: u32) -> Result<SemaphorePermit<'_>, Error> {
         if self.raw_try_acquire() {
             return Ok(SemaphorePermit::new(&self));
         } else {
@@ -70,7 +72,7 @@ impl Semaphore {
                 Ok(_) => {
                     self.raw_try_acquire();
                     Ok(SemaphorePermit::new(&self))
-                },
+                }
                 Err(event::Error::TimeOut) => Err(Error::TimeOut),
                 Err(_) => Err(Error::Poisoned),
             }
@@ -90,16 +92,19 @@ impl Semaphore {
     }
 
     fn raw_try_acquire(&self) -> bool {
-        loop { // CAS loop
+        loop {
+            // CAS loop
             let permits_issued = self.permits_issued.load(Ordering::Acquire);
             if permits_issued < self.permits.load(Ordering::Relaxed) {
                 match self.permits_issued.compare_exchange(
                     permits_issued,
                     permits_issued + 1,
                     Ordering::Release,
-                    Ordering::Relaxed
+                    Ordering::Relaxed,
                 ) {
-                    Ok(_) =>  { return true; }
+                    Ok(_) => {
+                        return true;
+                    }
                     Err(_) => continue, // CAS loop was interrupted, restart
                 }
             } else {
@@ -117,7 +122,6 @@ impl Semaphore {
 
 unsafe impl Sync for Semaphore {}
 
-
 /// Scoped semaphore permit
 ///
 /// similar to [`tokio::sync::SemaphorePermit`](https://docs.rs/tokio/0.2.6/tokio/sync/struct.SemaphorePermit.html).
@@ -127,9 +131,7 @@ pub struct SemaphorePermit<'a> {
 
 impl<'a> SemaphorePermit<'a> {
     fn new(semaphore: &'a Semaphore) -> Self {
-        SemaphorePermit {
-            semaphore,
-        }
+        SemaphorePermit { semaphore }
     }
 
     /// Forget permit. Will not be returned to the available permits.

@@ -1,6 +1,5 @@
 #![no_main]
 #![no_std]
-
 #![feature(default_alloc_error_handler)]
 
 mod common;
@@ -15,19 +14,15 @@ mod tests {
     use crate::common::Board;
     use bern_kernel::exec::runnable::Priority;
     use bern_kernel::exec::thread::Thread;
-    use bern_kernel::time;
     use bern_kernel::stack::Stack;
+    use bern_kernel::time;
     use bern_kernel::units::frequency::*;
     use bern_kernel::*;
-
 
     #[test_set_up]
     fn init_scheduler() {
         init();
-        time::set_tick_frequency(
-            1.kHz(),
-            72.MHz()
-        );
+        time::set_tick_frequency(1.kHz(), 72.MHz());
     }
 
     #[test_tear_down]
@@ -47,11 +42,9 @@ mod tests {
         PROC.init(move |c| {
             Thread::new(c)
                 .stack(Stack::try_new_in(c, 1024).unwrap())
-                .spawn(move || {
-                    loop {
-                        led.toggle();
-                        sleep(100);
-                    }
+                .spawn(move || loop {
+                    led.toggle();
+                    sleep(100);
                 });
 
             // watchdog
@@ -65,7 +58,8 @@ mod tests {
                     bern_test::test_succeeded();
                     __tear_down();
                 });
-        }).unwrap();
+        })
+        .unwrap();
 
         start();
     }

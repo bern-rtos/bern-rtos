@@ -2,18 +2,11 @@
 
 pub mod trace;
 
-pub use stm32f4xx_hal as hal;
-use hal::prelude::*;
-use hal::pac::{
-    Peripherals,
-    USART2,
-};
 use hal::gpio::*;
-use hal::serial::{
-    Serial,
-    Tx,
-    Rx,
-};
+use hal::pac::{Peripherals, USART2};
+use hal::prelude::*;
+use hal::serial::{Rx, Serial, Tx};
+pub use stm32f4xx_hal as hal;
 use stm32f4xx_hal::pac::{EXTI, TIM2};
 use stm32f4xx_hal::syscfg::SysCfg;
 use stm32f4xx_hal::time::Hertz;
@@ -56,11 +49,13 @@ pub struct StNucleoF446 {
 
 impl StNucleoF446 {
     pub fn new(sysclock_mhz: u32) -> Self {
-        let stm32_peripherals = Peripherals::take()
-            .expect("cannot take stm32 peripherals");
+        let stm32_peripherals = Peripherals::take().expect("cannot take stm32 peripherals");
 
         /* Enable SYSCFGEN for interrutps to work */
-        stm32_peripherals.RCC.apb2enr.write(|w| w.syscfgen().enabled());
+        stm32_peripherals
+            .RCC
+            .apb2enr
+            .write(|w| w.syscfgen().enabled());
 
         /* system clock */
         let rcc = stm32_peripherals.RCC.constrain();
@@ -78,8 +73,9 @@ impl StNucleoF446 {
             stm32_peripherals.USART2,
             (txd, rxd),
             hal::serial::config::Config::default().baudrate(115_200.bps()),
-            &clocks
-        ).unwrap();
+            &clocks,
+        )
+        .unwrap();
         let (vcp_tx, vcp_rx) = vcp.split();
 
         /* board IOs */
@@ -151,15 +147,21 @@ impl StNucleoF446 {
 
         self.shield.button_0.make_interrupt_source(&mut self.syscfg);
         self.shield.button_0.enable_interrupt(&mut self.exti);
-        self.shield.button_0.trigger_on_edge(&mut self.exti, Edge::Falling);
+        self.shield
+            .button_0
+            .trigger_on_edge(&mut self.exti, Edge::Falling);
 
         self.shield.button_1.make_interrupt_source(&mut self.syscfg);
         self.shield.button_1.enable_interrupt(&mut self.exti);
-        self.shield.button_1.trigger_on_edge(&mut self.exti, Edge::Falling);
+        self.shield
+            .button_1
+            .trigger_on_edge(&mut self.exti, Edge::Falling);
 
         self.shield.button_7.make_interrupt_source(&mut self.syscfg);
         self.shield.button_7.enable_interrupt(&mut self.exti);
-        self.shield.button_7.trigger_on_edge(&mut self.exti, Edge::Falling);
+        self.shield
+            .button_7
+            .trigger_on_edge(&mut self.exti, Edge::Falling);
 
         unsafe {
             hal::pac::NVIC::unmask(hal::pac::interrupt::EXTI0);

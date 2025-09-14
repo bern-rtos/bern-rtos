@@ -12,23 +12,22 @@
 //! - [MIT License](https://gitlab.com/bern-rtos/bern-rtos/-/blob/main/arch/LICENSE.md)
 
 #![cfg_attr(target_os = "none", no_std)]
-
 #![allow(unused)]
 
-pub mod syscall;
 pub mod core;
-pub mod scheduler;
-pub mod sync;
-pub mod startup;
 pub mod memory_protection;
+pub mod scheduler;
+pub mod startup;
+pub mod sync;
+pub mod syscall;
 
 // re-exports
-pub use crate::scheduler::IScheduler;
-pub use crate::syscall::ISyscall;
 pub use crate::core::ICore;
-pub use crate::sync::ISync;
-pub use crate::startup::IStartup;
 pub use crate::memory_protection::IMemoryProtection;
+pub use crate::scheduler::IScheduler;
+pub use crate::startup::IStartup;
+pub use crate::sync::ISync;
+pub use crate::syscall::ISyscall;
 
 // select architecture support
 #[cfg(not(target_os = "none"))]

@@ -2,17 +2,16 @@
 
 #![no_main]
 #![no_std]
-
 #![feature(default_alloc_error_handler)]
 
-use bern_kernel::exec::process::Context;
 use crate::common_timing::Board;
-use st_nucleo_f446::hal;
-use hal::interrupt;
-use core::sync::atomic::{compiler_fence, Ordering};
+use bern_kernel::exec::process::Context;
 use bern_kernel::exec::runnable::Priority;
 use bern_kernel::exec::thread::Thread;
 use bern_kernel::stack::Stack;
+use core::sync::atomic::{compiler_fence, Ordering};
+use hal::interrupt;
+use st_nucleo_f446::hal;
 
 mod common_timing;
 
@@ -22,20 +21,21 @@ pub fn spawn_timing_thread(c: &Context, mut board: Board) {
     Thread::new(c)
         .priority(Priority::new(0))
         .stack(Stack::try_new_in(c, 1024).unwrap())
-        .spawn(move || {
-            loop {
-                compiler_fence(Ordering::SeqCst);
-            }
+        .spawn(move || loop {
+            compiler_fence(Ordering::SeqCst);
         });
-
 }
 
 #[allow(non_snake_case)]
 #[interrupt]
 fn EXTI9_5() {
     unsafe {
-        (*hal::pac::GPIOC::ptr()).odr.modify(|_, w|  w.odr7().set_bit());
+        (*hal::pac::GPIOC::ptr())
+            .odr
+            .modify(|_, w| w.odr7().set_bit());
         (*hal::pac::EXTI::ptr()).pr.write(|w| w.pr6().set_bit());
-        (*hal::pac::GPIOC::ptr()).odr.modify(|_, w|  w.odr7().clear_bit());
+        (*hal::pac::GPIOC::ptr())
+            .odr
+            .modify(|_, w| w.odr7().clear_bit());
     }
 }

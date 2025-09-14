@@ -46,16 +46,16 @@
 
 #![cfg_attr(target_os = "none", no_std)]
 
-mod sched;
-pub mod syscall;
-pub mod time;
-pub mod stack;
-pub mod sync;
-pub mod mem;
-pub mod kernel;
 pub mod alloc;
 pub mod exec;
+pub mod kernel;
 pub mod log;
+pub mod mem;
+mod sched;
+pub mod stack;
+pub mod sync;
+pub mod syscall;
+pub mod time;
 
 pub use crate::syscall::*;
 pub use bern_kernel_macros::*;
@@ -63,8 +63,7 @@ pub use bern_units as units;
 
 pub use embedded_time;
 
+pub use bern_arch;
 #[allow(unused_imports)]
 use bern_arch::arch as _;
-pub use bern_arch;
 pub use kernel::*;
-

@@ -1,18 +1,17 @@
+use crate::alloc::allocator::{AllocError, Allocator};
+use crate::mem::boxed::Box;
+use crate::mem::queue::mpmc_linked::{Node, Queue};
+use bern_units::memory_size::Byte;
 use core::alloc::Layout;
 use core::cell::Cell;
 use core::ptr;
-use core::ptr::{NonNull, slice_from_raw_parts_mut};
-use bern_units::memory_size::Byte;
-use crate::alloc::allocator::{Allocator, AllocError};
-use crate::mem::boxed::Box;
-use crate::mem::queue::mpmc_linked::{Node, Queue};
-
+use core::ptr::{slice_from_raw_parts_mut, NonNull};
 
 pub enum PoolError {
-    OutOfRange
+    OutOfRange,
 }
 
-struct Free { }
+struct Free {}
 impl Free {
     const fn new() -> Self {
         Free {}
@@ -40,7 +39,7 @@ impl Partition {
             range: Cell::new(Range {
                 start: ptr::null(),
                 end: ptr::null(),
-            })
+            }),
         }
     }
 
@@ -68,7 +67,7 @@ impl Partition {
         unsafe {
             self.range.replace(Range {
                 start: ptr,
-                end: ptr.add(len)
+                end: ptr.add(len),
             });
         }
     }
@@ -78,24 +77,21 @@ impl Partition {
             return None;
         }
 
-        self.free.try_pop_front().map(| b | {
-            unsafe {
-                NonNull::new_unchecked(
-                    slice_from_raw_parts_mut(
-                        Box::leak(b).as_ptr() as *mut u8,
-                        layout.size()
-                    )
-                )
-            }
+        self.free.try_pop_front().map(|b| unsafe {
+            NonNull::new_unchecked(slice_from_raw_parts_mut(
+                Box::leak(b).as_ptr() as *mut u8,
+                layout.size(),
+            ))
         })
     }
 
-    unsafe fn try_deallocate(&self, ptr: NonNull<u8>, _layout: Layout) -> Result<(),PoolError> {
+    unsafe fn try_deallocate(&self, ptr: NonNull<u8>, _layout: Layout) -> Result<(), PoolError> {
         let ptr_raw = ptr.as_ptr();
         let range = self.range.as_ptr();
 
-        if (ptr_raw as usize) < ((*range).start as usize) ||
-            (ptr_raw as usize) > ((*range).end as usize) {
+        if (ptr_raw as usize) < ((*range).start as usize)
+            || (ptr_raw as usize) > ((*range).end as usize)
+        {
             return Err(PoolError::OutOfRange);
         }
 
@@ -118,12 +114,12 @@ impl Partition {
         let free_block = ptr as *mut Node<Free>;
         let node = Node::new(Free::new());
         free_block.write(node);
-        self.free.push_front(Box::from_raw(NonNull::new_unchecked(free_block)));
+        self.free
+            .push_front(Box::from_raw(NonNull::new_unchecked(free_block)));
     }
 }
 
-unsafe impl Sync for Partition { }
-
+unsafe impl Sync for Partition {}
 
 pub struct Pool<const N: usize> {
     partitions: [Partition; N],
@@ -167,17 +163,16 @@ impl<const N: usize> Allocator for Pool<{ N }> {
     }
 }
 
-unsafe impl<const N: usize> Sync for Pool<{ N }> { }
+unsafe impl<const N: usize> Sync for Pool<{ N }> {}
 
 #[allow(unused)]
 macro_rules! new {
     ($partitions:tt) => {
         Pool {
-            partitions: $partitions
+            partitions: $partitions,
         }
     };
 }
-
 
 #[cfg(all(test, not(target_os = "none")))]
 mod tests {
@@ -186,12 +181,12 @@ mod tests {
     #[test]
     fn one_partition() {
         static mut BUFFER: [u8; 1280] = [0; 1280];
-        static POOL: Pool<1> = new!([
-                Partition::empty(128),
-        ]);
+        static POOL: Pool<1> = new!([Partition::empty(128),]);
 
         let partion = POOL.partition(0).unwrap();
-        unsafe { partion.init_from_slice(BUFFER.as_mut()); }
+        unsafe {
+            partion.init_from_slice(BUFFER.as_mut());
+        }
 
         assert_eq!(partion.capacity(), 10);
         assert_eq!(partion.free(), 10);
@@ -200,9 +195,7 @@ mod tests {
     #[test]
     fn alloc_and_dealloc() {
         static mut BUFFER: [u8; 1280] = [0; 1280];
-        static POOL: Pool<1> = new!([
-                Partition::empty(128),
-        ]);
+        static POOL: Pool<1> = new!([Partition::empty(128),]);
         unsafe {
             POOL.partition(0).unwrap().init_from_slice(BUFFER.as_mut());
         }
@@ -219,7 +212,7 @@ mod tests {
             unsafe {
                 POOL.dealloc(
                     NonNull::new_unchecked(var.take().unwrap().as_ptr() as *mut u8),
-                    layout.clone()
+                    layout.clone(),
                 );
             }
         }
@@ -238,9 +231,15 @@ mod tests {
             Partition::empty(512),
         ]);
         unsafe {
-            POOL.partition(0).unwrap().init_from_slice(BUFFER_1.as_mut());
-            POOL.partition(1).unwrap().init_from_slice(BUFFER_2.as_mut());
-            POOL.partition(2).unwrap().init_from_slice(BUFFER_3.as_mut());
+            POOL.partition(0)
+                .unwrap()
+                .init_from_slice(BUFFER_1.as_mut());
+            POOL.partition(1)
+                .unwrap()
+                .init_from_slice(BUFFER_2.as_mut());
+            POOL.partition(2)
+                .unwrap()
+                .init_from_slice(BUFFER_3.as_mut());
         }
 
         let layout_a = Layout::from_size_align(100, 4).unwrap();
@@ -255,9 +254,18 @@ mod tests {
         assert_eq!(POOL.partition(2).unwrap().free(), 1);
 
         unsafe {
-            POOL.dealloc(NonNull::new_unchecked(a.unwrap().as_ptr() as *mut u8), layout_a.clone());
-            POOL.dealloc(NonNull::new_unchecked(b.unwrap().as_ptr() as *mut u8), layout_b.clone());
-            POOL.dealloc(NonNull::new_unchecked(c.unwrap().as_ptr() as *mut u8), layout_c.clone());
+            POOL.dealloc(
+                NonNull::new_unchecked(a.unwrap().as_ptr() as *mut u8),
+                layout_a.clone(),
+            );
+            POOL.dealloc(
+                NonNull::new_unchecked(b.unwrap().as_ptr() as *mut u8),
+                layout_b.clone(),
+            );
+            POOL.dealloc(
+                NonNull::new_unchecked(c.unwrap().as_ptr() as *mut u8),
+                layout_c.clone(),
+            );
         }
         assert_eq!(POOL.partition(0).unwrap().free(), 8);
         assert_eq!(POOL.partition(1).unwrap().free(), 4);

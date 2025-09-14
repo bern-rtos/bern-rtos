@@ -1,7 +1,7 @@
 //! Generic event system.
 
-use crate::mem::linked_list::LinkedList;
 use crate::exec::runnable::Runnable;
+use crate::mem::linked_list::LinkedList;
 
 /// Event errors.
 #[allow(dead_code)]

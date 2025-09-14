@@ -1,6 +1,6 @@
 //! Units representing a frequency.
 
-use derive_more::{Add, Sub, Mul, Div};
+use derive_more::{Add, Div, Mul, Sub};
 
 #[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Add, Sub, Mul, Div)]
 pub struct MilliHertz(pub u32);
@@ -13,7 +13,6 @@ pub struct KiloHertz(pub u32);
 
 #[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Add, Sub, Mul, Div)]
 pub struct MegaHertz(pub u32);
-
 
 /// MilliHertz is implemented specifically because const trait implementations are not
 /// stable yet.
@@ -67,20 +66,17 @@ impl ExtMilliHertz for u32 {
     }
 }
 
-
 impl From<u32> for MilliHertz {
     fn from(mhz: u32) -> Self {
         mhz.mHz()
     }
 }
 
-
 impl From<Hertz> for MilliHertz {
     fn from(hz: Hertz) -> Self {
         Self(hz.0 * 1_000)
     }
 }
-
 
 impl From<KiloHertz> for MilliHertz {
     fn from(khz: KiloHertz) -> Self {
@@ -93,7 +89,6 @@ impl From<KiloHertz> for Hertz {
         Self(khz.0 * 1_000)
     }
 }
-
 
 impl From<MegaHertz> for MilliHertz {
     fn from(mhz: MegaHertz) -> Self {

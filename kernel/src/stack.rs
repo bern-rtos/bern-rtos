@@ -1,12 +1,12 @@
 //! Thread stack management.
 
-use core::ops::{DerefMut, Deref};
+use core::ops::{Deref, DerefMut};
 
 extern crate alloc;
-use alloc::alloc::alloc;
-use core::alloc::Layout;
-use bern_units::memory_size::Byte;
 use crate::exec::process;
+use alloc::alloc::alloc;
+use bern_units::memory_size::Byte;
+use core::alloc::Layout;
 
 /// Stack management structure
 #[repr(C)]
@@ -25,7 +25,7 @@ impl Stack {
         Stack {
             bottom: stack.as_mut_ptr(),
             ptr: unsafe { stack.as_mut_ptr().offset(stack.len() as isize) } as *mut usize,
-            size
+            size,
         }
     }
 
@@ -49,9 +49,7 @@ impl Stack {
         let mut memory = match context
             .process()
             .allocator()
-            .alloc(unsafe {
-                Layout::from_size_align_unchecked(size, 32)
-            })
+            .alloc(unsafe { Layout::from_size_align_unchecked(size, 32) })
         {
             Ok(m) => m,
             Err(_) => return None, // stack remains None
@@ -78,7 +76,11 @@ impl Stack {
 
     /// Stack usage.
     pub fn usage(&self) -> Byte {
-        Byte(self.capacity().0.saturating_sub((self.ptr as usize).saturating_sub(self.bottom as usize) as u32))
+        Byte(
+            self.capacity()
+                .0
+                .saturating_sub((self.ptr as usize).saturating_sub(self.bottom as usize) as u32),
+        )
     }
 
     pub fn capacity(&self) -> Byte {
@@ -102,8 +104,8 @@ impl Stack {
 /// ```
 #[repr(C)]
 pub struct Aligned<A, T>
-    where
-        T: ?Sized,
+where
+    T: ?Sized,
 {
     _alignment: [A; 0],
     value: T,

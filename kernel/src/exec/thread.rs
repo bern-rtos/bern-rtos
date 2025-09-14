@@ -11,27 +11,27 @@
 #![allow(unused)]
 
 use core::alloc::Layout;
-use core::mem::size_of_val;
 use core::mem;
-use core::ptr;
+use core::mem::size_of_val;
 use core::ops::Deref;
+use core::ptr;
 
-use crate::sched;
-use crate::syscall;
-use crate::time;
-use crate::stack::Stack;
-use crate::sched::event::Event;
-use core::ptr::NonNull;
-use bern_arch::arch::memory_protection::MemoryRegion;
-use bern_arch::arch::Arch;
-use bern_arch::memory_protection::{Config, Type, Access, Permission};
-use bern_arch::IMemoryProtection;
-use bern_conf::CONF;
 use crate::alloc::allocator::AllocError;
 use crate::exec::process;
 use crate::exec::process::ProcessInternal;
-use crate::exec::runnable::{Priority, RunnableResult, Runnable, Transition};
+use crate::exec::runnable::{Priority, Runnable, RunnableResult, Transition};
 use crate::mem::boxed::Box;
+use crate::sched;
+use crate::sched::event::Event;
+use crate::stack::Stack;
+use crate::syscall;
+use crate::time;
+use bern_arch::arch::memory_protection::MemoryRegion;
+use bern_arch::arch::Arch;
+use bern_arch::memory_protection::{Access, Config, Permission, Type};
+use bern_arch::IMemoryProtection;
+use bern_conf::CONF;
+use core::ptr::NonNull;
 
 pub struct Thread {}
 
@@ -88,7 +88,8 @@ impl ThreadBuilder {
     // todo: return result
     /// Spawns the task and takes the entry point as closure.
     pub fn spawn<F>(&mut self, entry: F)
-        where F: 'static + FnMut() -> RunnableResult
+    where
+        F: 'static + FnMut() -> RunnableResult,
     {
         //let mut boxed_entry = match Box::try_new_in(entry, self.process.allocator()) {
         //    Ok(b) => b,
@@ -109,10 +110,7 @@ impl ThreadBuilder {
             stack.set_ptr((stack.ptr() as usize - entry_size) as *mut usize);
             &(&mut *entry_ptr as &mut dyn FnMut() -> RunnableResult)
         };
-        syscall::thread_spawn(
-            self,
-            entry_ref
-        );
+        syscall::thread_spawn(self, entry_ref);
     }
 
     // userland barrier ////////////////////////////////////////////////////////
@@ -133,16 +131,12 @@ impl ThreadBuilder {
         let runnable_ptr = ptr as *mut usize;
 
         // align top of stack
-        unsafe { ptr = Self::align_ptr(ptr, 8); }
+        unsafe {
+            ptr = Self::align_ptr(ptr, 8);
+        }
         stack.set_ptr(ptr as *mut usize);
 
-        let mut thread = Runnable::new(
-            self.process,
-            runnable_ptr,
-            stack,
-            self.priority,
-            self.name,
-        );
+        let mut thread = Runnable::new(self.process, runnable_ptr, stack, self.priority, self.name);
         sched::add_task(thread)
     }
 
@@ -152,16 +146,11 @@ impl ThreadBuilder {
     }
 }
 
-
-
-
 #[cfg(all(test, not(target_os = "none")))]
 mod tests {
     use super::*;
     use bern_arch::arch::Arch;
 
     #[test]
-    fn empty() {
-
-    }
+    fn empty() {}
 }
