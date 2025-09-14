@@ -2,9 +2,6 @@
 #![no_main]
 #![no_std]
 
-#![feature(type_ascription)]
-#![feature(default_alloc_error_handler)]
-
 //use defmt_rtt as _;
 
 mod rtt_global;
