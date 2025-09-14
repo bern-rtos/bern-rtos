@@ -112,6 +112,9 @@ pub(crate) fn start() -> ! {
 
     let stack_ptr = (*sched.task_running.as_ref().unwrap()).stack().ptr();
     Arch::start_first_task(stack_ptr);
+
+    // Note: We will never get here but the Arch crate cannot use the never type yet
+    loop {}
 }
 
 /// Add a task to the scheduler.

@@ -104,7 +104,7 @@ impl IScheduler for Arch {
         stack_ptr.offset(-(stack_offset as isize))
     }
 
-    fn start_first_task(stack_ptr: *const usize) -> ! {
+    fn start_first_task(stack_ptr: *const usize) -> () {
         unsafe {
             asm!(
             "ldmia r0!, {{r2,r3}}",
